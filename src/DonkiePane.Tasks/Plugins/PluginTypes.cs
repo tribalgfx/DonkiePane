@@ -12,6 +12,9 @@ public enum SettingKind
 
     /// <summary>SHA-256-vingerafdruk van een certificaat (<c>AA:BB:…</c>) om vast te pinnen.</summary>
     Fingerprint,
+
+    /// <summary>Een aan/uit-keuze; bewaard als <c>true</c> of <c>false</c> (zie <see cref="SourceContext.Flag"/>).</summary>
+    Bool,
 }
 
 /// <summary>
@@ -45,13 +48,21 @@ public interface ISecretStore
 /// <param name="Values">De ingevulde, niet-geheime instellingen (sleutel is <see cref="SettingField.Key"/>).</param>
 /// <param name="Secrets">Geheimen van deze verbinding.</param>
 /// <param name="OpenBrowser">Opent een adres in de standaardbrowser (voor inloggen).</param>
-public sealed class SourceContext(IReadOnlyDictionary<string, string> values, ISecretStore secrets, Func<Uri, Task> openBrowser)
+/// <param name="pollInterval">Hoe vaak de gebruiker wil dat er op veranderingen wordt gecontroleerd (standaard een minuut).</param>
+public sealed class SourceContext(IReadOnlyDictionary<string, string> values, ISecretStore secrets, Func<Uri, Task> openBrowser,
+    TimeSpan? pollInterval = null)
 {
+    public static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(60);
+
     public IReadOnlyDictionary<string, string> Values { get; } = values;
     public ISecretStore Secrets { get; } = secrets;
     public Func<Uri, Task> OpenBrowser { get; } = openBrowser;
+    public TimeSpan PollInterval { get; } = pollInterval ?? DefaultPollInterval;
 
     public string Value(string key) => Values.TryGetValue(key, out var v) ? v.Trim() : "";
+
+    /// <summary>Een aan/uit-instelling (<see cref="SettingKind.Bool"/>).</summary>
+    public bool Flag(string key) => string.Equals(Value(key), "true", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>

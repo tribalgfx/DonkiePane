@@ -36,6 +36,8 @@ public partial class SettingsWindow : Window
         GridSlider.Value = layout.GridSize;
         GridValue.Text = $"{layout.GridSize:0}";
         GridSlider.IsEnabled = layout.SnapToGrid;
+        SyncSlider.Value = layout.SyncInterval.TotalSeconds;
+        SyncValue.Text = FormatSeconds(layout.SyncInterval.TotalSeconds);
         RefreshAutoStart();
         RefreshSources();
         DataPath.Text = Path.GetDirectoryName(LayoutStore.DefaultPath);
@@ -86,6 +88,20 @@ public partial class SettingsWindow : Window
         GridValue.Text = $"{GridSlider.Value:0}";
         _save();
     }
+
+    // ---------- Synchronisatie ----------
+
+    private void SyncSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        SyncValue.Text = FormatSeconds(SyncSlider.Value);
+        if (_loading) return;
+        _layout.SyncSeconds = (int)SyncSlider.Value;
+        _save();
+        _sources.SetPollInterval(_layout.SyncInterval); // geldt ook voor bronnen die al draaien
+    }
+
+    private static string FormatSeconds(double seconds) =>
+        seconds < 60 ? $"{seconds:0} s" : seconds % 60 == 0 ? $"{seconds / 60:0} min" : $"{seconds / 60:0.#} min";
 
     // ---------- Takenbronnen ----------
 

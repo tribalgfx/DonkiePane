@@ -44,6 +44,7 @@ public partial class App : Application
 
         _layout = _store.Load();
         _sources = CreateSourceHost();
+        _sources.SetPollInterval(_layout.SyncInterval);
         if (LegacyGoogleMigration.Run(_sources, _layout)) SaveLayout();
         _desktop = new DesktopFolders();
         LayoutEditor.Sync(_layout, _desktop.EnumerateItems());

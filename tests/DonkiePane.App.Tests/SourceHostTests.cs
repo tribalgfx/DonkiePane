@@ -42,10 +42,27 @@ internal sealed class FakePlugin(string typeId = "fake", Exception? failOnCreate
     }
 }
 
+/// <summary>Een bron die van buiten kan veranderen en dus een controle-interval en een verversknop heeft.</summary>
+internal sealed class FakeRefreshable : IRefreshableTaskProvider
+{
+    public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(60);
+    public int Refreshed { get; private set; }
+    public Task RefreshAsync(CancellationToken ct = default) { Refreshed++; return Task.CompletedTask; }
+    public TaskProviderCapabilities Capabilities { get; } = new(false, false, false);
+    public event EventHandler<string>? ListChanged { add { } remove { } }
+    public event EventHandler<TaskProviderStatus>? StatusChanged { add { } remove { } }
+    public Task<IReadOnlyList<TaskItem>> GetTasksAsync(string listId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<TaskItem>>([]);
+    public Task AddAsync(string listId, TaskItem task, CancellationToken ct = default) => Task.CompletedTask;
+    public Task UpdateAsync(IEnumerable<TaskItem> tasks, CancellationToken ct = default) => Task.CompletedTask;
+    public Task MoveAsync(string listId, string taskId, int newIndex, CancellationToken ct = default) => Task.CompletedTask;
+    public Task DeleteAsync(string listId, string taskId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task DeleteListAsync(string listId, CancellationToken ct = default) => Task.CompletedTask;
+}
+
 internal sealed class FakeSource : ITaskSource
 {
     public bool Disposed { get; private set; }
-    public ITaskProvider Provider { get; } = new UnavailableTaskProvider("proef");
+    public ITaskProvider Provider { get; } = new FakeRefreshable();
     public Task<IReadOnlyList<TaskListInfo>> GetListsAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<TaskListInfo>>([]);
     public Task<SourceCheck> TestAsync(CancellationToken ct = default) => Task.FromResult(new SourceCheck(true, "ok"));
     public Task<string> RunActionAsync(string actionId, CancellationToken ct = default) => Task.FromResult("ok");
@@ -289,6 +306,35 @@ public sealed class TaskSourceHostTests : TempData
         Assert.Null(source);
         Assert.Contains("kapot in de plug-in", error);
         Assert.Contains("Bron", error);
+    }
+
+    [Fact]
+    public void A_new_source_starts_with_the_interval_the_user_chose()
+    {
+        var plugin = new FakePlugin();
+        using var host = NewHost(plugin);
+        host.SetPollInterval(TimeSpan.FromSeconds(30));
+        var connection = host.NewConnection("fake", "Bron");
+        host.Save(connection);
+
+        host.GetSource(connection.Id, out _);
+
+        Assert.Equal(TimeSpan.FromSeconds(30), Assert.Single(plugin.Created).PollInterval);
+    }
+
+    [Fact]
+    public void Changing_the_interval_reaches_a_source_that_is_already_running()
+    {
+        var plugin = new FakePlugin();
+        using var host = NewHost(plugin);
+        var connection = host.NewConnection("fake", "Bron");
+        host.Save(connection);
+        var source = host.GetSource(connection.Id, out _)!;
+
+        host.SetPollInterval(TimeSpan.FromSeconds(120));
+
+        Assert.Equal(TimeSpan.FromSeconds(120), ((FakeRefreshable)source.Provider).PollInterval);
+        Assert.Single(plugin.Created); // zonder de bron opnieuw te maken
     }
 
     [Fact]

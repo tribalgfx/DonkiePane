@@ -13,7 +13,7 @@ namespace DonkiePane.Plugins.RestTasks;
 /// Bij 401 stopt alles tot de gebruiker de instellingen verbetert, want de bron kan na een paar mislukte
 /// pogingen alles blokkeren, ook met een geldig token. Bij 429 wordt de wachttijd van de bron gerespecteerd.
 /// </summary>
-public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time = null) : ITaskProvider, IDisposable
+public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time = null) : IRefreshableTaskProvider, IDisposable
 {
     /// <summary>Het protocol heeft één lijst; dit is het vaste ID ervan.</summary>
     public const string ListId = "tasks";
@@ -34,7 +34,7 @@ public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time 
     public TaskProviderCapabilities Capabilities { get; } = new(Importance: false, PaneOwnsTasks: false, Reorder: false);
 
     /// <summary>Hoe vaak er gekeken wordt of de lijst buiten DonkiePane is gewijzigd.</summary>
-    public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(60);
+    public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(60);
 
     public event EventHandler<string>? ListChanged;
     public event EventHandler<TaskProviderStatus>? StatusChanged;
@@ -177,19 +177,10 @@ public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time 
         }
     }
 
-    private async Task PollLoopAsync()
-    {
-        try
-        {
-            using var timer = new PeriodicTimer(PollInterval, _time);
-            while (await timer.WaitForNextTickAsync(_stop.Token))
-                await PollOnceAsync(_stop.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Afsluiten.
-        }
-    }
+    private Task PollLoopAsync() => PollLoop.RunAsync(() => PollInterval, PollOnceAsync, _time, _stop.Token);
+
+    /// <summary>De verversknop: nu meteen kijken in plaats van wachten op de volgende ronde.</summary>
+    public Task RefreshAsync(CancellationToken ct = default) => PollOnceAsync(ct);
 
     // ---------- Hulpjes ----------
 

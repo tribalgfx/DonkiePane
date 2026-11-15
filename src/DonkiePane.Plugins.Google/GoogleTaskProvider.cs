@@ -12,7 +12,7 @@ namespace DonkiePane.Plugins.Google;
 /// Google Taken kent geen "belangrijk" en geen tijdstip bij een deadline; die velden
 /// worden dus genegeerd (zie <see cref="Capabilities"/>).
 /// </summary>
-public sealed class GoogleTaskProvider(GoogleTasksClient client) : ITaskProvider, IDisposable
+public sealed class GoogleTaskProvider(GoogleTasksClient client) : IRefreshableTaskProvider, IDisposable
 {
     private readonly object _lock = new();
     private readonly Dictionary<string, List<TaskItem>> _cache = [];
@@ -24,7 +24,7 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : ITaskProvider
     public TaskProviderCapabilities Capabilities { get; } = new(Importance: false, PaneOwnsTasks: false);
 
     /// <summary>Hoe vaak er gekeken wordt of een lijst buiten DonkiePane is gewijzigd.</summary>
-    public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(60);
+    public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(60);
 
     public event EventHandler<string>? ListChanged;
     public event EventHandler<TaskProviderStatus>? StatusChanged;
@@ -160,19 +160,10 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : ITaskProvider
         }
     }
 
-    private async Task PollLoopAsync()
-    {
-        try
-        {
-            using var timer = new PeriodicTimer(PollInterval);
-            while (await timer.WaitForNextTickAsync(_stop.Token))
-                await PollOnceAsync(_stop.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Afsluiten.
-        }
-    }
+    private Task PollLoopAsync() => PollLoop.RunAsync(() => PollInterval, PollOnceAsync, null, _stop.Token);
+
+    /// <summary>De verversknop: nu meteen kijken in plaats van wachten op de volgende ronde.</summary>
+    public Task RefreshAsync(CancellationToken ct = default) => PollOnceAsync(ct);
 
     private async Task<List<TaskItem>> FetchAsync(string listId, CancellationToken ct)
     {

@@ -83,6 +83,22 @@
             <TextBlock x:Name="GridValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
+        <TextBlock Style="{StaticResource Heading}" Text="Synchronisatie" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
+                   Text="Hoe vaak DonkiePane kijkt of er op een ander apparaat iets is veranderd. Wijzigingen die je in DonkiePane maakt, gaan direct weg." />
+        <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="56" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="Controleren elke" />
+            <Slider x:Name="SyncSlider" Grid.Column="1" Minimum="15" Maximum="300"
+                    TickFrequency="15" IsSnapToTickEnabled="True" TickPlacement="BottomRight"
+                    ValueChanged="SyncSlider_ValueChanged" />
+            <TextBlock x:Name="SyncValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
         <TextBlock Style="{StaticResource Heading}" Text="Takenbronnen" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
                    Text="Waar een takenpane zijn taken vandaan haalt. Lokale taken werken altijd. Andere bronnen voeg je zelf toe: elke bron heeft zijn eigen gegevens, en tokens worden versleuteld op deze pc bewaard." />

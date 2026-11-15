@@ -58,7 +58,7 @@ public sealed class RestTaskSource : ITaskSource
 
             _http = new HttpClient(handler ?? CreateHandler(pin)) { Timeout = TimeSpan.FromSeconds(30) };
             _client = new RestTasksClient(_http, baseUri, () => context.Secrets.Get(RestTasksPlugin.TokenKey)!.Trim());
-            _provider = new RestTaskProvider(_client);
+            _provider = new RestTaskProvider(_client) { PollInterval = context.PollInterval };
         }
         catch (FormatException ex)
         {
