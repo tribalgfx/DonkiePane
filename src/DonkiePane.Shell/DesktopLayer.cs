@@ -71,6 +71,14 @@ public static class DesktopLayer
         return true;
     }
 
+    /// <summary>Waar het venster nu staat, in fysieke schermpixels (niet in WPF-eenheden).</summary>
+    public static DonkiePane.Core.PxRect? GetBounds(Window window)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero || !GetWindowRect(hwnd, out var r)) return null;
+        return new DonkiePane.Core.PxRect(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+    }
+
     /// <summary>Zet een venster op een positie in fysieke schermpixels, zonder het te activeren of de stapelvolgorde te wijzigen.</summary>
     public static void SetBounds(Window window, int x, int y, int width, int height)
     {

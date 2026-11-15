@@ -24,6 +24,17 @@ public sealed class Pane
     public double Height { get; set; } = 220;
     public bool IsRolledUp { get; set; }
 
+    /// <summary>Het scherm (bijv. <c>\\.\DISPLAY2</c>) waar dit pane voor het laatst stond.</summary>
+    public string? Monitor { get; set; }
+
+    /// <summary>
+    /// Plek in schermpixels van vóór het pane is teruggehaald omdat zijn scherm
+    /// wegviel. Komt <see cref="HomeMonitor"/> terug, dan gaat het pane daarheen.
+    /// </summary>
+    public int? HomeX { get; set; }
+    public int? HomeY { get; set; }
+    public string? HomeMonitor { get; set; }
+
     /// <summary>Naam van het thema (zie de themalijst in de app); onbekend = standaard.</summary>
     public string Theme { get; set; } = "";
 

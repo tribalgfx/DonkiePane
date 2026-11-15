@@ -20,7 +20,6 @@ public partial class App : Application
     private DesktopFolders? _desktop;
     private DispatcherTimer? _resyncTimer;
     private Forms.NotifyIcon? _trayIcon;
-    private Forms.ToolStripMenuItem? _hideIconsMenuItem;
     private ShellRestartWatcher? _shellWatcher;
     private GridOverlayWindow? _gridOverlay;
     private Mutex? _singleInstance;
@@ -52,6 +51,8 @@ public partial class App : Application
             ShowPane(pane);
         RefreshItems();
         ApplyDesktopIconsSetting();
+        EnsurePanesVisible();
+        WatchDisplays();
 
         _resyncTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
         _resyncTimer.Tick += (_, _) =>
@@ -68,6 +69,7 @@ public partial class App : Application
         _desktop.StartWatching();
 
         _trayIcon = CreateTrayIcon();
+        if (e.Args.Contains("--settings")) ShowSettings(); // handig voor een snelkoppeling
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
@@ -145,7 +147,12 @@ public partial class App : Application
             _gridOverlay ??= new GridOverlayWindow();
             _gridOverlay.ShowFor(window, _layout.GridSize);
         };
-        window.SizeMoveEnded += (_, _) => _gridOverlay?.Hide();
+        window.SizeMoveEnded += (_, _) =>
+        {
+            _gridOverlay?.Hide();
+            ClearHome(pane); // zelf verplaatst: niet meer terugzetten naar de oude plek
+            pane.Monitor = MonitorOf(window) ?? pane.Monitor;
+        };
         window.PaneChanged += (_, _) => SaveLayout();
         window.DeleteRequested += async (_, _) => await DeletePaneAsync(window);
 
@@ -217,6 +224,7 @@ public partial class App : Application
                 ShowPane(pane);
             RefreshItems();
             ApplyDesktopIconsSetting();
+            EnsurePanesVisible();
         };
         timer.Start();
     }
@@ -255,59 +263,19 @@ public partial class App : Application
         menu.Items.Add("Nieuw iconenpane", null, (_, _) => AddPane(new Pane()));
         menu.Items.Add("Nieuw takenpane", null, (_, _) => AddPane(Pane.NewTaskPane()));
         menu.Items.Add(new Forms.ToolStripSeparator());
-        _hideIconsMenuItem = new Forms.ToolStripMenuItem("Windows-iconen verbergen")
-        {
-            Checked = _layout.HideDesktopIcons,
-            CheckOnClick = true,
-        };
-        _hideIconsMenuItem.CheckedChanged += (_, _) =>
-        {
-            _layout.HideDesktopIcons = _hideIconsMenuItem.Checked;
-            DesktopIcons.SetVisible(!_layout.HideDesktopIcons);
-            SaveLayout();
-        };
-        menu.Items.Add(_hideIconsMenuItem);
-
-        var snapItem = new Forms.ToolStripMenuItem("Vastklikken op raster")
-        {
-            Checked = _layout.SnapToGrid,
-            CheckOnClick = true,
-        };
-        snapItem.CheckedChanged += (_, _) =>
-        {
-            _layout.SnapToGrid = snapItem.Checked;
-            SaveLayout();
-        };
-        menu.Items.Add(snapItem);
-
-        var autoStartItem = new Forms.ToolStripMenuItem("Starten met Windows")
-        {
-            Checked = AutoStart.IsEnabled(),
-            CheckOnClick = true,
-        };
-        autoStartItem.CheckedChanged += (_, _) =>
-        {
-            try
-            {
-                AutoStart.SetEnabled(autoStartItem.Checked);
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException)
-            {
-                MessageBox.Show(ex.Message, "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
-                autoStartItem.Checked = AutoStart.IsEnabled();
-            }
-        };
-        menu.Items.Add(autoStartItem);
+        menu.Items.Add("Instellingen…", null, (_, _) => ShowSettings());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Afsluiten", null, (_, _) => Shutdown());
 
-        return new Forms.NotifyIcon
+        var icon = new Forms.NotifyIcon
         {
             Icon = TrayIconFactory.CreatePlaidIcon(),
             Text = "DonkiePane",
             ContextMenuStrip = menu,
             Visible = true,
         };
+        icon.DoubleClick += (_, _) => ShowSettings();
+        return icon;
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -323,6 +291,7 @@ public partial class App : Application
 
         SaveLayout();
         RestoreDesktopIcons();
+        StopWatchingDisplays();
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
         _singleInstance?.Dispose();
