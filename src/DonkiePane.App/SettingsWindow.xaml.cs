@@ -93,8 +93,10 @@ public partial class SettingsWindow : Window
 
     private void SyncSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        SyncValue.Text = FormatSeconds(SyncSlider.Value);
+        // Eerst deze controle: het schuifje vuurt al tijdens het opbouwen van het venster, als de rest er nog niet is.
+        // Eerst deze controle: het schuifje vuurt al tijdens het opbouwen van het venster, als de rest er nog niet is.
         if (_loading) return;
+        SyncValue.Text = FormatSeconds(SyncSlider.Value);
         _layout.SyncSeconds = (int)SyncSlider.Value;
         _save();
         _sources.SetPollInterval(_layout.SyncInterval); // geldt ook voor bronnen die al draaien

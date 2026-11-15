@@ -65,9 +65,21 @@ public sealed class SourceEditWindow : Window
 
         foreach (var field in _plugin.Fields)
         {
-            panel.Children.Add(Label(field.Label + (field.Required ? "" : " (optioneel)")));
+            // Een aan/uit-keuze is een vinkje met zijn eigen label; alle andere velden hebben een label erboven.
+            if (field.Kind != SettingKind.Bool)
+                panel.Children.Add(Label(field.Label + (field.Required ? "" : " (optioneel)")));
+
             Control input;
-            if (field.Kind == SettingKind.Secret)
+            if (field.Kind == SettingKind.Bool)
+            {
+                input = new CheckBox
+                {
+                    Content = new TextBlock { Text = field.Label, Foreground = Text, TextWrapping = TextWrapping.Wrap },
+                    IsChecked = string.Equals(_connection.Values.GetValueOrDefault(field.Key, ""), "true", StringComparison.OrdinalIgnoreCase),
+                    Margin = new Thickness(0, 14, 0, 0),
+                };
+            }
+            else if (field.Kind == SettingKind.Secret)
             {
                 input = new PasswordBox { Background = new SolidColorBrush(Color.FromArgb(0x26, 255, 255, 255)), Foreground = Text, BorderThickness = new Thickness(0), Padding = new Thickness(6, 5, 6, 5) };
             }
@@ -148,6 +160,7 @@ public sealed class SourceEditWindow : Window
 
     private string Typed(SettingField field) => _inputs[field.Key] switch
     {
+        CheckBox box => box.IsChecked == true ? "true" : "false",
         PasswordBox box => box.Password.Trim(),
         TextBox box => box.Text.Trim(),
         _ => "",

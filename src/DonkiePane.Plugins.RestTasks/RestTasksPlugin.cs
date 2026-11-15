@@ -1,7 +1,7 @@
 using System.Net.Http;
-using System.Net.Security;
 using DonkiePane.Tasks;
 using DonkiePane.Tasks.Plugins;
+using DonkiePane.Tasks.Security;
 
 namespace DonkiePane.Plugins.RestTasks;
 
@@ -56,7 +56,7 @@ public sealed class RestTaskSource : ITaskSource
             var token = context.Secrets.Get(RestTasksPlugin.TokenKey);
             if (string.IsNullOrWhiteSpace(token)) throw new FormatException("Vul het token in.");
 
-            _http = new HttpClient(handler ?? CreateHandler(pin)) { Timeout = TimeSpan.FromSeconds(30) };
+            _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin)) { Timeout = TimeSpan.FromSeconds(30) };
             _client = new RestTasksClient(_http, baseUri, () => context.Secrets.Get(RestTasksPlugin.TokenKey)!.Trim());
             _provider = new RestTaskProvider(_client) { PollInterval = context.PollInterval };
         }
@@ -110,16 +110,5 @@ public sealed class RestTaskSource : ITaskSource
             throw new FormatException("Het adres moet met https:// beginnen. Een token mag nooit onversleuteld over het netwerk.");
         return uri;
     }
-
-    private static SocketsHttpHandler CreateHandler(string? pin) => new()
-    {
-        ConnectTimeout = TimeSpan.FromSeconds(10),
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-        SslOptions = new SslClientAuthenticationOptions
-        {
-            // Met een pin: alleen dat ene certificaat. Zonder pin: de gewone controle van Windows (nooit "alles goed").
-            RemoteCertificateValidationCallback = (_, certificate, _, errors) => CertPin.Validate(certificate, errors, pin),
-        },
-    };
 }
 

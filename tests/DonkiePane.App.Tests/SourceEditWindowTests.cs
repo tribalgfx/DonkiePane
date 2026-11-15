@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using DonkiePane.App;
 using DonkiePane.Plugins.Google;
+using DonkiePane.Plugins.HomeAssistant;
 using DonkiePane.Plugins.RestTasks;
 using DonkiePane.Tasks.Plugins;
 
@@ -57,9 +58,11 @@ public sealed class SourceEditWindowTests : TempData
             root.Arrange(new Rect(root.DesiredSize));
             root.UpdateLayout();
 
-            // Een veld per instelling, een knop per actie plus Opslaan, Verbinding testen en Sluiten.
+            // Een veld per instelling (een aan/uit-keuze is een vinkje), een knop per actie plus Opslaan, Verbinding testen en Sluiten.
+            var checkboxes = plugin.Fields.Count(f => f.Kind == SettingKind.Bool);
             var inputs = Descendants<TextBox>(root).Count() + Descendants<PasswordBox>(root).Count();
-            Assert.Equal(plugin.Fields.Count + 1, inputs); // + de naam
+            Assert.Equal(plugin.Fields.Count - checkboxes + 1, inputs); // + de naam
+            Assert.Equal(checkboxes, Descendants<CheckBox>(root).Count());
             Assert.Equal(plugin.Actions.Count + 3, Descendants<Button>(root).Count());
             Assert.Equal(plugin.Fields.Count(f => f.Kind == SettingKind.Secret), Descendants<PasswordBox>(root).Count());
 
@@ -84,6 +87,10 @@ public sealed class SourceEditWindowTests : TempData
 
     [Fact]
     public void The_window_for_the_google_source_builds_with_its_real_fields_and_buttons() => Render(new GoogleSourcePlugin(), "bron-google");
+
+    [Fact]
+    public void The_window_for_home_assistant_builds_with_its_checkbox_for_unencrypted_connections() =>
+        Render(new HomeAssistantPlugin(), "bron-homeassistant");
 
     [Fact]
     public void A_fake_plugin_without_buttons_builds_too() => Render(new FakePlugin(), "bron-proef");

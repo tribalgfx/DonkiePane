@@ -22,6 +22,7 @@
     <!-- Alleen om de echte invoervelden van de plug-ins in het instellingenvenster te kunnen tekenen. -->
     <ProjectReference Include="..\..\src\DonkiePane.Plugins.Google\DonkiePane.Plugins.Google.csproj" />
     <ProjectReference Include="..\..\src\DonkiePane.Plugins.RestTasks\DonkiePane.Plugins.RestTasks.csproj" />
+    <ProjectReference Include="..\..\src\DonkiePane.Plugins.HomeAssistant\DonkiePane.Plugins.HomeAssistant.csproj" />
   </ItemGroup>
 
 </Project>

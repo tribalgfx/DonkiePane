@@ -42,7 +42,7 @@ Write-Host "Publiceren naar $target ..."
 if ($LASTEXITCODE -ne 0) { throw 'Publiceren is mislukt.' }
 
 # Bronnen zijn plug-ins in plugins\<naam>. Het programma verwijst er niet naar; hij laadt ze uit deze map.
-$plugins = [ordered]@{ google = 'DonkiePane.Plugins.Google'; rest = 'DonkiePane.Plugins.RestTasks' }
+$plugins = [ordered]@{ google = 'DonkiePane.Plugins.Google'; rest = 'DonkiePane.Plugins.RestTasks'; homeassistant = 'DonkiePane.Plugins.HomeAssistant' }
 foreach ($name in $plugins.Keys) {
     $project = $plugins[$name]
     $dest = Join-Path $target "plugins\$name"
