@@ -44,6 +44,21 @@ public sealed class Pane
     /// <summary>Naam van het thema (zie de themalijst in de app); onbekend = standaard.</summary>
     public string Theme { get; set; } = "";
 
+    /// <summary>Eigen kleur ("#RRGGBB") die het thema vervangt; <c>null</c> = kleur van het thema.</summary>
+    public string? CustomColor { get; set; }
+
+    public const double DefaultOpacity = 0.7;
+    public const double MinOpacity = 0.2;
+
+    /// <summary>Hoe ondoorzichtig de achtergrond is (1 = massief, 0,2 = erg doorzichtig). De tekst blijft altijd helder.</summary>
+    public double Opacity { get; set; } = DefaultOpacity;
+
+    /// <summary><see cref="Opacity"/> binnen de grenzen (een kapot of handmatig aangepast bestand mag niets onleesbaar maken).</summary>
+    public double EffectiveOpacity => double.IsNaN(Opacity) ? DefaultOpacity : Math.Clamp(Opacity, MinOpacity, 1.0);
+
+    /// <summary>Toon het ruitpatroon van het thema. Standaard uit: rustig en zakelijk.</summary>
+    public bool ShowPattern { get; set; }
+
     /// <summary>
     /// De Inbox vangt bureaubladitems op die nog in geen enkel pane staan.
     /// Er is er altijd precies één.

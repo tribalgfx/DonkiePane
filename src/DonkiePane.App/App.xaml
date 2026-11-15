@@ -8,6 +8,7 @@
         <SolidColorBrush x:Key="PaneTitleBackground" Color="#CCB3262D" />
         <SolidColorBrush x:Key="PaneBorder" Color="#66FFFFFF" />
         <SolidColorBrush x:Key="PaneText" Color="#FFF5F0E8" />
+        <SolidColorBrush x:Key="PaneTitleText" Color="#FFF5F0E8" />
         <SolidColorBrush x:Key="PaneMutedText" Color="#A6F5F0E8" />
         <SolidColorBrush x:Key="PaneInputBackground" Color="#26FFFFFF" />
         <SolidColorBrush x:Key="PaneAccent" Color="#FFF2C14E" />
