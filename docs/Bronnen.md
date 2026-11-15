@@ -14,6 +14,7 @@ Windows-account op deze pc kan ze lezen). Er wordt niets gedeeld en niets in git
 |---|---|
 | **Taken via REST (Tasks REST v1)** | Een dashboard of dienst die het protocol hieronder spreekt. Jij vult adres, token en eventueel een vingerafdruk in. |
 | **Google Taken** | Je eigen Google Taken. Je maakt zelf een Google-koppeling (zie verderop). |
+| **Home Assistant (to-do lijsten)** | De to-do lijsten uit je eigen Home Assistant. Je maakt daar een toegangstoken (zie verderop). |
 
 Een bron toevoegen: **Toevoegen…**, kies het soort, vul de gegevens in, **Verbinding testen**, **Opslaan**.
 Daarna kies je bij **Nieuw takenpane** (tray-icoon) de bron en, als die meer lijsten heeft, de lijst.
@@ -69,6 +70,37 @@ betaalaccount (voor zover ik heb kunnen nagaan; Google vraagt er bij het aanzett
 
 Een Workspace-beheerder kan externe apps blokkeren. Krijg je een melding met `403`, vraag de beheerder dan de
 client toe te staan (Admin-console → Beveiliging → API-controles).
+
+## Home Assistant instellen
+
+1. Maak in Home Assistant een **lang-levend toegangstoken**: je profiel, tabblad **Beveiliging**, onderaan.
+2. In DonkiePane: **Instellingen → Takenbronnen → Toevoegen → Home Assistant (to-do lijsten)**.
+3. Vul het adres in (bijvoorbeeld `https://ha.voorbeeld.nl`) en plak het token.
+4. Draait je Home Assistant op je eigen netwerk **zonder https** (de standaard is `http://…:8123`), zet dan **Onversleutelde
+   verbinding (http) toestaan** aan. Het token gaat dan onversleuteld over je netwerk: doe dit alleen voor een adres binnen je
+   huis, nooit voor een adres buiten je huis. Zonder dat vinkje weigert DonkiePane een http-adres.
+5. Kies **Verbinding testen**. Daarna kies je bij **Nieuw takenpane** de lijst die je wilt tonen; elk pane toont één lijst.
+
+Wat Home Assistant niet kent, kent DonkiePane hier ook niet: geen volgorde (eerst wat een deadline heeft, dan de rest in de
+volgorde van Home Assistant), geen "belangrijk", en een deadline is alleen een datum (een tijdstip valt weg). Er is geen
+snelle controle zoals bij het REST-protocol: elke ronde wordt de lijst opgehaald en vergeleken, wat binnen je eigen netwerk
+niets kost. Een deadline wissen stuurt `due_date: null`; of Home Assistant dat accepteert, staat niet in de documentatie.
+
+## Synchroniseren en offline werken
+
+- **Van andere apparaten naar DonkiePane:** DonkiePane kijkt elke 60 seconden of er iets veranderd is. Dat stel je in bij
+  **Instellingen → Synchronisatie** (15 seconden tot 5 minuten) en het geldt direct. Met de knop **↻** naast het invoervak
+  van een pane kijk je meteen.
+- **Van DonkiePane naar de bron:** direct.
+- **Geen verbinding:** je ziet de laatst bekende taken met een melding. Wat je dan toevoegt, aanpast, afvinkt of verwijdert
+  blijft direct zichtbaar, wordt bewaard (in `%APPDATA%\DonkiePane\queue`, dus ook na een herstart) en gaat in dezelfde volgorde
+  naar de bron zodra die weer bereikbaar is.
+- **Wat niet wordt bewaard:** taken verplaatsen (een positie zegt niets meer als de lijst intussen veranderd is), en een
+  wijziging die de bron definitief weigert (bijvoorbeeld voor een taak die elders is verwijderd): die wordt weggelaten, met een
+  melding. Een geweigerd token laat de wachtrij staan tot je het verbetert.
+- **Let op:** een taak die je offline aanmaakt en meteen afvinkt, komt bij de bron open aan; DonkiePane meldt dat. En een
+  Home Assistant die precies tijdens het toevoegen wegvalt, kan een taak dubbel krijgen, omdat die bron geen eigen id kent.
+- **Subtaken** uit Google Taken staan ingesprongen onder hun hoofdtaak. Verplaatsen blijft binnen dezelfde hoofdtaak.
 
 ## Eigen plug-ins
 

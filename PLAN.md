@@ -48,7 +48,7 @@ DonkiePane/
 | 4. Taakpane | Taken toevoegen, afvinken, bewerken, ordenen, via `LocalTaskProvider` | Dagelijks bruikbaar |
 | 5. Ruitjes-identiteit | Raster met snappen, theedoek-thema's, oprollen | Het voelt als DonkiePane |
 | 6. Afwerking | Starten met Windows, meerdere monitoren, DPI, instellingen, installer | Kan dagelijks draaien |
-| 7. Takenbronnen als plug-ins | Contract + lader, bronnenbeheer in Instellingen, generieke REST-bron, Google Taken (klaar); Home Assistant (nog te doen) | Elke gebruiker voegt zelf bronnen toe |
+| 7. Takenbronnen als plug-ins | Contract + lader, bronnenbeheer in Instellingen, generieke REST-bron, Google Taken, Home Assistant, instelbare synchronisatie met verversknop, offline wachtrij, subtaken | Elke gebruiker voegt zelf bronnen toe (klaar) |
 
 ## Risico's
 
@@ -62,11 +62,14 @@ Zie [docs/Bronnen.md](docs/Bronnen.md) voor het gebruik. Samengevat:
 
 - **Eén algemene app.** Er is geen bron ingebouwd en er staat geen adres of naam van iemands eigen dashboard in de app. Wat een gebruiker gebruikt, vult hij zelf in.
 - **Bronnen zijn plug-ins** (`DonkiePane.Plugins.*.dll`) uit `plugins\` naast het programma en uit `%APPDATA%\DonkiePane\plugins`. Alleen daaruit, nooit van internet. Een plug-in beschrijft zijn invoervelden; de app tekent het formulier en bewaart geheimen versleuteld (DPAPI, `secrets\`), nooit in `sources.json`.
-- **Meegeleverd:** Taken via REST (Tasks REST v1, met optionele vastgepinde certificaat-vingerafdruk) en Google Taken (de gebruiker maakt zelf een OAuth-client; er wordt geen client-ID meegeleverd).
+- **Meegeleverd:** Taken via REST (Tasks REST v1, met optionele vastgepinde certificaat-vingerafdruk), Google Taken (de gebruiker maakt zelf een OAuth-client; er wordt geen client-ID meegeleverd) en Home Assistant (to-do lijsten; http alleen na een uitdrukkelijke keuze).
+- **Synchronisatie:** instelbaar interval (standaard 60 s, 15 s tot 5 min) en een verversknop. Een wachtrij om elke gekoppelde bron bewaart wat je offline doet, in een bestand per verbinding, en verstuurt het in volgorde zodra het kan.
 - **Gedrag naar de bron toe:** na een 401 stopt DonkiePane met verzoeken (een bron kan na een paar mislukte pogingen alles blokkeren), bij 429 wacht het de opgegeven tijd, elke minuut volstaat één vraag met de revisie (304).
 - **Microsoft To Do: vervallen.** Een persoonlijk hotmail-account heeft geen Entra-tenant en kan dus geen app registreren.
 
-Nog te doen: een Home Assistant-bron (todo-entiteiten). Bekend en nog niet gedaan: wijzigingen die je offline maakt worden niet in een wachtrij bewaard (een mislukte wijziging geeft een melding en de lijst wordt opnieuw opgehaald), en subtaken van Google worden vlak getoond.
+Bekende beperkingen: taken verplaatsen wordt niet offline bewaard; een taak die offline wordt aangemaakt en meteen afgevinkt komt open aan (met een melding); bij Home Assistant kan een toevoeging die precies tijdens een netwerkfout gebeurt dubbel aankomen; of Home Assistant een deadline wist met `due_date: null` staat niet in de documentatie en is niet met een echte Home Assistant geprobeerd.
+
 ## Open punten
 
-- Een Home Assistant-bron toevoegen.
+- De Home Assistant-bron proberen met een echte Home Assistant (door de gebruiker, met een eigen token).
+- Een installatiepakket en een eerste-start-scherm voor andere gebruikers.

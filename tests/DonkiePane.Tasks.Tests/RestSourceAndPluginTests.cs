@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using DonkiePane.Plugins.Google;
 using DonkiePane.Plugins.RestTasks;
 using DonkiePane.Tasks.Plugins;
+using DonkiePane.Tasks.Security;
 
 namespace DonkiePane.Tasks.Tests;
 
@@ -257,6 +258,19 @@ public sealed class PluginLoaderTests : IDisposable
         // Het type komt uit de eigen laadcontext van de plug-in, het contract van de app.
         Assert.NotSame(typeof(RestTasksPlugin), rest.GetType());
         Assert.IsAssignableFrom<ITaskSourcePlugin>(rest);
+    }
+
+    [Fact]
+    public void The_home_assistant_plugin_loads_from_a_folder_too()
+    {
+        Install("homeassistant", typeof(DonkiePane.Plugins.HomeAssistant.HomeAssistantPlugin));
+
+        var result = PluginLoader.Load([Path.Combine(_root, "plugins")]);
+
+        Assert.Empty(result.Errors);
+        var plugin = Assert.Single(result.Plugins).Plugin;
+        Assert.Equal("home-assistant-todo", plugin.TypeId);
+        Assert.Contains(plugin.Fields, f => f.Kind == SettingKind.Bool);
     }
 
     [Fact]

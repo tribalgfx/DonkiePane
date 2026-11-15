@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace DonkiePane.Plugins.RestTasks;
+namespace DonkiePane.Tasks.Security;
 
 /// <summary>
 /// Een zelfondertekend certificaat vastpinnen op zijn SHA-256-vingerafdruk, in plaats van de
@@ -44,4 +44,19 @@ public static class CertPin
     /// <summary>Voor in een foutmelding: "AA:BB:…".</summary>
     public static string Format(string hex) =>
         string.Join(':', Enumerable.Range(0, hex.Length / 2).Select(i => hex.Substring(i * 2, 2).ToUpper(CultureInfo.InvariantCulture)));
+}
+
+/// <summary>De HTTP-verbinding die bronnen gebruiken: met een pin alleen dat ene certificaat, zonder pin de gewone controle.</summary>
+public static class PinnedHttp
+{
+    public static SocketsHttpHandler CreateHandler(string? pin) => new()
+    {
+        ConnectTimeout = TimeSpan.FromSeconds(10),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        SslOptions = new SslClientAuthenticationOptions
+        {
+            // Met een pin: alleen dat ene certificaat. Zonder pin: de gewone controle van Windows (nooit "alles goed").
+            RemoteCertificateValidationCallback = (_, certificate, _, errors) => CertPin.Validate(certificate, errors, pin),
+        },
+    };
 }

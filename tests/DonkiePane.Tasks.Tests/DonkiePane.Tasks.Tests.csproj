@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\src\DonkiePane.Tasks\DonkiePane.Tasks.csproj" />
     <ProjectReference Include="..\..\src\DonkiePane.Plugins.Google\DonkiePane.Plugins.Google.csproj" />
     <ProjectReference Include="..\..\src\DonkiePane.Plugins.RestTasks\DonkiePane.Plugins.RestTasks.csproj" />
+    <ProjectReference Include="..\..\src\DonkiePane.Plugins.HomeAssistant\DonkiePane.Plugins.HomeAssistant.csproj" />
   </ItemGroup>
 
 </Project>

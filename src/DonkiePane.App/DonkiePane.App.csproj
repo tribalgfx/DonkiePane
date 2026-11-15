@@ -32,15 +32,18 @@
   <ItemGroup>
     <ProjectReference Include="..\DonkiePane.Plugins.Google\DonkiePane.Plugins.Google.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\DonkiePane.Plugins.RestTasks\DonkiePane.Plugins.RestTasks.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\DonkiePane.Plugins.HomeAssistant\DonkiePane.Plugins.HomeAssistant.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <Target Name="CopyPluginsToOutput" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
     <ItemGroup>
       <_GoogleFiles Include="..\DonkiePane.Plugins.Google\bin\$(Configuration)\net10.0\DonkiePane.Plugins.Google.*" />
       <_RestFiles Include="..\DonkiePane.Plugins.RestTasks\bin\$(Configuration)\net10.0\DonkiePane.Plugins.RestTasks.*" />
+      <_HomeAssistantFiles Include="..\DonkiePane.Plugins.HomeAssistant\bin\$(Configuration)\net10.0\DonkiePane.Plugins.HomeAssistant.*" />
     </ItemGroup>
     <Copy SourceFiles="@(_GoogleFiles)" DestinationFolder="$(OutDir)plugins\google" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_RestFiles)" DestinationFolder="$(OutDir)plugins\rest" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_HomeAssistantFiles)" DestinationFolder="$(OutDir)plugins\homeassistant" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
