@@ -35,7 +35,7 @@ internal static class Responses
     public static HttpResponseMessage NoContent() => new(HttpStatusCode.NoContent);
 }
 
-internal sealed class MemoryTokenStore(string? initial = null) : DonkiePane.Tasks.Google.ITokenStore
+internal sealed class MemoryTokenStore(string? initial = null) : DonkiePane.Plugins.Google.ITokenStore
 {
     private string? _token = initial;
     public string? Load() => _token;
@@ -48,3 +48,4 @@ internal sealed class TestTime : TimeProvider
     public DateTimeOffset Now { get; set; } = new(2026, 11, 15, 12, 0, 0, TimeSpan.Zero);
     public override DateTimeOffset GetUtcNow() => Now;
 }
+

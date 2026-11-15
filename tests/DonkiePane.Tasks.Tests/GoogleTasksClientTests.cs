@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json.Nodes;
-using DonkiePane.Tasks.Google;
+using DonkiePane.Plugins.Google;
 
 namespace DonkiePane.Tasks.Tests;
 
@@ -208,3 +208,4 @@ public sealed class GoogleTasksClientTests
         Assert.Equal("2026-01-05T00:00:00.000Z", GoogleTasksClient.DueString(new DateOnly(2026, 1, 5)));
     }
 }
+

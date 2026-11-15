@@ -1,6 +1,7 @@
+using DonkiePane.Tasks;
 using System.Text.Json;
 
-namespace DonkiePane.Tasks.Google;
+namespace DonkiePane.Plugins.Google;
 
 /// <summary>
 /// Inloggen bij Google en toegangstokens ophalen. Eén keer in de browser inloggen;
@@ -181,3 +182,5 @@ public sealed class GoogleAuth(HttpClient http, ITokenStore store, Func<GoogleCl
 
     private sealed class InvalidGrantException : Exception;
 }
+
+

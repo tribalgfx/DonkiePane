@@ -236,6 +236,7 @@ public partial class TasksView : UserControl
     private void Row_MouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed || IsInsideButton(e.OriginalSource)) return;
+        if (!_provider.Capabilities.Reorder) return; // deze bron kent geen volgorde: DonkiePane sorteert zelf
         if (RowOf(sender) is not { IsEditing: false, IsCompleted: false } row) return;
 
         var delta = e.GetPosition(this) - _dragStart;

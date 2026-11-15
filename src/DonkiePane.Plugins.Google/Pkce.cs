@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace DonkiePane.Tasks.Google;
+namespace DonkiePane.Plugins.Google;
 
 /// <summary>
 /// PKCE (RFC 7636): beschermt het inloggen bij apps die geen geheim kunnen bewaren.
@@ -24,3 +24,4 @@ public static class Pkce
     internal static string Base64Url(byte[] bytes) =>
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
+

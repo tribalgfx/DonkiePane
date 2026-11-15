@@ -83,24 +83,17 @@
             <TextBlock x:Name="GridValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
-        <TextBlock Style="{StaticResource Heading}" Text="Google Taken" />
-        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
-                   Text="Voor takenpanes die aan Google Taken gekoppeld zijn. Het client-ID en het secret komen uit Google Cloud (een OAuth-client van het type Desktop app). Je wachtwoord vul je alleen bij Google zelf in, in je browser." />
-
-        <TextBlock Text="Client-ID" Margin="0,10,0,3" />
-        <TextBox x:Name="GoogleClientId" Style="{StaticResource PaneTextBox}" Padding="6,5" />
-
-        <TextBlock Text="Client-secret" Margin="0,10,0,3" />
-        <PasswordBox x:Name="GoogleSecret" Background="#26FFFFFF" Foreground="#FFF5F0E8" BorderThickness="0" Padding="6,5" />
-        <TextBlock x:Name="GoogleSecretHint" Style="{StaticResource Hint}" Margin="0,3,0,0" />
-
+        <TextBlock Style="{StaticResource Heading}" Text="Takenbronnen" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
+                   Text="Waar een takenpane zijn taken vandaan haalt. Lokale taken werken altijd. Andere bronnen voeg je zelf toe: elke bron heeft zijn eigen gegevens, en tokens worden versleuteld op deze pc bewaard." />
+        <ListBox x:Name="SourcesList" Height="96" Background="#26FFFFFF" BorderThickness="0" Foreground="#FFF5F0E8"
+                 DisplayMemberPath="Label" SelectionChanged="Sources_SelectionChanged" />
         <StackPanel Orientation="Horizontal">
-            <Button Style="{StaticResource Action}" Click="GoogleSave_Click" Content="Opslaan" />
-            <Button x:Name="GoogleSignInButton" Style="{StaticResource Action}" Click="GoogleSignIn_Click" Content="Inloggen" />
-            <Button x:Name="GoogleSignOutButton" Style="{StaticResource Action}" Click="GoogleSignOut_Click" Content="Uitloggen" />
-            <Button x:Name="GoogleClearSecretButton" Style="{StaticResource Action}" Click="GoogleClearSecret_Click" Content="Secret wissen" />
+            <Button Style="{StaticResource Action}" Click="AddSource_Click" Content="Toevoegen…" />
+            <Button x:Name="EditSourceButton" Style="{StaticResource Action}" Click="EditSource_Click" Content="Bewerken…" />
+            <Button x:Name="RemoveSourceButton" Style="{StaticResource Action}" Click="RemoveSource_Click" Content="Verwijderen" />
         </StackPanel>
-        <TextBlock x:Name="GoogleStatus" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+        <TextBlock x:Name="PluginsInfo" Style="{StaticResource Hint}" Margin="0,8,0,0" />
 
         <TextBlock Style="{StaticResource Heading}" Text="Schermen" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,0" Foreground="{StaticResource Muted}"
@@ -119,3 +112,4 @@
     </StackPanel>
     </ScrollViewer>
 </Window>
+
