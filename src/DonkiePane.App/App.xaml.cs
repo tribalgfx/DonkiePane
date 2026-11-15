@@ -8,27 +8,122 @@ namespace DonkiePane.App;
 
 public partial class App : Application
 {
-    private Forms.NotifyIcon? _trayIcon;
-    private ShellRestartWatcher? _shellWatcher;
+    private const int IconPixelSize = 96; // scherp tot 200% schaling bij 48 DIP
+
     private readonly LayoutStore _store = new(LayoutStore.DefaultPath);
-    private Layout _layout = new();
     private readonly List<PaneWindow> _windows = [];
+    private readonly Dictionary<string, ItemView> _itemCache = new(StringComparer.OrdinalIgnoreCase);
+    private Layout _layout = new();
+    private DesktopFolders? _desktop;
+    private DispatcherTimer? _resyncTimer;
+    private Forms.NotifyIcon? _trayIcon;
+    private Forms.ToolStripMenuItem? _hideIconsMenuItem;
+    private ShellRestartWatcher? _shellWatcher;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        InstallCrashSafety();
 
         _layout = _store.Load();
-        if (_layout.Panes.Count == 0)
-            _layout.Panes.Add(new Pane { Title = "Welkom bij DonkiePane" });
+        _desktop = new DesktopFolders();
+        LayoutEditor.Sync(_layout, _desktop.EnumerateItems());
+        SaveLayout();
 
         foreach (var pane in _layout.Panes)
             ShowPane(pane);
+        RefreshItems();
+        ApplyDesktopIconsSetting();
+
+        _resyncTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        _resyncTimer.Tick += (_, _) =>
+        {
+            _resyncTimer.Stop();
+            Resync();
+        };
+        _desktop.Changed += (_, _) => Dispatcher.InvokeAsync(ScheduleResync);
+        _desktop.Renamed += (_, ids) => Dispatcher.InvokeAsync(() =>
+        {
+            _itemCache.Remove(ids.OldId);
+            LayoutEditor.Rename(_layout, ids.OldId, ids.NewId);
+        });
+        _desktop.StartWatching();
 
         _trayIcon = CreateTrayIcon();
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
+    }
+
+    // ---------- Bureaubladitems ----------
+
+    private void ScheduleResync()
+    {
+        // Meerdere wijzigingen kort na elkaar (bijv. een installatie) samen verwerken.
+        _resyncTimer!.Stop();
+        _resyncTimer.Start();
+    }
+
+    private void Resync()
+    {
+        var items = _desktop!.EnumerateItems();
+        foreach (var stale in _itemCache.Keys.Except(items, StringComparer.OrdinalIgnoreCase).ToList())
+            _itemCache.Remove(stale);
+
+        LayoutEditor.Sync(_layout, items);
+        SaveLayout();
+        RefreshItems();
+    }
+
+    private void RefreshItems()
+    {
+        foreach (var window in _windows)
+            window.SetItems(window.Pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
+    }
+
+    private ItemView? GetItemView(string id)
+    {
+        if (_itemCache.TryGetValue(id, out var cached)) return cached;
+        var path = _desktop!.ResolvePath(id);
+        if (path is null) return null;
+
+        var view = new ItemView(id, path, ShellItemInfo.GetDisplayName(path), ShellItemInfo.GetIcon(path, IconPixelSize));
+        _itemCache[id] = view;
+        return view;
+    }
+
+    // ---------- Panes ----------
+
+    private void AddPane()
+    {
+        var offset = 30 * (_layout.Panes.Count % 10);
+        var pane = new Pane { Left = 500 + offset, Top = 140 + offset };
+        _layout.Panes.Add(pane);
+        ShowPane(pane).SetItems([]);
+        SaveLayout();
+    }
+
+    private PaneWindow ShowPane(Pane pane)
+    {
+        var window = new PaneWindow(pane);
+        window.PaneChanged += (_, _) => SaveLayout();
+        window.DeleteRequested += (_, _) =>
+        {
+            if (!LayoutEditor.DeletePane(_layout, pane.Id)) return;
+            _windows.Remove(window);
+            window.Close();
+            SaveLayout();
+            RefreshItems();
+        };
+        window.ItemDropped += (_, drop) =>
+        {
+            if (!LayoutEditor.MoveItem(_layout, drop.ItemId, pane.Id, drop.Index)) return;
+            SaveLayout();
+            RefreshItems();
+        };
+        _windows.Add(window);
+        window.Show();
+        return window;
     }
 
     /// <summary>
@@ -47,14 +142,56 @@ public partial class App : Application
             _windows.Clear();
             foreach (var pane in _layout.Panes)
                 ShowPane(pane);
+            RefreshItems();
+            ApplyDesktopIconsSetting();
         };
         timer.Start();
     }
+
+    private void SaveLayout() => _store.Save(_layout);
+
+    // ---------- Windows-iconen ----------
+
+    /// <summary>Bij starten en na een herstart van Verkenner.</summary>
+    private void ApplyDesktopIconsSetting()
+    {
+        if (_layout.HideDesktopIcons) DesktopIcons.SetVisible(false);
+    }
+
+    /// <summary>
+    /// Bij afsluiten of crash: zolang DonkiePane de iconen beheert, zet het ze
+    /// terug. Dat geldt ook als een vorige keer DonkiePane hard is gestopt.
+    /// </summary>
+    private void RestoreDesktopIcons()
+    {
+        if (_layout.HideDesktopIcons) DesktopIcons.SetVisible(true);
+    }
+
+    /// <summary>Bij een crash de Windows-iconen altijd terugzetten.</summary>
+    private void InstallCrashSafety()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, _) => RestoreDesktopIcons();
+        DispatcherUnhandledException += (_, _) => RestoreDesktopIcons();
+    }
+
+    // ---------- Tray ----------
 
     private Forms.NotifyIcon CreateTrayIcon()
     {
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Nieuw pane", null, (_, _) => AddPane());
+        _hideIconsMenuItem = new Forms.ToolStripMenuItem("Windows-iconen verbergen")
+        {
+            Checked = _layout.HideDesktopIcons,
+            CheckOnClick = true,
+        };
+        _hideIconsMenuItem.CheckedChanged += (_, _) =>
+        {
+            _layout.HideDesktopIcons = _hideIconsMenuItem.Checked;
+            DesktopIcons.SetVisible(!_layout.HideDesktopIcons);
+            SaveLayout();
+        };
+        menu.Items.Add(_hideIconsMenuItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Afsluiten", null, (_, _) => Shutdown());
 
@@ -67,33 +204,11 @@ public partial class App : Application
         };
     }
 
-    private void AddPane()
-    {
-        var pane = new Pane { Left = 140 + 30 * _layout.Panes.Count, Top = 140 + 30 * _layout.Panes.Count };
-        _layout.Panes.Add(pane);
-        ShowPane(pane);
-        SaveLayout();
-    }
-
-    private void ShowPane(Pane pane)
-    {
-        var window = new PaneWindow(pane);
-        window.PaneChanged += (_, _) => SaveLayout();
-        window.PaneDeleted += (_, _) =>
-        {
-            _layout.Panes.Remove(pane);
-            _windows.Remove(window);
-            SaveLayout();
-        };
-        _windows.Add(window);
-        window.Show();
-    }
-
-    private void SaveLayout() => _store.Save(_layout);
-
     protected override void OnExit(ExitEventArgs e)
     {
         SaveLayout();
+        RestoreDesktopIcons();
+        _desktop?.Dispose();
         _shellWatcher?.Dispose();
         if (_trayIcon is not null)
         {
