@@ -99,8 +99,12 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : IRefreshableT
             tasks = _cache.TryGetValue(listId, out var cached) ? Clones(cached).ToList() : [];
         if (tasks.Count == 0) tasks = (await FetchAsync(listId, ct)).ToList();
 
-        var previous = TaskOrdering.PreviousSiblingId(TaskOrdering.Ordered(tasks).ToList(), taskId, newIndex);
-        await client.MoveAsync(listId, taskId, previous, ct);
+        // Alleen verplaatsen binnen dezelfde "familie": een subtaak blijft onder zijn hoofdtaak (en gaat dus met
+        // zijn ouder mee), een gewone taak zoekt zijn buur tussen de gewone taken.
+        var ordered = TaskOrdering.Ordered(tasks).ToList();
+        var moved = ordered.FirstOrDefault(t => t.Id == taskId);
+        var previous = TaskOrdering.PreviousSiblingId(ordered, taskId, newIndex, sameParent: true);
+        await client.MoveAsync(listId, taskId, previous, moved?.ParentId, ct);
         ListChanged?.Invoke(this, listId);
     }
 
@@ -179,11 +183,26 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : IRefreshableT
         return tasks;
     }
 
-    /// <summary>Google-taken omzetten naar DonkiePane-taken. De volgorde van Google (positie, alfabetisch) wordt een rangnummer.</summary>
-    internal static List<TaskItem> Map(string listId, IEnumerable<GoogleTaskDto> dtos)
+    /// <summary>
+    /// Google-taken omzetten naar DonkiePane-taken. De volgorde van Google (positie, alfabetisch) wordt een rangnummer,
+    /// waarbij subtaken direct onder hun hoofdtaak komen. Een subtaak telt alleen als zodanig als zijn hoofdtaak ook
+    /// open is; anders staat hij los in de lijst.
+    /// </summary>
+    public static List<TaskItem> Map(string listId, IEnumerable<GoogleTaskDto> dtos)
     {
         var all = dtos.OrderBy(d => d.Position ?? "", StringComparer.Ordinal).ToList();
-        var open = 0;
+        var openIds = all.Where(d => d.Status != "completed").Select(d => d.Id).ToHashSet();
+        string? OpenParent(GoogleTaskDto d) => d.Status != "completed" && d.Parent is { } p && openIds.Contains(p) ? p : null;
+
+        var order = new Dictionary<string, int>();
+        var next = 0;
+        foreach (var top in all.Where(d => d.Status != "completed" && OpenParent(d) is null))
+        {
+            order[top.Id] = next++;
+            foreach (var child in all.Where(c => OpenParent(c) == top.Id))
+                order[child.Id] = next++;
+        }
+
         var result = new List<TaskItem>(all.Count);
         foreach (var d in all)
         {
@@ -193,11 +212,12 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : IRefreshableT
             {
                 Id = d.Id,
                 ListId = listId,
+                ParentId = OpenParent(d),
                 Title = d.Title ?? "",
                 IsCompleted = completed,
                 CompletedAt = completed ? ParseTime(d.Completed) ?? updated : null,
                 DueDate = ParseDate(d.Due),
-                SortOrder = completed ? 0 : open++,
+                SortOrder = completed ? 0 : order[d.Id],
                 CreatedAt = updated, // Google geeft geen aanmaakdatum
                 UpdatedAt = updated,
                 ExternalId = d.Id,

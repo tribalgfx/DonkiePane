@@ -14,6 +14,9 @@ public sealed class TaskItem
 {
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
     public string ListId { get; set; } = "";
+
+    /// <summary>De hoofdtaak als dit een subtaak is (Google Taken kent die); anders <c>null</c>. Wordt ingesprongen getoond.</summary>
+    public string? ParentId { get; set; }
     public string Title { get; set; } = "";
     public bool IsCompleted { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
