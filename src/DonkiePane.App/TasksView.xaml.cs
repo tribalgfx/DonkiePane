@@ -10,7 +10,8 @@ namespace DonkiePane.App;
 /// <summary>
 /// Inhoud van een taakpane. Alle wijzigingen gaan via de
 /// <see cref="ITaskProvider"/>; de lijst wordt opnieuw opgebouwd zodra die
-/// meldt dat de lijst veranderd is.
+/// meldt dat de lijst veranderd is. Fouten van de bron (geen verbinding, niet
+/// ingelogd) komen als melding onderin het pane te staan.
 /// </summary>
 public partial class TasksView : UserControl
 {
@@ -31,22 +32,48 @@ public partial class TasksView : UserControl
         Loaded += async (_, _) =>
         {
             _provider.ListChanged += Provider_ListChanged;
+            _provider.StatusChanged += Provider_StatusChanged;
             await ReloadAsync();
         };
-        Unloaded += (_, _) => _provider.ListChanged -= Provider_ListChanged;
+        Unloaded += (_, _) =>
+        {
+            _provider.ListChanged -= Provider_ListChanged;
+            _provider.StatusChanged -= Provider_StatusChanged;
+        };
     }
 
-    private async void Provider_ListChanged(object? sender, string listId)
+    // Een bron als Google Taken meldt vanaf een achtergrondthread; het scherm bijwerken moet op de UI-thread.
+    private void Provider_ListChanged(object? sender, string listId)
     {
-        if (listId == _listId) await ReloadAsync();
+        if (listId == _listId) Dispatcher.InvokeAsync(ReloadAsync);
+    }
+
+    private void Provider_StatusChanged(object? sender, TaskProviderStatus status)
+    {
+        if (status.ListId == _listId) Dispatcher.InvokeAsync(() => ShowStatus(status.Message));
+    }
+
+    private void ShowStatus(string? message)
+    {
+        StatusText.Text = message ?? "";
+        StatusBar.Visibility = string.IsNullOrEmpty(message) ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private async Task ReloadAsync()
     {
-        _tasks = (await _provider.GetTasksAsync(_listId)).ToList();
+        try
+        {
+            _tasks = (await _provider.GetTasksAsync(_listId)).ToList();
+        }
+        catch (TaskProviderException ex)
+        {
+            ShowStatus(ex.Message);
+            return;
+        }
 
-        _openRows = TaskOrdering.Ordered(_tasks).Select(t => new TaskRow(t)).ToList();
-        var completed = TaskOrdering.Completed(_tasks).Select(t => new TaskRow(t)).ToList();
+        var showStar = _provider.Capabilities.Importance;
+        _openRows = TaskOrdering.Ordered(_tasks).Select(t => new TaskRow(t, showStar)).ToList();
+        var completed = TaskOrdering.Completed(_tasks).Select(t => new TaskRow(t, showStar)).ToList();
 
         OpenList.ItemsSource = _openRows;
         CompletedList.ItemsSource = completed;
@@ -57,7 +84,27 @@ public partial class TasksView : UserControl
 
     private static TaskRow? RowOf(object sender) => (sender as FrameworkElement)?.DataContext as TaskRow;
 
-    private Task SaveAsync(TaskItem task) => _provider.UpdateAsync([task]);
+    /// <summary>
+    /// Voert een wijziging uit en toont een fout van de bron als melding. Nodig omdat de
+    /// gebeurtenis-afhandelaars hieronder <c>async void</c> zijn: een niet-afgevangen fout daar sluit de app af.
+    /// Bij een fout wordt de lijst opnieuw opgehaald, zodat het scherm weer klopt met de bron.
+    /// </summary>
+    private async Task TryAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (TaskProviderException ex)
+        {
+            // Eerst de lijst herladen (die meldt bij succes "alles goed" en wist de melding),
+            // dan pas de foutmelding tonen, anders ziet de gebruiker hem nooit.
+            await ReloadAsync();
+            ShowStatus(ex.Message);
+        }
+    }
+
+    private Task SaveAsync(TaskItem task) => TryAsync(() => _provider.UpdateAsync([task]));
 
     // ---------- Toevoegen ----------
 
@@ -73,7 +120,7 @@ public partial class TasksView : UserControl
         var title = NewTaskBox.Text.Trim();
         if (title.Length == 0) return;
         NewTaskBox.Clear();
-        await _provider.AddAsync(_listId, new TaskItem { Title = title, SortOrder = TaskOrdering.TopOrder(_tasks) });
+        await TryAsync(() => _provider.AddAsync(_listId, new TaskItem { Title = title, SortOrder = TaskOrdering.TopOrder(_tasks) }));
     }
 
     // ---------- Afvinken, belangrijk, deadline ----------
@@ -135,7 +182,7 @@ public partial class TasksView : UserControl
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
-        if (RowOf(sender) is { } row) await _provider.DeleteAsync(row.Task.Id);
+        if (RowOf(sender) is { } row) await TryAsync(() => _provider.DeleteAsync(_listId, row.Task.Id));
     }
 
     // ---------- Naam wijzigen ----------
@@ -211,9 +258,8 @@ public partial class TasksView : UserControl
         if (e.Data.GetData(TaskDataFormat) is not string id) return;
         e.Handled = true;
 
-        var ordered = _openRows.Select(r => r.Task).ToList();
-        var changed = TaskOrdering.Move(ordered, id, DropIndex(e));
-        if (changed.Count > 0) await _provider.UpdateAsync(changed);
+        var index = DropIndex(e);
+        await TryAsync(() => _provider.MoveAsync(_listId, id, index));
     }
 
     /// <summary>De taak onder de muis bepaalt de plek: de gesleepte taak komt ervóór (of erna, op de onderste helft).</summary>

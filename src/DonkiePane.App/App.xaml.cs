@@ -14,7 +14,8 @@ public partial class App : Application
     private readonly LayoutStore _store = new(LayoutStore.DefaultPath);
     private readonly List<PaneWindow> _windows = [];
     private readonly Dictionary<Pane, IconsView> _iconViews = [];
-    private readonly ITaskProvider _taskProvider = new LocalTaskProvider(new TaskStore(TaskStore.DefaultPath));
+    private readonly ITaskProvider _localTasks = new LocalTaskProvider(new TaskStore(TaskStore.DefaultPath));
+    private readonly GoogleAccount _google = new();
     private readonly Dictionary<string, ItemView> _itemCache = new(StringComparer.OrdinalIgnoreCase);
     private Layout _layout = new();
     private DesktopFolders? _desktop;
@@ -159,7 +160,7 @@ public partial class App : Application
         if (pane.Kind == PaneKind.Tasks)
         {
             pane.TaskListId ??= Guid.NewGuid().ToString("N");
-            window.SetContent(new TasksView(_taskProvider, pane.TaskListId));
+            window.SetContent(new TasksView(TaskProviderFor(pane), pane.TaskListId));
         }
         else
         {
@@ -183,16 +184,21 @@ public partial class App : Application
         var pane = window.Pane;
         if (pane.Kind == PaneKind.Tasks && pane.TaskListId is { } listId)
         {
-            // Iconen gaan naar de Inbox, maar taken zouden echt weg zijn: eerst vragen.
-            var count = (await _taskProvider.GetTasksAsync(listId)).Count;
-            if (count > 0)
+            var provider = TaskProviderFor(pane);
+            // Lokale taken staan alleen in dit pane en zouden echt weg zijn: eerst vragen.
+            // Een Google-lijst blijft bij Google staan, dus daar valt niets te verliezen.
+            if (provider.Capabilities.PaneOwnsTasks)
             {
-                var answer = MessageBox.Show(
-                    $"Pane \"{pane.Title}\" verwijderen? De {count} taken erin worden ook verwijderd.",
-                    "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-                if (answer != MessageBoxResult.Yes) return;
+                var count = (await provider.GetTasksAsync(listId)).Count;
+                if (count > 0)
+                {
+                    var answer = MessageBox.Show(
+                        $"Pane \"{pane.Title}\" verwijderen? De {count} taken erin worden ook verwijderd.",
+                        "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                    if (answer != MessageBoxResult.Yes) return;
+                }
             }
-            await _taskProvider.DeleteListAsync(listId);
+            await provider.DeleteListAsync(listId);
         }
 
         if (!LayoutEditor.DeletePane(_layout, pane.Id)) return;
@@ -261,7 +267,10 @@ public partial class App : Application
     {
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Nieuw iconenpane", null, (_, _) => AddPane(new Pane()));
-        menu.Items.Add("Nieuw takenpane", null, (_, _) => AddPane(Pane.NewTaskPane()));
+        var newTasks = new Forms.ToolStripMenuItem("Nieuw takenpane");
+        newTasks.DropDownItems.Add("Lokaal (alleen op deze pc)", null, (_, _) => AddPane(Pane.NewTaskPane()));
+        newTasks.DropDownItems.Add("Google Taken…", null, (_, _) => _ = AddGoogleTaskPaneAsync());
+        menu.Items.Add(newTasks);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Instellingen…", null, (_, _) => ShowSettings());
         menu.Items.Add(new Forms.ToolStripSeparator());
@@ -292,6 +301,7 @@ public partial class App : Application
         SaveLayout();
         RestoreDesktopIcons();
         StopWatchingDisplays();
+        _google.Dispose();
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
         _singleInstance?.Dispose();

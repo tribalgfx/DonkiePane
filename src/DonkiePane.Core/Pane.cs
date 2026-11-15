@@ -1,5 +1,11 @@
 namespace DonkiePane.Core;
 
+public static class TaskSources
+{
+    public const string Local = "local";
+    public const string Google = "google";
+}
+
 public enum PaneKind
 {
     /// <summary>Bureaubladiconen.</summary>
@@ -47,8 +53,21 @@ public sealed class Pane
     /// <summary>Bureaubladitems in dit pane, in weergavevolgorde (zie <see cref="DesktopItemId"/>). Alleen bij <see cref="PaneKind.Icons"/>.</summary>
     public List<string> Items { get; set; } = [];
 
-    /// <summary>De takenlijst die dit pane toont. Alleen bij <see cref="PaneKind.Tasks"/>.</summary>
+    /// <summary>De takenlijst die dit pane toont. Alleen bij <see cref="PaneKind.Tasks"/>. Bij Google Taken is dit het ID van de lijst bij Google.</summary>
     public string? TaskListId { get; set; }
+
+    /// <summary>Waar de taken vandaan komen: <see cref="TaskSources.Local"/> of <see cref="TaskSources.Google"/>. Alleen bij <see cref="PaneKind.Tasks"/>.</summary>
+    public string TaskSource { get; set; } = TaskSources.Local;
+
+    public static Pane NewGoogleTaskPane(string googleListId, string listTitle) => new()
+    {
+        Kind = PaneKind.Tasks,
+        Title = listTitle,
+        Width = 320,
+        Height = 384,
+        TaskSource = TaskSources.Google,
+        TaskListId = googleListId,
+    };
 
     public static Pane NewTaskPane() => new()
     {

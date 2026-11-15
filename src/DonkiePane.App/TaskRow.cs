@@ -6,7 +6,8 @@ using DonkiePane.Tasks;
 namespace DonkiePane.App;
 
 /// <summary>Eén taak zoals een taakpane hem toont.</summary>
-public sealed class TaskRow(TaskItem task) : INotifyPropertyChanged
+/// <param name="showStar">Of de bron "belangrijk" kent; Google Taken niet, dan is er geen ster.</param>
+public sealed class TaskRow(TaskItem task, bool showStar = true) : INotifyPropertyChanged
 {
     private static readonly CultureInfo Dutch = CultureInfo.GetCultureInfo("nl-NL");
     private bool _isEditing;
@@ -16,6 +17,7 @@ public sealed class TaskRow(TaskItem task) : INotifyPropertyChanged
     public string Title => Task.Title;
     public bool IsCompleted => Task.IsCompleted;
     public bool IsImportant => Task.Importance == TaskImportance.High;
+    public bool ShowStar { get; } = showStar;
     public bool HasDueDate => Task.DueDate is not null;
 
     public string DueText => Task.DueDate is { } due ? DueDates.Format(due, DueDates.Today, Dutch) : "";
