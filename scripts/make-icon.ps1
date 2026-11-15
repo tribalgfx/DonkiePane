@@ -3,7 +3,7 @@
   Tekent het DonkiePane-icoon en schrijft src\DonkiePane.App\Assets\DonkiePane.ico (alle formaten) en een voorbeeld-png.
 
 .DESCRIPTION
-  Een donkere antracietkleurige tegel met een ezelkop (Donkie), op een subtiel theedoekruitje.
+  Een tegel met diagonaal verloop in theedoekrood en een witte P met ezeloren (Pane + Donkie), in dezelfde familie als de andere Donkie-apps.
   Elk formaat wordt apart getekend, zodat de kleine versies scherp blijven.
   Het script is bewust zuiver ASCII, zodat Windows PowerShell 5.1 het niet beschadigt.
 
@@ -37,82 +37,58 @@ function New-IconBitmap([int]$size) {
     $g.Clear([System.Drawing.Color]::Transparent)
 
     $s = [single]$size
-    # Tegel: bij kleine formaten bijna de hele ruimte en geen rand.
+    # Tegel met diagonaal verloop (zelfde familie als de andere Donkie-apps, maar in theedoekrood).
     $inset = if ($size -le 24) { 0.0 } else { $s * 0.03 }
-    $tile = New-RoundedPath $inset $inset ($s - 2 * $inset) ($s - 2 * $inset) ($s * 0.2)
-    $top = [System.Drawing.Color]::FromArgb(255, 0x2E, 0x31, 0x36)
-    $bottom = [System.Drawing.Color]::FromArgb(255, 0x17, 0x18, 0x1A)
-    $bg = New-Object System.Drawing.Drawing2D.LinearGradientBrush((New-Object System.Drawing.PointF(0, 0)), (New-Object System.Drawing.PointF(0, $s)), $top, $bottom)
-    $g.FillPath($bg, $tile)
-    if ($size -gt 24) {
-        $edge = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(70, 255, 255, 255), [single][Math]::Max(1, $s / 128))
-        $g.DrawPath($edge, $tile)
-    }
+    $tile = New-RoundedPath $inset $inset ($s - 2 * $inset) ($s - 2 * $inset) ($s * 0.22)
+    $c1 = [System.Drawing.Color]::FromArgb(255, 0xFF, 0x93, 0x6B)
+    $c2 = [System.Drawing.Color]::FromArgb(255, 0xD6, 0x2F, 0x5A)
+    $gradient = New-Object System.Drawing.Drawing2D.LinearGradientBrush((New-Object System.Drawing.RectangleF(0, 0, $s, $s)), $c1, $c2, 45.0)
+    $g.FillPath($gradient, $tile)
 
-    # Subtiel theedoekruitje op de tegel (alleen waar het niet in ruis verandert).
-    if ($size -ge 32) {
-        $g.SetClip($tile)
-        $check = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(16, 255, 255, 255))
-        $step = $s / 8
-        for ($r = 0; $r -lt 8; $r++) {
-            for ($c = 0; $c -lt 8; $c++) {
-                if (($r + $c) % 2 -eq 0) { $g.FillRectangle($check, [single]($c * $step), [single]($r * $step), [single]$step, [single]$step) }
-            }
+    # Het glyph: een witte "P" (van Pane) met ezeloren. Alles in een pad, zodat de schaduw niet dubbel valt.
+    function New-Glyph([single]$s, [single]$dy, [bool]$small) {
+        $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+        $path.FillMode = [System.Drawing.Drawing2D.FillMode]::Winding
+
+        # Oren: twee lange ellipsen, naar buiten gedraaid.
+        $earW = if ($small) { 0.14 } else { 0.115 }
+        foreach ($side in -1, 1) {
+            $ear = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $cx = (0.5 + $side * 0.16) * $s
+            $cy = (0.285 + $dy) * $s
+            $ear.AddEllipse([single]($cx - $earW * $s / 2), [single]($cy - 0.15 * $s), [single]($earW * $s), [single](0.30 * $s))
+            $m = New-Object System.Drawing.Drawing2D.Matrix
+            $m.RotateAt([single]($side * 17), (New-Object System.Drawing.PointF([single]$cx, [single]$cy)))
+            $ear.Transform($m)
+            $path.AddPath($ear, $false)
         }
-        $g.ResetClip()
+
+        # Steel en kom van de P.
+        $stem = New-RoundedPath ([single](0.30 * $s)) ([single]((0.38 + $dy) * $s)) ([single](0.20 * $s)) ([single](0.44 * $s)) ([single](0.035 * $s))
+        $bowl = New-RoundedPath ([single](0.30 * $s)) ([single]((0.38 + $dy) * $s)) ([single](0.43 * $s)) ([single](0.29 * $s)) ([single](0.13 * $s))
+        $path.AddPath($stem, $false)
+        $path.AddPath($bowl, $false)
+        return , $path
     }
 
-    # De ezel (Donkie): twee lange oren, een grijze kop met lichte snuit, donkere lok, ogen en neusgaten.
     $small = $size -le 24
-    $grey = [System.Drawing.Color]::FromArgb(255, 0x9A, 0xA0, 0xAA)
-    $greyDark = [System.Drawing.Color]::FromArgb(255, 0x6E, 0x74, 0x7E)
-    $muzzle = [System.Drawing.Color]::FromArgb(255, 0xE6, 0xDF, 0xD2)
-    $ink = [System.Drawing.Color]::FromArgb(255, 0x1B, 0x1C, 0x1E)
-    $red = [System.Drawing.Color]::FromArgb(255, 0xC8, 0x2D, 0x35)
-
-    $earW = if ($small) { 0.17 } else { 0.15 }
-    foreach ($side in -1, 1) {
-        $cx = 0.5 + $side * 0.205
-        $state = $g.Save()
-        $g.TranslateTransform([single]($cx * $s), [single](0.27 * $s))
-        $g.RotateTransform([single]($side * 17))
-        $ear = New-Object System.Drawing.RectangleF([single](-$earW * $s / 2), [single](-0.20 * $s), [single]($earW * $s), [single](0.40 * $s))
-        $earBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($ear, $grey, $greyDark, 90.0)
-        $g.FillEllipse($earBrush, $ear)
-        $inner = New-Object System.Drawing.RectangleF([single](-$earW * $s * 0.27), [single](-0.145 * $s), [single]($earW * $s * 0.54), [single](0.29 * $s))
-        $g.FillEllipse((New-Object System.Drawing.SolidBrush($red)), $inner)
-        $g.Restore($state)
-    }
-
-    # Kop
-    $head = New-Object System.Drawing.RectangleF([single](0.29 * $s), [single](0.30 * $s), [single](0.42 * $s), [single](0.50 * $s))
-    $headBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($head, $grey, $greyDark, 90.0)
-    $g.FillEllipse($headBrush, $head)
-
-    # Snuit
-    $snout = New-Object System.Drawing.RectangleF([single](0.335 * $s), [single](0.55 * $s), [single](0.33 * $s), [single](0.27 * $s))
-    $g.FillEllipse((New-Object System.Drawing.SolidBrush($muzzle)), $snout)
-
-    # Lok tussen de oren
-    $tuft = New-Object System.Drawing.RectangleF([single](0.43 * $s), [single](0.255 * $s), [single](0.14 * $s), [single](0.13 * $s))
-    $g.FillEllipse((New-Object System.Drawing.SolidBrush($ink)), $tuft)
-
-    # Ogen
-    $eye = if ($small) { 0.055 } else { 0.042 }
-    foreach ($side in -1, 1) {
-        $ex = 0.5 + $side * 0.105
-        $g.FillEllipse((New-Object System.Drawing.SolidBrush($ink)), [single](($ex - $eye) * $s), [single]((0.49 - $eye) * $s), [single]($eye * 2 * $s), [single]($eye * 2 * $s))
-        if ($size -ge 48) {
-            $g.FillEllipse([System.Drawing.Brushes]::White, [single](($ex - $eye * 0.2) * $s), [single]((0.49 - $eye * 0.7) * $s), [single]($eye * 0.7 * $s), [single]($eye * 0.7 * $s))
+    # Zachte schaduw: een paar doorzichtige lagen, steeds iets lager.
+    if ($size -ge 32) {
+        foreach ($layer in 1, 2, 3) {
+            $shadowPath = New-Glyph $s ([single](0.006 * $layer)) $small
+            $g.FillPath((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(22, 60, 0, 20))), $shadowPath)
         }
     }
+    $glyph = New-Glyph $s 0 $small
+    $g.FillPath((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0xFF, 0xF6, 0xF3))), $glyph)
 
-    # Neusgaten
-    $nose = if ($small) { 0.034 } else { 0.026 }
-    foreach ($side in -1, 1) {
-        $nx = 0.5 + $side * 0.065
-        $g.FillEllipse((New-Object System.Drawing.SolidBrush($ink)), [single](($nx - $nose) * $s), [single]((0.71 - $nose * 0.8) * $s), [single]($nose * 2 * $s), [single]($nose * 1.6 * $s))
-    }
+    # Sleuf in de kom (de snuit): gevuld met hetzelfde verloop, zodat het lijkt of de tegel erdoorheen schijnt.
+    $hole = New-RoundedPath ([single](0.465 * $s)) ([single](0.465 * $s)) ([single](0.145 * $s)) ([single](0.095 * $s)) ([single](0.047 * $s))
+    $g.FillPath($gradient, $hole)
+
+    # Donkere lok tussen de oren.
+    $tuft = New-Object System.Drawing.RectangleF([single](0.435 * $s), [single](0.335 * $s), [single](0.15 * $s), [single](0.085 * $s))
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0x3B, 0x1F, 0x3A))), $tuft)
     $g.Dispose()
     return $bmp
 }
