@@ -13,10 +13,18 @@ namespace DonkiePane.App;
 /// </summary>
 public sealed class SourceEditWindow : Window
 {
-    private static readonly Brush Text = new SolidColorBrush(Color.FromRgb(0xF5, 0xF0, 0xE8));
-    private static readonly Brush Muted = new SolidColorBrush(Color.FromArgb(0xA6, 0xF5, 0xF0, 0xE8));
-    private static readonly Brush Good = new SolidColorBrush(Color.FromRgb(0x8F, 0xD6, 0x9B));
-    private static readonly Brush Bad = new SolidColorBrush(Color.FromRgb(0xFF, 0x9A, 0x8A));
+    // Gedeelde kleuren moeten bevroren zijn, anders mag alleen de thread die ze maakte ze gebruiken.
+    private static readonly Brush Text = Frozen(Color.FromRgb(0xF5, 0xF0, 0xE8));
+    private static readonly Brush Muted = Frozen(Color.FromArgb(0xA6, 0xF5, 0xF0, 0xE8));
+    private static readonly Brush Good = Frozen(Color.FromRgb(0x8F, 0xD6, 0x9B));
+    private static readonly Brush Bad = Frozen(Color.FromRgb(0xFF, 0x9A, 0x8A));
+
+    private static SolidColorBrush Frozen(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
 
     private readonly TaskSourceHost _host;
     private readonly SourceConnection _connection;
@@ -212,14 +220,14 @@ public sealed class SourceEditWindow : Window
 
     private static void ApplyStyle(TextBox box)
     {
-        if (Application.Current.TryFindResource("PaneTextBox") is System.Windows.Style style) box.Style = style;
+        if (Application.Current?.TryFindResource("PaneTextBox") is System.Windows.Style style) box.Style = style;
         box.Padding = new Thickness(6, 5, 6, 5);
     }
 
     private Button AddButton(string text, RoutedEventHandler click)
     {
         var button = new Button { Content = text, Margin = new Thickness(0, 0, 8, 8) };
-        if (Application.Current.TryFindResource("ActionButton") is System.Windows.Style style) button.Style = style;
+        if (Application.Current?.TryFindResource("ActionButton") is System.Windows.Style style) button.Style = style;
         button.Click += click;
         _buttons.Add(button);
         return button;
