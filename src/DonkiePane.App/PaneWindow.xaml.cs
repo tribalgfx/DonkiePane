@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using DonkiePane.Core;
 using DonkiePane.Shell;
 
@@ -64,29 +65,90 @@ public partial class PaneWindow : Window
 
     public void SetContent(UIElement content) => Body.Content = content;
 
-    // ---------- Thema ----------
+    // ---------- Thema, kleur en transparantie ----------
 
-    private void ApplyTheme() => PaneThemes.Apply(Resources, PaneThemes.Get(Pane.Theme));
+    private void ApplyTheme() => PaneThemes.Apply(Resources, Pane);
 
     private void BuildThemeMenu()
     {
         ThemeMenu.Items.Clear();
         var current = PaneThemes.Get(Pane.Theme).Id;
+        var hasCustom = PaneThemes.TryParseColor(Pane.CustomColor, out _);
         foreach (var theme in PaneThemes.All)
         {
-            var item = new MenuItem { Header = theme.Name, IsCheckable = true, IsChecked = theme.Id == current, Tag = theme.Id };
+            var item = new MenuItem { Header = theme.Name, IsCheckable = true, IsChecked = !hasCustom && theme.Id == current, Tag = theme.Id };
             item.Click += Theme_Click;
             ThemeMenu.Items.Add(item);
         }
+
+        TransparencyMenu.Items.Clear();
+        var currentPercent = (int)Math.Round((1 - Pane.EffectiveOpacity) * 100);
+        foreach (var percent in PaneThemes.TransparencySteps)
+        {
+            var item = new MenuItem
+            {
+                Header = percent == 0 ? "0% (massief)" : $"{percent}%",
+                IsCheckable = true,
+                IsChecked = Math.Abs(percent - currentPercent) < 5,
+                Tag = percent,
+            };
+            item.Click += Transparency_Click;
+            TransparencyMenu.Items.Add(item);
+        }
+
+        PatternMenuItem.IsChecked = Pane.ShowPattern;
+    }
+
+    private void LookChanged()
+    {
+        ApplyTheme();
+        BuildThemeMenu();
+        PaneChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void Theme_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem { Tag: string id }) return;
         Pane.Theme = id;
-        ApplyTheme();
-        BuildThemeMenu();
-        PaneChanged?.Invoke(this, EventArgs.Empty);
+        Pane.CustomColor = null; // een gekozen thema vervangt een eigen kleur
+        LookChanged();
+    }
+
+    private void PickColor_Click(object sender, RoutedEventArgs e)
+    {
+        var start = PaneThemes.TryParseColor(Pane.CustomColor, out var c) ? c
+            : (Color)ColorConverter.ConvertFromString(PaneThemes.Resolve(Pane).Title);
+        using var dialog = new System.Windows.Forms.ColorDialog
+        {
+            FullOpen = true,
+            AnyColor = true,
+            Color = System.Drawing.Color.FromArgb(start.R, start.G, start.B),
+        };
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+
+        Pane.CustomColor = PaneThemes.ToHex(Color.FromRgb(dialog.Color.R, dialog.Color.G, dialog.Color.B));
+        LookChanged();
+    }
+
+    private void Transparency_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: int percent }) return;
+        Pane.Opacity = 1 - percent / 100.0;
+        LookChanged();
+    }
+
+    private void Pattern_Click(object sender, RoutedEventArgs e)
+    {
+        Pane.ShowPattern = PatternMenuItem.IsChecked;
+        LookChanged();
+    }
+
+    private void ResetLook_Click(object sender, RoutedEventArgs e)
+    {
+        Pane.CustomColor = null;
+        Pane.Opacity = Pane.DefaultOpacity;
+        Pane.ShowPattern = false;
+        LookChanged();
     }
 
     // ---------- Verplaatsen en vergroten, vastklikken op het raster ----------
