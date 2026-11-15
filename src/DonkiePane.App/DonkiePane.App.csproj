@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Alleen voor het tray-icoon (NotifyIcon); WPF heeft er zelf geen. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>DonkiePane</AssemblyName>
+    <RootNamespace>DonkiePane.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Voorkom botsingen tussen WPF- en WinForms-types (Application, Button, ...). -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DonkiePane.Core\DonkiePane.Core.csproj" />
+  </ItemGroup>
+
+</Project>
