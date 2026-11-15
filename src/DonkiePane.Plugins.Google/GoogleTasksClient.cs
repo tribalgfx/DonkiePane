@@ -64,9 +64,18 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
     public Task DeleteAsync(string listId, string taskId, CancellationToken ct = default) =>
         SendAsync(HttpMethod.Delete, TaskUrl(listId, taskId), null, ct);
 
-    /// <summary>Zet de taak direct onder <paramref name="previousId"/>; <c>null</c> = bovenaan.</summary>
-    public Task MoveAsync(string listId, string taskId, string? previousId, CancellationToken ct = default) =>
-        SendAsync(HttpMethod.Post, TaskUrl(listId, taskId) + "/move" + (previousId is null ? "" : "?previous=" + Uri.EscapeDataString(previousId)), null, ct);
+    /// <summary>
+    /// Zet de taak direct onder <paramref name="previousId"/>; <c>null</c> = bovenaan. Een subtaak moet met
+    /// <paramref name="parentId"/> onder zijn hoofdtaak blijven: laat je die weg, dan maakt Google er een gewone taak van.
+    /// </summary>
+    public Task MoveAsync(string listId, string taskId, string? previousId, string? parentId = null, CancellationToken ct = default)
+    {
+        var query = new List<string>();
+        if (previousId is not null) query.Add("previous=" + Uri.EscapeDataString(previousId));
+        if (parentId is not null) query.Add("parent=" + Uri.EscapeDataString(parentId));
+        var suffix = query.Count == 0 ? "" : "?" + string.Join("&", query);
+        return SendAsync(HttpMethod.Post, TaskUrl(listId, taskId) + "/move" + suffix, null, ct);
+    }
 
     /// <summary>Google bewaart bij <c>due</c> alleen de datum; het tijdstip wordt genegeerd.</summary>
     public static string DueString(DateOnly date) => date.ToString("yyyy-MM-dd") + "T00:00:00.000Z";

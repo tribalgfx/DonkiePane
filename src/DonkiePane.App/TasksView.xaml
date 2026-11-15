@@ -48,7 +48,7 @@
 
         <DataTemplate x:Key="TaskTemplate" DataType="{x:Type local:TaskRow}">
             <Border x:Name="Row"
-                    Padding="6,4" Margin="0,1"
+                    Padding="6,4" Margin="{Binding RowMargin}"
                     CornerRadius="4"
                     Background="Transparent"
                     ContextMenu="{StaticResource TaskMenu}"

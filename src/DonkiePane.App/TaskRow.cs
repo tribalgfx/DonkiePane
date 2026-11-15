@@ -18,6 +18,9 @@ public sealed class TaskRow(TaskItem task, bool showStar = true) : INotifyProper
     public bool IsCompleted => Task.IsCompleted;
     public bool IsImportant => Task.Importance == TaskImportance.High;
     public bool ShowStar { get; } = showStar;
+
+    /// <summary>Een subtaak springt in onder zijn hoofdtaak.</summary>
+    public System.Windows.Thickness RowMargin => new(Task.ParentId is null ? 0 : 22, 1, 0, 1);
     public bool HasDueDate => Task.DueDate is not null;
 
     public string DueText => Task.DueDate is { } due ? DueDates.Format(due, DueDates.Today, Dutch) : "";

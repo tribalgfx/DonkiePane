@@ -60,6 +60,25 @@ public static class TaskOrdering
         return index == 0 ? null : list[index - 1].Id;
     }
 
+    /// <summary>
+    /// Zoals <see cref="PreviousSiblingId(IReadOnlyList{TaskItem}, string, int)"/>, maar met <paramref name="sameParent"/> telt alleen
+    /// een buur met dezelfde hoofdtaak (of allebei zonder). Zo blijft een subtaak onder zijn hoofdtaak, en een gewone taak
+    /// zoekt zijn buur tussen de gewone taken en niet tussen subtaken van een andere taak.
+    /// </summary>
+    public static string? PreviousSiblingId(IReadOnlyList<TaskItem> ordered, string taskId, int newIndex, bool sameParent)
+    {
+        var list = ordered.ToList();
+        var oldIndex = list.FindIndex(t => t.Id == taskId);
+        if (oldIndex < 0) return null;
+
+        var moved = list[oldIndex];
+        list.RemoveAt(oldIndex);
+        var index = TargetIndex(list.Count, oldIndex, newIndex);
+        for (var i = index - 1; i >= 0; i--)
+            if (!sameParent || list[i].ParentId == moved.ParentId) return list[i].Id;
+        return null;
+    }
+
     /// <summary>De plek in de lijst zónder de verplaatste taak, gegeven de plek in de lijst mét die taak.</summary>
     private static int TargetIndex(int countWithoutTask, int oldIndex, int newIndex)
     {
