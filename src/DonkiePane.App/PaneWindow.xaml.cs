@@ -71,14 +71,17 @@ public partial class PaneWindow : Window
 
     private void BuildThemeMenu()
     {
-        ThemeMenu.Items.Clear();
+        // Alleen de themakleuren vernieuwen; de vaste opties eronder (eigen kleur, transparantie, patroon) blijven staan.
+        foreach (var old in ThemeMenu.Items.OfType<MenuItem>().Where(i => i.Tag is string).ToList())
+            ThemeMenu.Items.Remove(old);
         var current = PaneThemes.Get(Pane.Theme).Id;
         var hasCustom = PaneThemes.TryParseColor(Pane.CustomColor, out _);
+        var index = 0;
         foreach (var theme in PaneThemes.All)
         {
             var item = new MenuItem { Header = theme.Name, IsCheckable = true, IsChecked = !hasCustom && theme.Id == current, Tag = theme.Id };
             item.Click += Theme_Click;
-            ThemeMenu.Items.Add(item);
+            ThemeMenu.Items.Insert(index++, item);
         }
 
         TransparencyMenu.Items.Clear();
