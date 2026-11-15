@@ -22,11 +22,25 @@ public partial class App : Application
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ToolStripMenuItem? _hideIconsMenuItem;
     private ShellRestartWatcher? _shellWatcher;
+    private Mutex? _singleInstance;
+    private bool _isDuplicate;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Maar één DonkiePane tegelijk: twee zouden elkaars panes en de
+        // Windows-iconen door elkaar halen.
+        _singleInstance = new Mutex(initiallyOwned: true, @"Local\DonkiePane.SingleInstance", out var isFirst);
+        if (!isFirst)
+        {
+            _isDuplicate = true;
+            Shutdown();
+            return;
+        }
+
         InstallCrashSafety();
+        WaitForDesktop();
 
         _layout = _store.Load();
         _desktop = new DesktopFolders();
@@ -56,6 +70,18 @@ public partial class App : Application
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
+    }
+
+    /// <summary>
+    /// Bij het inloggen start DonkiePane soms eerder dan het bureaublad van
+    /// Verkenner. Zonder bureaublad kunnen de panes er niet aan hangen, dus
+    /// even wachten (maximaal 30 seconden; daarna gewoon doorgaan).
+    /// </summary>
+    private static void WaitForDesktop()
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (DesktopIcons.AreVisible() is null && DateTime.UtcNow < deadline)
+            Thread.Sleep(250);
     }
 
     // ---------- Bureaubladitems ----------
@@ -230,6 +256,25 @@ public partial class App : Application
             SaveLayout();
         };
         menu.Items.Add(_hideIconsMenuItem);
+
+        var autoStartItem = new Forms.ToolStripMenuItem("Starten met Windows")
+        {
+            Checked = AutoStart.IsEnabled(),
+            CheckOnClick = true,
+        };
+        autoStartItem.CheckedChanged += (_, _) =>
+        {
+            try
+            {
+                AutoStart.SetEnabled(autoStartItem.Checked);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException)
+            {
+                MessageBox.Show(ex.Message, "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+                autoStartItem.Checked = AutoStart.IsEnabled();
+            }
+        };
+        menu.Items.Add(autoStartItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Afsluiten", null, (_, _) => Shutdown());
 
@@ -244,10 +289,20 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Een tweede instantie heeft niets opgezet en mag dus ook niets
+        // terugdraaien (anders komen de Windows-iconen terug terwijl de
+        // eerste instantie ze verbergt).
+        if (_isDuplicate)
+        {
+            base.OnExit(e);
+            return;
+        }
+
         SaveLayout();
         RestoreDesktopIcons();
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
+        _singleInstance?.Dispose();
         if (_trayIcon is not null)
         {
             _trayIcon.Visible = false;
