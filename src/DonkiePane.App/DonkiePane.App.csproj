@@ -9,12 +9,18 @@
     <AssemblyName>DonkiePane</AssemblyName>
     <RootNamespace>DonkiePane.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\DonkiePane.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Voorkom botsingen tussen WPF- en WinForms-types (Application, Button, ...). -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Het icoon zit ook in het programma zelf, voor het tray-icoon. -->
+    <EmbeddedResource Include="Assets\DonkiePane.ico" LogicalName="DonkiePane.ico" />
   </ItemGroup>
 
   <ItemGroup>
