@@ -123,6 +123,17 @@
 
         <!-- Nieuwe taak -->
         <Grid Margin="8,8,8,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Verversen: alleen bij een bron die van buiten kan veranderen (niet bij lokale taken). -->
+            <Button x:Name="RefreshButton" Grid.Column="1" Style="{StaticResource StarButton}" Margin="4,0,0,0"
+                    ToolTip="Nu verversen" Visibility="Collapsed" Click="Refresh_Click">
+                <TextBlock Text="↻" FontSize="16" Foreground="{DynamicResource PaneMutedText}" />
+            </Button>
+
             <TextBox x:Name="NewTaskBox" Style="{StaticResource PaneTextBox}" Padding="6,5" KeyDown="NewTaskBox_KeyDown" />
             <TextBlock Text="+ Nieuwe taak (Enter)"
                        Margin="9,0,0,0"

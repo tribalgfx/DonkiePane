@@ -50,7 +50,7 @@ internal sealed class GoogleTaskSource : ITaskSource
         _context = context;
         _auth = new GoogleAuth(_http, new SecretTokenStore(context.Secrets), ReadConfig);
         _client = new GoogleTasksClient(_http, (force, ct) => _auth.GetAccessTokenAsync(force, ct));
-        _provider = new GoogleTaskProvider(_client);
+        _provider = new GoogleTaskProvider(_client) { PollInterval = context.PollInterval };
     }
 
     public ITaskProvider Provider => _provider;

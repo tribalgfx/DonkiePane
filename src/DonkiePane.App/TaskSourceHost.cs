@@ -35,6 +35,20 @@ public sealed class TaskSourceHost : IDisposable
 
     public IReadOnlyList<SourceConnection> Connections => _config.Connections;
 
+    /// <summary>Hoe vaak bronnen op veranderingen controleren. Geldt voor alle bronnen, ook die al draaien.</summary>
+    public TimeSpan PollInterval { get; private set; } = SourceContext.DefaultPollInterval;
+
+    public void SetPollInterval(TimeSpan interval)
+    {
+        lock (_lock)
+        {
+            PollInterval = interval;
+            foreach (var source in _sources.Values)
+                if (source.Provider is IRefreshableTaskProvider refreshable)
+                    refreshable.PollInterval = interval;
+        }
+    }
+
     /// <summary>Een verbinding is gewijzigd of verwijderd; panes die hem gebruiken moeten opnieuw beginnen.</summary>
     public event EventHandler<string>? SourceReset;
 
@@ -114,7 +128,7 @@ public sealed class TaskSourceHost : IDisposable
 
             try
             {
-                var context = new SourceContext(new Dictionary<string, string>(connection.Values), _secretsFor(connectionId), _openBrowser);
+                var context = new SourceContext(new Dictionary<string, string>(connection.Values), _secretsFor(connectionId), _openBrowser, PollInterval);
                 var source = plugin.Create(context);
                 _sources[connectionId] = source;
                 error = null;

@@ -28,6 +28,7 @@ public partial class TasksView : UserControl
         InitializeComponent();
         _provider = provider;
         _listId = listId;
+        RefreshButton.Visibility = provider is IRefreshableTaskProvider ? Visibility.Visible : Visibility.Collapsed;
 
         Loaded += async (_, _) =>
         {
@@ -80,6 +81,26 @@ public partial class TasksView : UserControl
         EmptyHint.Visibility = _openRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         CompletedExpander.Header = $"Voltooid ({completed.Count})";
         CompletedExpander.Visibility = completed.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>De verversknop: nu meteen kijken of er op een ander apparaat iets is veranderd.</summary>
+    private async void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        if (_provider is not IRefreshableTaskProvider refreshable) return;
+        RefreshButton.IsEnabled = false;
+        try
+        {
+            await refreshable.RefreshAsync();
+        }
+        catch (TaskProviderException ex)
+        {
+            ShowStatus(ex.Message);
+        }
+        finally
+        {
+            RefreshButton.IsEnabled = true;
+        }
+        await ReloadAsync();
     }
 
     private static TaskRow? RowOf(object sender) => (sender as FrameworkElement)?.DataContext as TaskRow;
