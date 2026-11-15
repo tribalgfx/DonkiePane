@@ -10,7 +10,7 @@ Aanpasbare vakken ("panes", naar de ruitjes van een theedoek) op het Windows-bur
   - De eigen iconenweergave van Windows wordt verborgen. DonkiePane tekent de iconen in de panes.
   - Een **Inbox-pane** vangt nieuwe bestanden op die op het bureaublad verschijnen, zodat niets onzichtbaar wordt.
   - Bij afsluiten of verwijderen van DonkiePane komt de Windows-iconenweergave terug.
-- **Taken zijn eerst lokaal**, maar het ontwerp houdt rekening met koppelen aan een takenapp (bijvoorbeeld Microsoft To Do) en aan een eigen dashboard.
+- **Taken zijn lokaal of gekoppeld** aan Google Taken (werk) en later een eigen dashboard (thuis), per pane te kiezen.
 - **Eigen privé-repo op GitHub.**
 
 ## Eigen draai
@@ -29,7 +29,7 @@ DonkiePane/
 ├─ src/DonkiePane.App/        WPF: tray-icoon, pane-vensters, thema's
 ├─ src/DonkiePane.Core/       Model en logica: Pane, items, raster, opslag
 ├─ src/DonkiePane.Shell/      Win32: bureaubladlaag, iconen, .lnk, desktopweergave verbergen
-├─ src/DonkiePane.Tasks/      ITaskProvider + LocalTaskProvider (later To Do, een eigen dashboard)
+├─ src/DonkiePane.Tasks/      ITaskProvider + LocalTaskProvider + GoogleTaskProvider (later een eigen dashboard)
 └─ tests/DonkiePane.Core.Tests/
 ```
 
@@ -48,7 +48,7 @@ DonkiePane/
 | 4. Taakpane | Taken toevoegen, afvinken, bewerken, ordenen, via `LocalTaskProvider` | Dagelijks bruikbaar |
 | 5. Ruitjes-identiteit | Raster met snappen, theedoek-thema's, oprollen | Het voelt als DonkiePane |
 | 6. Afwerking | Starten met Windows, meerdere monitoren, DPI, instellingen, installer | Kan dagelijks draaien |
-| 7. Koppelingen | Takenapp-provider, dashboard-provider | Taken synchroniseren |
+| 7. Koppelingen | Google Taken (klaar), dashboard-provider (nog te doen) | Taken synchroniseren |
 
 ## Risico's
 
@@ -56,14 +56,16 @@ DonkiePane/
 - **Windows-iconen verbergen:** als DonkiePane crasht, moet de gebruiker zijn bureaublad terugkrijgen. Herstel bij afsluiten, bij crash (handler) en via een tray-optie.
 - **Meerdere monitoren / DPI:** posities per monitor en relatief opslaan, anders vallen panes buiten beeld.
 
-## Takenkoppelingen (fase 7)
+## Takenbronnen (fase 7)
 
-Gekozen: **Microsoft To Do**. Google Taken en een eigen dashboard zijn mogelijke latere bronnen.
+Elk takenpane kiest zijn eigen bron; taken en layout staan per pc in `%APPDATA%\DonkiePane`.
 
-- **Per taakpane een bron:** lokaal of een To Do-lijst. Door de `ITaskProvider`-laag kan er later een andere bron bij.
-- **Microsoft To Do:** via Microsoft Graph (`/me/todo/lists`), met OAuth en een eigen app-registratie in Microsoft Entra (gratis, werkt met een persoonlijk Microsoft-account).
-- **Inloggen** gaat via de browser (OAuth met PKCE, via MSAL.NET). Tokens bewaar ik versleuteld per gebruiker (Windows DPAPI / Credential Manager), nooit in de repo.
-- **Synchroniseren:** periodiek ophalen plus direct wegschrijven bij een wijziging. Bij een conflict wint de laatste wijziging (`updatedAt`). Offline wijzigingen gaan in een wachtrij.
+- **Lokaal:** klaar (fase 4).
+- **Google Taken (werk-pc): klaar.** Eigen OAuth-client (Desktop app) in een intern Cloud-project van de Workspace. Inloggen via de browser met PKCE en een loopback-adres; het inlogtoken staat met DPAPI versleuteld in `google.token`, client-ID en secret in `google.json` (beide buiten git). Wijzigingen gaan direct naar Google, elke 60 s wordt gekeken of er buiten DonkiePane iets veranderd is. Google kent geen "belangrijk" en geen tijdstip bij een deadline, dus daar is geen ster. Een Google-pane verwijderen laat de lijst bij Google staan.
+- **Een eigen dashboard (thuis): nog te doen.** Daarvoor is een API met een eigen toegangssleutel nodig.
+- **Microsoft To Do: vervallen.** Een persoonlijk hotmail-account heeft geen Entra-tenant en kan dus geen app registreren.
+
+Bekend en nog niet gedaan: offline wijzigingen worden niet in een wachtrij bewaard (een mislukte wijziging geeft een melding en de lijst wordt opnieuw opgehaald), en subtaken van Google worden vlak getoond.
 
 ## Open punten
 
