@@ -1,5 +1,7 @@
 using System.Windows;
+using System.Windows.Threading;
 using DonkiePane.Core;
+using DonkiePane.Shell;
 using Forms = System.Windows.Forms;
 
 namespace DonkiePane.App;
@@ -7,6 +9,7 @@ namespace DonkiePane.App;
 public partial class App : Application
 {
     private Forms.NotifyIcon? _trayIcon;
+    private ShellRestartWatcher? _shellWatcher;
     private readonly LayoutStore _store = new(LayoutStore.DefaultPath);
     private Layout _layout = new();
     private readonly List<PaneWindow> _windows = [];
@@ -23,6 +26,29 @@ public partial class App : Application
             ShowPane(pane);
 
         _trayIcon = CreateTrayIcon();
+
+        _shellWatcher = new ShellRestartWatcher();
+        _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
+    }
+
+    /// <summary>
+    /// Na een herstart van Verkenner zijn de panes met het oude bureaublad
+    /// meegesloten. Even wachten tot het nieuwe bureaublad klaarstaat en ze
+    /// dan opnieuw opbouwen vanuit de layout.
+    /// </summary>
+    private void RebuildPanesSoon()
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            foreach (var window in _windows.ToList())
+                window.Close();
+            _windows.Clear();
+            foreach (var pane in _layout.Panes)
+                ShowPane(pane);
+        };
+        timer.Start();
     }
 
     private Forms.NotifyIcon CreateTrayIcon()
@@ -68,6 +94,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         SaveLayout();
+        _shellWatcher?.Dispose();
         if (_trayIcon is not null)
         {
             _trayIcon.Visible = false;

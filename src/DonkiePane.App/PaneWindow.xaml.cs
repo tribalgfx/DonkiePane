@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using DonkiePane.Core;
+using DonkiePane.Shell;
 
 namespace DonkiePane.App;
 
@@ -17,6 +18,7 @@ public partial class PaneWindow : Window
     {
         InitializeComponent();
         _pane = pane;
+        DesktopLayer.Attach(this);
 
         TitleText.Text = pane.Title;
         Left = pane.Left;
