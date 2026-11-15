@@ -29,7 +29,7 @@
                                TextWrapping="Wrap"
                                TextTrimming="CharacterEllipsis"
                                FontSize="12"
-                               Foreground="{StaticResource PaneText}"
+                               Foreground="{DynamicResource PaneText}"
                                Effect="{StaticResource TextShadow}" />
                 </StackPanel>
             </Border>
@@ -53,7 +53,7 @@
         </ScrollViewer>
         <TextBlock x:Name="EmptyHint"
                    Margin="12"
-                   Foreground="{StaticResource PaneText}"
+                   Foreground="{DynamicResource PaneText}"
                    Opacity="0.6"
                    TextWrapping="Wrap"
                    IsHitTestVisible="False"

@@ -1,5 +1,7 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using DonkiePane.Core;
 using DonkiePane.Shell;
 
@@ -7,18 +9,29 @@ namespace DonkiePane.App;
 
 /// <summary>
 /// Het venster om een pane heen: titelbalk, verslepen, grootte, oprollen,
-/// hernoemen en de koppeling met het bureaublad. De inhoud (iconen of taken)
-/// komt via <see cref="SetContent"/>.
+/// hernoemen, thema, vastklikken op het raster en de koppeling met het
+/// bureaublad. De inhoud (iconen of taken) komt via <see cref="SetContent"/>.
 /// </summary>
 public partial class PaneWindow : Window
 {
     private const double TitleBarHeight = 34;
+    private const int WM_ENTERSIZEMOVE = 0x0231;
+    private const int WM_EXITSIZEMOVE = 0x0232;
+
+    private Rect _boundsAtMoveStart;
 
     public Pane Pane { get; }
 
-    /// <summary>Positie, grootte, titel of status is veranderd en moet bewaard worden.</summary>
+    /// <summary>Of en hoe groot het raster is; wordt gelezen op het moment van loslaten.</summary>
+    public Func<(bool Snap, double Cell)> GridSettings { get; set; } = () => (false, GridSnap.DefaultCell);
+
+    /// <summary>Positie, grootte, titel, thema of status is veranderd en moet bewaard worden.</summary>
     public event EventHandler? PaneChanged;
     public event EventHandler? DeleteRequested;
+
+    /// <summary>Het verplaatsen of vergroten begint/eindigt (om het raster te tonen).</summary>
+    public event EventHandler? SizeMoveStarted;
+    public event EventHandler? SizeMoveEnded;
 
     public PaneWindow(Pane pane)
     {
@@ -32,6 +45,8 @@ public partial class PaneWindow : Window
         Top = pane.Top;
         Width = pane.Width;
         ApplyRolledUp();
+        ApplyTheme();
+        BuildThemeMenu();
 
         LocationChanged += (_, _) =>
         {
@@ -43,9 +58,81 @@ public partial class PaneWindow : Window
             Pane.Width = ActualWidth;
             if (!Pane.IsRolledUp) Pane.Height = ActualHeight;
         };
+        SourceInitialized += (_, _) =>
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndProc);
     }
 
     public void SetContent(UIElement content) => Body.Content = content;
+
+    // ---------- Thema ----------
+
+    private void ApplyTheme() => PaneThemes.Apply(Resources, PaneThemes.Get(Pane.Theme));
+
+    private void BuildThemeMenu()
+    {
+        ThemeMenu.Items.Clear();
+        var current = PaneThemes.Get(Pane.Theme).Id;
+        foreach (var theme in PaneThemes.All)
+        {
+            var item = new MenuItem { Header = theme.Name, IsCheckable = true, IsChecked = theme.Id == current, Tag = theme.Id };
+            item.Click += Theme_Click;
+            ThemeMenu.Items.Add(item);
+        }
+    }
+
+    private void Theme_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string id }) return;
+        Pane.Theme = id;
+        ApplyTheme();
+        BuildThemeMenu();
+        PaneChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // ---------- Verplaatsen en vergroten, vastklikken op het raster ----------
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        switch (msg)
+        {
+            case WM_ENTERSIZEMOVE:
+                _boundsAtMoveStart = new Rect(Left, Top, ActualWidth, ActualHeight);
+                SizeMoveStarted?.Invoke(this, EventArgs.Empty);
+                break;
+            case WM_EXITSIZEMOVE:
+                SnapToGrid();
+                SizeMoveEnded?.Invoke(this, EventArgs.Empty);
+                break;
+        }
+        return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Klikt hoek en afmetingen vast op het raster. Alleen als het pane echt
+    /// verplaatst of vergroot is: een klik op de titelbalk laat hem staan.
+    /// </summary>
+    private void SnapToGrid()
+    {
+        var (snap, cell) = GridSettings();
+        if (!snap) return;
+
+        var moved = Left != _boundsAtMoveStart.X || Top != _boundsAtMoveStart.Y;
+        var resized = ActualWidth != _boundsAtMoveStart.Width || ActualHeight != _boundsAtMoveStart.Height;
+        if (!moved && !resized) return;
+
+        if (moved)
+        {
+            Left = GridSnap.Position(Left, cell);
+            Top = GridSnap.Position(Top, cell);
+        }
+        if (resized)
+        {
+            Width = GridSnap.Size(ActualWidth, cell, MinWidth);
+            if (!Pane.IsRolledUp) Height = GridSnap.Size(ActualHeight, cell, MinHeight);
+        }
+    }
+
+    // ---------- Titelbalk ----------
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
