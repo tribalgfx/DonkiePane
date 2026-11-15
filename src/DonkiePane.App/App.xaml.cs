@@ -22,6 +22,7 @@ public partial class App : Application
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ToolStripMenuItem? _hideIconsMenuItem;
     private ShellRestartWatcher? _shellWatcher;
+    private GridOverlayWindow? _gridOverlay;
     private Mutex? _singleInstance;
     private bool _isDuplicate;
 
@@ -137,6 +138,14 @@ public partial class App : Application
     private void ShowPane(Pane pane)
     {
         var window = new PaneWindow(pane);
+        window.GridSettings = () => (_layout.SnapToGrid, _layout.GridSize);
+        window.SizeMoveStarted += (_, _) =>
+        {
+            if (!_layout.SnapToGrid) return;
+            _gridOverlay ??= new GridOverlayWindow();
+            _gridOverlay.ShowFor(window, _layout.GridSize);
+        };
+        window.SizeMoveEnded += (_, _) => _gridOverlay?.Hide();
         window.PaneChanged += (_, _) => SaveLayout();
         window.DeleteRequested += async (_, _) => await DeletePaneAsync(window);
 
@@ -202,6 +211,8 @@ public partial class App : Application
                 window.Close();
             _windows.Clear();
             _iconViews.Clear();
+            _gridOverlay?.Close(); // hing aan het oude bureaublad
+            _gridOverlay = null;
             foreach (var pane in _layout.Panes)
                 ShowPane(pane);
             RefreshItems();
@@ -256,6 +267,18 @@ public partial class App : Application
             SaveLayout();
         };
         menu.Items.Add(_hideIconsMenuItem);
+
+        var snapItem = new Forms.ToolStripMenuItem("Vastklikken op raster")
+        {
+            Checked = _layout.SnapToGrid,
+            CheckOnClick = true,
+        };
+        snapItem.CheckedChanged += (_, _) =>
+        {
+            _layout.SnapToGrid = snapItem.Checked;
+            SaveLayout();
+        };
+        menu.Items.Add(snapItem);
 
         var autoStartItem = new Forms.ToolStripMenuItem("Starten met Windows")
         {

@@ -7,8 +7,8 @@
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         MinWidth="160" MinHeight="36">
-    <Border Background="{StaticResource PaneBackground}"
-            BorderBrush="{StaticResource PaneBorder}"
+    <Border Background="{DynamicResource PaneBackground}"
+            BorderBrush="{DynamicResource PaneBorder}"
             BorderThickness="1"
             CornerRadius="6">
         <Grid>
@@ -20,19 +20,20 @@
             <!-- Titelbalk: slepen verplaatst, dubbelklik rolt op/uit. -->
             <Border x:Name="TitleBar"
                     Grid.Row="0"
-                    Background="{StaticResource PaneTitleBackground}"
+                    Background="{DynamicResource PaneTitleBackground}"
                     CornerRadius="5,5,0,0"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Border.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Naam wijzigen" Click="Rename_Click" />
+                        <MenuItem x:Name="ThemeMenu" Header="Thema" />
                         <MenuItem x:Name="DeleteMenuItem" Header="Pane verwijderen" Click="Delete_Click" />
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Grid Margin="10,0">
                     <TextBlock x:Name="TitleText"
                                VerticalAlignment="Center"
-                               Foreground="{StaticResource PaneText}"
+                               Foreground="{DynamicResource PaneText}"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis" />
                     <TextBox x:Name="TitleEditor"

@@ -71,6 +71,17 @@ public static class DesktopLayer
         return true;
     }
 
+    /// <summary>Zet een venster op een positie in fysieke schermpixels, zonder het te activeren of de stapelvolgorde te wijzigen.</summary>
+    public static void SetBounds(Window window, int x, int y, int width, int height)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    /// <summary>Legt het venster onderaan, direct boven het bureaublad (onder alle andere panes).</summary>
+    public static void SendToBottom(Window window) => SendToBottom(new WindowInteropHelper(window).Handle);
+
     private static void SendToBottom(IntPtr hwnd) =>
         SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 

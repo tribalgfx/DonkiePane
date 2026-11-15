@@ -69,7 +69,7 @@
                         <TextBlock x:Name="TitleText"
                                    Text="{Binding Title}"
                                    TextWrapping="Wrap"
-                                   Foreground="{StaticResource PaneText}" />
+                                   Foreground="{DynamicResource PaneText}" />
                         <TextBox x:Name="Editor"
                                  Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}"
                                  Style="{StaticResource PaneTextBox}"
@@ -80,12 +80,12 @@
                                    Text="{Binding DueText}"
                                    FontSize="11"
                                    Margin="0,1,0,0"
-                                   Foreground="{StaticResource PaneMutedText}"
+                                   Foreground="{DynamicResource PaneMutedText}"
                                    Visibility="{Binding HasDueDate, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <Button Grid.Column="2" x:Name="Star" Style="{StaticResource StarButton}" Click="ToggleImportant_Click">
-                        <TextBlock x:Name="StarGlyph" Text="☆" FontSize="15" Foreground="{StaticResource PaneMutedText}" />
+                        <TextBlock x:Name="StarGlyph" Text="☆" FontSize="15" Foreground="{DynamicResource PaneMutedText}" />
                     </Button>
                 </Grid>
             </Border>
@@ -98,10 +98,10 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsImportant}" Value="True">
                     <Setter TargetName="StarGlyph" Property="Text" Value="★" />
-                    <Setter TargetName="StarGlyph" Property="Foreground" Value="{StaticResource PaneAccent}" />
+                    <Setter TargetName="StarGlyph" Property="Foreground" Value="{DynamicResource PaneAccent}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                    <Setter TargetName="DueText" Property="Foreground" Value="{StaticResource PaneOverdue}" />
+                    <Setter TargetName="DueText" Property="Foreground" Value="{DynamicResource PaneOverdue}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsCompleted}" Value="True">
                     <Setter TargetName="TitleText" Property="TextDecorations" Value="Strikethrough" />
@@ -125,7 +125,7 @@
                        Margin="9,0,0,0"
                        VerticalAlignment="Center"
                        IsHitTestVisible="False"
-                       Foreground="{StaticResource PaneMutedText}">
+                       Foreground="{DynamicResource PaneMutedText}">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -150,10 +150,10 @@
 
                 <TextBlock x:Name="EmptyHint"
                            Margin="8,6"
-                           Foreground="{StaticResource PaneMutedText}"
+                           Foreground="{DynamicResource PaneMutedText}"
                            Text="Geen open taken." />
 
-                <Expander x:Name="CompletedExpander" Margin="4,8,0,0" Foreground="{StaticResource PaneMutedText}">
+                <Expander x:Name="CompletedExpander" Margin="4,8,0,0" Foreground="{DynamicResource PaneMutedText}">
                     <ItemsControl x:Name="CompletedList" ItemTemplate="{StaticResource TaskTemplate}" />
                 </Expander>
             </StackPanel>

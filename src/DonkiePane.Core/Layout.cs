@@ -8,4 +8,10 @@ public sealed class Layout
 
     /// <summary>Verberg de eigen iconen van Windows zodat alleen de panes ze tonen.</summary>
     public bool HideDesktopIcons { get; set; } = true;
+
+    /// <summary>Panes klikken bij verplaatsen en vergroten vast op het ruitjesraster.</summary>
+    public bool SnapToGrid { get; set; } = true;
+
+    /// <summary>Rastergrootte in WPF-eenheden.</summary>
+    public double GridSize { get; set; } = GridSnap.DefaultCell;
 }

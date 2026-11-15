@@ -24,6 +24,9 @@ public sealed class Pane
     public double Height { get; set; } = 220;
     public bool IsRolledUp { get; set; }
 
+    /// <summary>Naam van het thema (zie de themalijst in de app); onbekend = standaard.</summary>
+    public string Theme { get; set; } = "";
+
     /// <summary>
     /// De Inbox vangt bureaubladitems op die nog in geen enkel pane staan.
     /// Er is er altijd precies één.
