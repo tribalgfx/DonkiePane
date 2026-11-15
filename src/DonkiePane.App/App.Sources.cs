@@ -26,7 +26,7 @@ public partial class App
         var plugins = PluginLoader.Load([Path.Combine(AppContext.BaseDirectory, "plugins"), Path.Combine(appData, "plugins")]);
 
         var host = new TaskSourceHost(new SourcesStore(SourcesStore.DefaultPath), plugins,
-            id => new DpapiSecretStore(id), OpenBrowser, _localTasks);
+            id => new DpapiSecretStore(id), OpenBrowser, _localTasks, Path.Combine(appData, "queue"));
         host.SourceReset += (_, sourceId) => Dispatcher.InvokeAsync(() => RebuildTaskPanes(sourceId));
         return host;
     }
