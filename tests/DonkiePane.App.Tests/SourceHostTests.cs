@@ -3,6 +3,7 @@ using System.Text;
 using DonkiePane.App;
 using DonkiePane.Core;
 using DonkiePane.Tasks;
+using DonkiePane.Tasks.Offline;
 using DonkiePane.Tasks.Plugins;
 
 namespace DonkiePane.App.Tests;
@@ -21,6 +22,7 @@ public abstract class TempData : IDisposable
     }
 
     protected string SecretsDir => Path.Combine(Dir, "secrets");
+    protected string QueueDir => Path.Combine(Dir, "queue");
     protected string SourcesPath => Path.Combine(Dir, "sources.json");
 }
 
@@ -157,7 +159,7 @@ public sealed class TaskSourceHostTests : TempData
     {
         var result = new PluginLoadResult();
         if (plugin is not null) result.Plugins.Add(new LoadedPlugin(plugin, "test.dll"));
-        return new TaskSourceHost(new SourcesStore(SourcesPath), result, id => new DpapiSecretStore(id, SecretsDir), _ => Task.CompletedTask, local ?? new FakeLocal());
+        return new TaskSourceHost(new SourcesStore(SourcesPath), result, id => new DpapiSecretStore(id, SecretsDir), _ => Task.CompletedTask, local ?? new FakeLocal(), QueueDir);
     }
 
     private static Pane PaneFor(string? sourceId) => new() { Kind = PaneKind.Tasks, SourceId = sourceId, TaskListId = "tasks" };
@@ -309,6 +311,80 @@ public sealed class TaskSourceHostTests : TempData
     }
 
     [Fact]
+    public void A_linked_source_sits_in_the_offline_queue_and_the_same_one_is_reused()
+    {
+        var plugin = new FakePlugin();
+        using var host = NewHost(plugin);
+        var connection = host.NewConnection("fake", "Bron");
+        host.Save(connection);
+
+        var provider = host.ProviderFor(PaneFor(connection.Id));
+
+        Assert.IsAssignableFrom<OfflineQueueProvider>(provider);
+        Assert.IsAssignableFrom<IRefreshableTaskProvider>(provider); // de bron kan van buiten veranderen: knop en interval blijven
+        Assert.Same(provider, host.ProviderFor(PaneFor(connection.Id)));
+    }
+
+    [Fact]
+    public void Local_tasks_are_not_put_in_a_queue()
+    {
+        var local = new FakeLocal();
+        using var host = NewHost(local: local);
+
+        Assert.Same(local, host.ProviderFor(PaneFor(null)));
+    }
+
+    [Fact]
+    public void A_waiting_queue_on_disk_is_picked_up_when_the_source_starts()
+    {
+        var plugin = new FakePlugin();
+        using var host = NewHost(plugin);
+        var connection = host.NewConnection("fake", "Bron");
+        host.Save(connection);
+        new PendingQueueStore(Path.Combine(QueueDir, connection.Id + ".json")).Save(new PendingQueueData
+        {
+            Operations = [new PendingOperation { Kind = PendingOperation.Add, ListId = "tasks", TaskId = "queued-1", Task = new TaskItem { Id = "queued-1", Title = "Wachtte al" } }],
+        });
+
+        var provider = (OfflineQueueProvider)host.ProviderFor(PaneFor(connection.Id));
+
+        Assert.Equal(1, provider.PendingCount);
+    }
+
+    [Fact]
+    public void Removing_a_connection_discards_its_waiting_changes()
+    {
+        var plugin = new FakePlugin();
+        using var host = NewHost(plugin);
+        var connection = host.NewConnection("fake", "Bron");
+        host.Save(connection);
+        var file = Path.Combine(QueueDir, connection.Id + ".json");
+        new PendingQueueStore(file).Save(new PendingQueueData { Operations = [new PendingOperation { Kind = PendingOperation.Delete, ListId = "tasks", TaskId = "x" }] });
+
+        host.Remove(connection.Id);
+
+        Assert.False(File.Exists(file));
+    }
+
+    [Fact]
+    public void Changing_a_connection_keeps_its_waiting_changes_and_starts_a_fresh_queue_object()
+    {
+        var plugin = new FakePlugin();
+        using var host = NewHost(plugin);
+        var connection = host.NewConnection("fake", "Bron");
+        host.Save(connection);
+        var file = Path.Combine(QueueDir, connection.Id + ".json");
+        new PendingQueueStore(file).Save(new PendingQueueData { Operations = [new PendingOperation { Kind = PendingOperation.Delete, ListId = "tasks", TaskId = "x" }] });
+        var before = (OfflineQueueProvider)host.ProviderFor(PaneFor(connection.Id));
+
+        host.Save(connection, resetSource: true); // bijvoorbeeld een ander token ingevuld
+        var after = (OfflineQueueProvider)host.ProviderFor(PaneFor(connection.Id));
+
+        Assert.NotSame(before, after);
+        Assert.Equal(1, after.PendingCount); // het wachtende staat in het bestand en gaat niet verloren
+    }
+
+    [Fact]
     public void A_new_source_starts_with_the_interval_the_user_chose()
     {
         var plugin = new FakePlugin();
@@ -355,7 +431,7 @@ public sealed class TaskSourceHostTests : TempData
 public sealed class LegacyGoogleMigrationTests : TempData
 {
     private TaskSourceHost NewHost() =>
-        new(new SourcesStore(SourcesPath), new PluginLoadResult(), id => new DpapiSecretStore(id, SecretsDir), _ => Task.CompletedTask, new FakeLocal());
+        new(new SourcesStore(SourcesPath), new PluginLoadResult(), id => new DpapiSecretStore(id, SecretsDir), _ => Task.CompletedTask, new FakeLocal(), QueueDir);
 
     private void WriteLegacy(string clientId, string? secret)
     {

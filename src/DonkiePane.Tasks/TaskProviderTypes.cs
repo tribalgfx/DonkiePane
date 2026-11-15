@@ -19,7 +19,7 @@ public class TaskProviderException(string message, Exception? inner = null) : Ex
 /// De bron weigert het token of de inloggegevens. Niet herhalen: sommige bronnen blokkeren na een
 /// paar mislukte pogingen alles, ook met een geldig token. De gebruiker moet het eerst verbeteren.
 /// </summary>
-public sealed class SourceUnauthorizedException(string message) : TaskProviderException(message);
+public class SourceUnauthorizedException(string message) : TaskProviderException(message);
 
 /// <summary>De bron vraagt om even te wachten. Respecteer <see cref="RetryAfter"/> en probeer niet eerder opnieuw.</summary>
 public sealed class SourceRateLimitedException(TimeSpan retryAfter)

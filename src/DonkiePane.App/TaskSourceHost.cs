@@ -1,5 +1,7 @@
+using System.IO;
 using DonkiePane.Core;
 using DonkiePane.Tasks;
+using DonkiePane.Tasks.Offline;
 using DonkiePane.Tasks.Plugins;
 
 namespace DonkiePane.App;
@@ -16,12 +18,15 @@ public sealed class TaskSourceHost : IDisposable
     private readonly Func<string, ISecretStore> _secretsFor;
     private readonly Func<Uri, Task> _openBrowser;
     private readonly ITaskProvider _local;
+    private readonly string _queueFolder;
     private readonly object _lock = new();
     private readonly Dictionary<string, ITaskSource> _sources = [];
+    private readonly Dictionary<string, OfflineQueueProvider> _wrapped = [];
     private readonly Dictionary<string, string> _failed = [];
 
+    /// <param name="queueFolder">Waar de wachtrijen met offline wijzigingen staan (één bestand per verbinding).</param>
     public TaskSourceHost(SourcesStore store, PluginLoadResult plugins, Func<string, ISecretStore> secretsFor,
-        Func<Uri, Task> openBrowser, ITaskProvider local)
+        Func<Uri, Task> openBrowser, ITaskProvider local, string queueFolder)
     {
         _store = store;
         _config = store.Load();
@@ -29,7 +34,10 @@ public sealed class TaskSourceHost : IDisposable
         _secretsFor = secretsFor;
         _openBrowser = openBrowser;
         _local = local;
+        _queueFolder = queueFolder;
     }
+
+    private string QueueFile(string connectionId) => Path.Combine(_queueFolder, connectionId + ".json");
 
     public PluginLoadResult Plugins { get; }
 
@@ -88,12 +96,21 @@ public sealed class TaskSourceHost : IDisposable
         }
         _secretsFor(connectionId).Clear();
         Reset(connectionId);
+        try
+        {
+            File.Delete(QueueFile(connectionId)); // wijzigingen die nog wachtten op een bron die je zelf verwijdert, vervallen
+        }
+        catch (IOException)
+        {
+            // Bestand in gebruik: het wordt nooit meer gelezen, want de verbinding bestaat niet meer.
+        }
     }
 
     private void Reset(string connectionId)
     {
         lock (_lock)
         {
+            if (_wrapped.Remove(connectionId, out var queue)) queue.Dispose();
             if (_sources.Remove(connectionId, out var old)) old.Dispose();
             _failed.Remove(connectionId);
         }
@@ -150,18 +167,33 @@ public sealed class TaskSourceHost : IDisposable
         return null;
     }
 
-    /// <summary>De provider voor een takenpane: lokaal, een bron, of een provider die uitlegt waarom het niet gaat.</summary>
+    /// <summary>
+    /// De provider voor een takenpane: lokaal, een bron, of een provider die uitlegt waarom het niet gaat.
+    /// Een gekoppelde bron zit in een wachtrij die wijzigingen bewaart zolang de bron niet bereikbaar is.
+    /// </summary>
     public ITaskProvider ProviderFor(Pane pane)
     {
         if (string.IsNullOrEmpty(pane.SourceId)) return _local;
         var source = GetSource(pane.SourceId, out var error);
-        return source?.Provider ?? new UnavailableTaskProvider(error ?? "Deze bron is niet beschikbaar.");
+        if (source is null) return new UnavailableTaskProvider(error ?? "Deze bron is niet beschikbaar.");
+
+        lock (_lock)
+        {
+            if (!_wrapped.TryGetValue(pane.SourceId, out var queue))
+            {
+                queue = OfflineQueueProvider.Wrap(source.Provider, new PendingQueueStore(QueueFile(pane.SourceId)));
+                _wrapped[pane.SourceId] = queue;
+            }
+            return queue;
+        }
     }
 
     public void Dispose()
     {
         lock (_lock)
         {
+            foreach (var queue in _wrapped.Values) queue.Dispose();
+            _wrapped.Clear();
             foreach (var source in _sources.Values) source.Dispose();
             _sources.Clear();
         }

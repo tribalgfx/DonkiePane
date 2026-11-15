@@ -33,7 +33,7 @@ public sealed class SourceEditWindowTests : TempData
     }
 
     private TaskSourceHost NewHost() =>
-        new(new SourcesStore(SourcesPath), new PluginLoadResult(), id => new DpapiSecretStore(id, SecretsDir), _ => Task.CompletedTask, new FakeLocal());
+        new(new SourcesStore(SourcesPath), new PluginLoadResult(), id => new DpapiSecretStore(id, SecretsDir), _ => Task.CompletedTask, new FakeLocal(), QueueDir);
 
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
     {
