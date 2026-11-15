@@ -33,6 +33,7 @@ public partial class SettingsWindow : Window
 
         HideIconsBox.IsChecked = layout.HideDesktopIcons;
         SnapBox.IsChecked = layout.SnapToGrid;
+        DoubleClickBox.IsChecked = layout.HideOnDesktopDoubleClick;
         GridSlider.Value = layout.GridSize;
         GridValue.Text = $"{layout.GridSize:0}";
         GridSlider.IsEnabled = layout.SnapToGrid;
@@ -58,6 +59,12 @@ public partial class SettingsWindow : Window
     {
         _layout.HideDesktopIcons = HideIconsBox.IsChecked == true;
         DesktopIcons.SetVisible(!_layout.HideDesktopIcons);
+        _save();
+    }
+
+    private void DoubleClick_Click(object sender, RoutedEventArgs e)
+    {
+        _layout.HideOnDesktopDoubleClick = DoubleClickBox.IsChecked == true;
         _save();
     }
 

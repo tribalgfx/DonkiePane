@@ -60,6 +60,12 @@
         <TextBlock Style="{StaticResource Hint}"
                    Text="DonkiePane toont je iconen in panes. Je bestanden blijven gewoon op je bureaublad staan. Uitgezet zie je de Windows-iconen weer." />
 
+        <CheckBox x:Name="DoubleClickBox" Style="{StaticResource Option}" Click="DoubleClick_Click">
+            <TextBlock Text="Dubbelklikken op het bureaublad verbergt de panes" />
+        </CheckBox>
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="Dubbelklik op een leeg stuk bureaublad om alle panes met hun inhoud te verbergen, en nog een keer om ze terug te halen." />
+
         <CheckBox x:Name="AutoStartBox" Style="{StaticResource Option}" Click="AutoStart_Click">
             <TextBlock Text="Starten met Windows" />
         </CheckBox>

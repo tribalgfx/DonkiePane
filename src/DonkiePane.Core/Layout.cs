@@ -9,6 +9,9 @@ public sealed class Layout
     /// <summary>Verberg de eigen iconen van Windows zodat alleen de panes ze tonen.</summary>
     public bool HideDesktopIcons { get; set; } = true;
 
+    /// <summary>Dubbelklikken op een leeg stuk bureaublad verbergt alle panes; nog een keer haalt ze terug.</summary>
+    public bool HideOnDesktopDoubleClick { get; set; } = true;
+
     /// <summary>Panes klikken bij verplaatsen en vergroten vast op het ruitjesraster.</summary>
     public bool SnapToGrid { get; set; } = true;
 

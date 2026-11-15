@@ -50,6 +50,7 @@ public sealed class SettingsWindowTests : TempData
             Assert.Equal(90, window.FindName("SyncSlider") is Slider s ? s.Value : -1);
             Assert.Equal("1,5 min", ((TextBlock)window.FindName("SyncValue")).Text.Replace('.', ','));
             Assert.Equal(48, ((Slider)window.FindName("GridSlider")).Value);
+            Assert.True(((CheckBox)window.FindName("DoubleClickBox")).IsChecked);
             Assert.False(((CheckBox)window.FindName("SnapBox")).IsChecked);
             Assert.False(((CheckBox)window.FindName("HideIconsBox")).IsChecked);
         });
