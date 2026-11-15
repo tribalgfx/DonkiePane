@@ -285,7 +285,7 @@ public partial class App : Application
 
         var icon = new Forms.NotifyIcon
         {
-            Icon = TrayIconFactory.CreatePlaidIcon(),
+            Icon = TrayIconFactory.CreateAppIcon(),
             Text = "DonkiePane",
             ContextMenuStrip = menu,
             Visible = true,
