@@ -104,6 +104,18 @@ public sealed class LayoutEditorTests
     }
 
     [Fact]
+    public void MoveItem_into_task_pane_is_refused()
+    {
+        var icons = new Pane { Items = ["user/a"] };
+        var tasks = Pane.NewTaskPane();
+        var layout = LayoutWith(icons, tasks);
+
+        Assert.False(LayoutEditor.MoveItem(layout, "user/a", tasks.Id));
+        Assert.Equal(["user/a"], icons.Items);
+        Assert.Empty(tasks.Items);
+    }
+
+    [Fact]
     public void DeletePane_moves_items_to_inbox()
     {
         var pane = new Pane { Items = ["user/a"] };
