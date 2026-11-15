@@ -3,7 +3,7 @@
   Tekent het DonkiePane-icoon en schrijft src\DonkiePane.App\Assets\DonkiePane.ico (alle formaten) en een voorbeeld-png.
 
 .DESCRIPTION
-  Een donkere antracietkleurige tegel met vier panes (2 x 2), waarvan er een theedoekrood is.
+  Een donkere antracietkleurige tegel met een ezelkop (Donkie), op een subtiel theedoekruitje.
   Elk formaat wordt apart getekend, zodat de kleine versies scherp blijven.
   Het script is bewust zuiver ASCII, zodat Windows PowerShell 5.1 het niet beschadigt.
 
@@ -49,29 +49,69 @@ function New-IconBitmap([int]$size) {
         $g.DrawPath($edge, $tile)
     }
 
-    # Vier panes. Kleine formaten: kleinere marge en kleinere spleet, dan blijft het leesbaar.
-    $margin = if ($size -le 24) { $s * 0.17 } else { $s * 0.21 }
-    $gap = if ($size -le 24) { $s * 0.09 } else { $s * 0.07 }
-    $cell = ($s - 2 * $margin - $gap) / 2
-    $radius = $cell * 0.22
-    $red = [System.Drawing.Color]::FromArgb(255, 0xC8, 0x2D, 0x35)
-    $redDark = [System.Drawing.Color]::FromArgb(255, 0x9E, 0x1E, 0x25)
-    $grey = [System.Drawing.Color]::FromArgb(255, 0x6A, 0x70, 0x7B)
-    $greyDark = [System.Drawing.Color]::FromArgb(255, 0x4A, 0x4F, 0x57)
-
-    for ($row = 0; $row -lt 2; $row++) {
-        for ($col = 0; $col -lt 2; $col++) {
-            $x = $margin + $col * ($cell + $gap)
-            $y = $margin + $row * ($cell + $gap)
-            $path = New-RoundedPath $x $y $cell $cell $radius
-            $isRed = ($row -eq 0 -and $col -eq 0)
-            $c1 = if ($isRed) { $red } else { $grey }
-            $c2 = if ($isRed) { $redDark } else { $greyDark }
-            $rect = New-Object System.Drawing.RectangleF($x, $y, $cell, $cell)
-            $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($rect, $c1, $c2, 90.0)
-            $g.FillPath($brush, $path)
-            $brush.Dispose(); $path.Dispose()
+    # Subtiel theedoekruitje op de tegel (alleen waar het niet in ruis verandert).
+    if ($size -ge 32) {
+        $g.SetClip($tile)
+        $check = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(16, 255, 255, 255))
+        $step = $s / 8
+        for ($r = 0; $r -lt 8; $r++) {
+            for ($c = 0; $c -lt 8; $c++) {
+                if (($r + $c) % 2 -eq 0) { $g.FillRectangle($check, [single]($c * $step), [single]($r * $step), [single]$step, [single]$step) }
+            }
         }
+        $g.ResetClip()
+    }
+
+    # De ezel (Donkie): twee lange oren, een grijze kop met lichte snuit, donkere lok, ogen en neusgaten.
+    $small = $size -le 24
+    $grey = [System.Drawing.Color]::FromArgb(255, 0x9A, 0xA0, 0xAA)
+    $greyDark = [System.Drawing.Color]::FromArgb(255, 0x6E, 0x74, 0x7E)
+    $muzzle = [System.Drawing.Color]::FromArgb(255, 0xE6, 0xDF, 0xD2)
+    $ink = [System.Drawing.Color]::FromArgb(255, 0x1B, 0x1C, 0x1E)
+    $red = [System.Drawing.Color]::FromArgb(255, 0xC8, 0x2D, 0x35)
+
+    $earW = if ($small) { 0.17 } else { 0.15 }
+    foreach ($side in -1, 1) {
+        $cx = 0.5 + $side * 0.205
+        $state = $g.Save()
+        $g.TranslateTransform([single]($cx * $s), [single](0.27 * $s))
+        $g.RotateTransform([single]($side * 17))
+        $ear = New-Object System.Drawing.RectangleF([single](-$earW * $s / 2), [single](-0.20 * $s), [single]($earW * $s), [single](0.40 * $s))
+        $earBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($ear, $grey, $greyDark, 90.0)
+        $g.FillEllipse($earBrush, $ear)
+        $inner = New-Object System.Drawing.RectangleF([single](-$earW * $s * 0.27), [single](-0.145 * $s), [single]($earW * $s * 0.54), [single](0.29 * $s))
+        $g.FillEllipse((New-Object System.Drawing.SolidBrush($red)), $inner)
+        $g.Restore($state)
+    }
+
+    # Kop
+    $head = New-Object System.Drawing.RectangleF([single](0.29 * $s), [single](0.30 * $s), [single](0.42 * $s), [single](0.50 * $s))
+    $headBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($head, $grey, $greyDark, 90.0)
+    $g.FillEllipse($headBrush, $head)
+
+    # Snuit
+    $snout = New-Object System.Drawing.RectangleF([single](0.335 * $s), [single](0.55 * $s), [single](0.33 * $s), [single](0.27 * $s))
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush($muzzle)), $snout)
+
+    # Lok tussen de oren
+    $tuft = New-Object System.Drawing.RectangleF([single](0.43 * $s), [single](0.255 * $s), [single](0.14 * $s), [single](0.13 * $s))
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush($ink)), $tuft)
+
+    # Ogen
+    $eye = if ($small) { 0.055 } else { 0.042 }
+    foreach ($side in -1, 1) {
+        $ex = 0.5 + $side * 0.105
+        $g.FillEllipse((New-Object System.Drawing.SolidBrush($ink)), [single](($ex - $eye) * $s), [single]((0.49 - $eye) * $s), [single]($eye * 2 * $s), [single]($eye * 2 * $s))
+        if ($size -ge 48) {
+            $g.FillEllipse([System.Drawing.Brushes]::White, [single](($ex - $eye * 0.2) * $s), [single]((0.49 - $eye * 0.7) * $s), [single]($eye * 0.7 * $s), [single]($eye * 0.7 * $s))
+        }
+    }
+
+    # Neusgaten
+    $nose = if ($small) { 0.034 } else { 0.026 }
+    foreach ($side in -1, 1) {
+        $nx = 0.5 + $side * 0.065
+        $g.FillEllipse((New-Object System.Drawing.SolidBrush($ink)), [single](($nx - $nose) * $s), [single]((0.71 - $nose * 0.8) * $s), [single]($nose * 2 * $s), [single]($nose * 1.6 * $s))
     }
     $g.Dispose()
     return $bmp
