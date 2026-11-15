@@ -55,6 +55,20 @@ public sealed class TaskOrderingTests
         Assert.Equal(["c", "b"], changed.Select(t => t.Id).Order().Reverse());
     }
 
+    [Theory]
+    [InlineData("a", 3, "c")]   // achteraan: onder de laatste (c)
+    [InlineData("a", 2, "b")]   // vóór c: dus onder b
+    [InlineData("c", 0, null)]  // bovenaan
+    [InlineData("b", -1, "c")]  // -1 = achteraan
+    [InlineData("b", 1, "a")]   // op de eigen plek: blijft onder a
+    [InlineData("nietbestaand", 0, null)]
+    public void PreviousSiblingId_names_the_neighbour_above_the_new_position(string id, int index, string? expected)
+    {
+        var tasks = Tasks("a", "b", "c");
+
+        Assert.Equal(expected, TaskOrdering.PreviousSiblingId(tasks, id, index));
+    }
+
     [Fact]
     public void NextWeek_is_the_coming_monday()
     {

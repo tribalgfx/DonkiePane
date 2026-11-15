@@ -25,7 +25,8 @@
 
         <!-- x:Shared="False": elke taak krijgt een eigen menu. -->
         <ContextMenu x:Key="TaskMenu" x:Shared="False">
-            <MenuItem Header="Belangrijk" IsCheckable="True" IsChecked="{Binding IsImportant, Mode=OneWay}" Click="ToggleImportant_Click" />
+            <MenuItem Header="Belangrijk" IsCheckable="True" IsChecked="{Binding IsImportant, Mode=OneWay}" Click="ToggleImportant_Click"
+                      Visibility="{Binding ShowStar, Converter={StaticResource BoolToVisibility}}" />
             <MenuItem Header="Naam wijzigen" Click="Edit_Click" />
             <MenuItem Header="Deadline">
                 <MenuItem Header="Vandaag" Tag="today" Click="Due_Click" />
@@ -84,7 +85,8 @@
                                    Visibility="{Binding HasDueDate, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
-                    <Button Grid.Column="2" x:Name="Star" Style="{StaticResource StarButton}" Click="ToggleImportant_Click">
+                    <Button Grid.Column="2" x:Name="Star" Style="{StaticResource StarButton}" Click="ToggleImportant_Click"
+                            Visibility="{Binding ShowStar, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock x:Name="StarGlyph" Text="☆" FontSize="15" Foreground="{DynamicResource PaneMutedText}" />
                     </Button>
                 </Grid>
@@ -116,6 +118,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Nieuwe taak -->
@@ -158,5 +161,12 @@
                 </Expander>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Melding van de bron: geen verbinding, niet ingelogd, ... Verborgen als alles goed gaat. -->
+        <Border x:Name="StatusBar" Grid.Row="2" Visibility="Collapsed" Padding="10,6"
+                Background="#33000000" CornerRadius="0,0,5,5">
+            <TextBlock x:Name="StatusText" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource PaneOverdue}" />
+        </Border>
     </Grid>
 </UserControl>

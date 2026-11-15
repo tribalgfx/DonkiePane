@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using DonkiePane.Core;
 using DonkiePane.Shell;
+using DonkiePane.Tasks;
 
 namespace DonkiePane.App;
 
@@ -14,14 +15,21 @@ public partial class SettingsWindow : Window
     private readonly Layout _layout;
     private readonly Action _save;
     private readonly Action _bringPanes;
+    private readonly GoogleAccount _google;
     private bool _loading = true;
 
-    public SettingsWindow(Layout layout, Action save, Action bringPanes)
+    public SettingsWindow(Layout layout, Action save, Action bringPanes, GoogleAccount google)
     {
         InitializeComponent();
+        // Nooit hoger dan het scherm; wat er niet in past, scrolt.
+        MaxHeight = SystemParameters.WorkArea.Height - 40;
         _layout = layout;
         _save = save;
         _bringPanes = bringPanes;
+        _google = google;
+
+        GoogleClientId.Text = google.ClientId;
+        RefreshGoogle();
 
         HideIconsBox.IsChecked = layout.HideDesktopIcons;
         SnapBox.IsChecked = layout.SnapToGrid;
@@ -76,6 +84,64 @@ public partial class SettingsWindow : Window
         _layout.GridSize = GridSlider.Value;
         GridValue.Text = $"{GridSlider.Value:0}";
         _save();
+    }
+
+    // ---------- Google Taken ----------
+
+    private void RefreshGoogle()
+    {
+        GoogleStatus.Text = _google.IsSignedIn ? "Ingelogd bij Google." : "Niet ingelogd bij Google.";
+        GoogleSecretHint.Text = _google.HasClientSecret
+            ? "Er is een secret opgeslagen. Laat dit veld leeg om het te houden, of typ een nieuw secret om het te vervangen."
+            : "Er is nog geen secret opgeslagen. Voor een desktop-app is dat soms niet nodig.";
+        GoogleSignOutButton.IsEnabled = _google.IsSignedIn;
+        GoogleClearSecretButton.IsEnabled = _google.HasClientSecret;
+    }
+
+    /// <summary>Een leeg wachtwoordveld betekent "ongewijzigd laten", geen "wissen".</summary>
+    private void SaveGoogle()
+    {
+        _google.SaveSettings(GoogleClientId.Text, GoogleSecret.Password.Length > 0 ? GoogleSecret.Password : null);
+        GoogleSecret.Clear();
+        RefreshGoogle();
+    }
+
+    private void GoogleSave_Click(object sender, RoutedEventArgs e)
+    {
+        SaveGoogle();
+        GoogleStatus.Text = "Opgeslagen. " + GoogleStatus.Text;
+    }
+
+    private async void GoogleSignIn_Click(object sender, RoutedEventArgs e)
+    {
+        SaveGoogle();
+        GoogleSignInButton.IsEnabled = false;
+        GoogleStatus.Text = "Inloggen in je browser… (je hebt 3 minuten)";
+        try
+        {
+            await _google.SignInAsync();
+        }
+        catch (TaskProviderException ex)
+        {
+            MessageBox.Show(this, ex.Message, "Google Taken", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            GoogleSignInButton.IsEnabled = true;
+            RefreshGoogle();
+        }
+    }
+
+    private async void GoogleSignOut_Click(object sender, RoutedEventArgs e)
+    {
+        await _google.SignOutAsync();
+        RefreshGoogle();
+    }
+
+    private void GoogleClearSecret_Click(object sender, RoutedEventArgs e)
+    {
+        _google.SaveSettings(GoogleClientId.Text, secret: "");
+        RefreshGoogle();
     }
 
     private void BringPanes_Click(object sender, RoutedEventArgs e) => _bringPanes();

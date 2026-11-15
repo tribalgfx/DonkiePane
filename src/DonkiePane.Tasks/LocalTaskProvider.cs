@@ -20,13 +20,18 @@ public sealed class LocalTaskProvider : ITaskProvider
     private readonly TaskStore _store;
     private readonly TaskStoreData _data;
 
-    public event EventHandler<string>? ListChanged;
-
     public LocalTaskProvider(TaskStore store)
     {
         _store = store;
         _data = store.Load();
     }
+
+    public TaskProviderCapabilities Capabilities { get; } = new(Importance: true, PaneOwnsTasks: true);
+
+    public event EventHandler<string>? ListChanged;
+
+    // Lokale taken zijn altijd bereikbaar; er is nooit iets te melden.
+    public event EventHandler<TaskProviderStatus>? StatusChanged { add { } remove { } }
 
     public Task<IReadOnlyList<TaskItem>> GetTasksAsync(string listId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<TaskItem>>(
@@ -58,13 +63,22 @@ public sealed class LocalTaskProvider : ITaskProvider
         return Task.CompletedTask;
     }
 
-    public Task DeleteAsync(string taskId, CancellationToken ct = default)
+    public Task MoveAsync(string listId, string taskId, int newIndex, CancellationToken ct = default)
     {
-        var task = _data.Tasks.FirstOrDefault(t => t.Id == taskId);
+        var ordered = TaskOrdering.Ordered(_data.Tasks.Where(t => t.ListId == listId)).ToList();
+        var changed = TaskOrdering.Move(ordered, taskId, newIndex);
+        foreach (var task in changed) task.UpdatedAt = DateTimeOffset.UtcNow;
+        if (changed.Count > 0) SaveAndNotify([listId]);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(string listId, string taskId, CancellationToken ct = default)
+    {
+        var task = _data.Tasks.FirstOrDefault(t => t.Id == taskId && t.ListId == listId);
         if (task is not null)
         {
             _data.Tasks.Remove(task);
-            SaveAndNotify([task.ListId]);
+            SaveAndNotify([listId]);
         }
         return Task.CompletedTask;
     }

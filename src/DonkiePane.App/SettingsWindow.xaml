@@ -50,6 +50,7 @@
         </Style>
     </Window.Resources>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24,12,24,24">
         <TextBlock Style="{StaticResource Heading}" Margin="0,6,0,6" Text="Bureaublad" />
 
@@ -82,6 +83,25 @@
             <TextBlock x:Name="GridValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
+        <TextBlock Style="{StaticResource Heading}" Text="Google Taken" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
+                   Text="Voor takenpanes die aan Google Taken gekoppeld zijn. Het client-ID en het secret komen uit Google Cloud (een OAuth-client van het type Desktop app). Je wachtwoord vul je alleen bij Google zelf in, in je browser." />
+
+        <TextBlock Text="Client-ID" Margin="0,10,0,3" />
+        <TextBox x:Name="GoogleClientId" Style="{StaticResource PaneTextBox}" Padding="6,5" />
+
+        <TextBlock Text="Client-secret" Margin="0,10,0,3" />
+        <PasswordBox x:Name="GoogleSecret" Background="#26FFFFFF" Foreground="#FFF5F0E8" BorderThickness="0" Padding="6,5" />
+        <TextBlock x:Name="GoogleSecretHint" Style="{StaticResource Hint}" Margin="0,3,0,0" />
+
+        <StackPanel Orientation="Horizontal">
+            <Button Style="{StaticResource Action}" Click="GoogleSave_Click" Content="Opslaan" />
+            <Button x:Name="GoogleSignInButton" Style="{StaticResource Action}" Click="GoogleSignIn_Click" Content="Inloggen" />
+            <Button x:Name="GoogleSignOutButton" Style="{StaticResource Action}" Click="GoogleSignOut_Click" Content="Uitloggen" />
+            <Button x:Name="GoogleClearSecretButton" Style="{StaticResource Action}" Click="GoogleClearSecret_Click" Content="Secret wissen" />
+        </StackPanel>
+        <TextBlock x:Name="GoogleStatus" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+
         <TextBlock Style="{StaticResource Heading}" Text="Schermen" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,0" Foreground="{StaticResource Muted}"
                    Text="Valt een scherm weg, dan haalt DonkiePane de panes vanzelf terug en zet ze weer op hun plek zodra het scherm terugkomt. Is er toch iets zoek, haal dan alles naar je hoofdscherm." />
@@ -97,4 +117,5 @@
 
         <TextBlock x:Name="VersionText" Style="{StaticResource Hint}" Margin="0,22,0,0" />
     </StackPanel>
+    </ScrollViewer>
 </Window>

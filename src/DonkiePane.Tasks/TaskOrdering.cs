@@ -32,9 +32,7 @@ public static class TaskOrdering
 
         var task = list[oldIndex];
         list.RemoveAt(oldIndex);
-        if (newIndex > oldIndex) newIndex--;
-        if (newIndex < 0 || newIndex > list.Count) newIndex = list.Count;
-        list.Insert(newIndex, task);
+        list.Insert(TargetIndex(list.Count, oldIndex, newIndex), task);
 
         var changed = new List<TaskItem>();
         for (var i = 0; i < list.Count; i++)
@@ -44,5 +42,28 @@ public static class TaskOrdering
             changed.Add(list[i]);
         }
         return changed;
+    }
+
+    /// <summary>
+    /// Bij bronnen die de volgorde zelf bijhouden (Google Taken): de taak waar
+    /// <paramref name="taskId"/> na een verplaatsing naar <paramref name="newIndex"/>
+    /// direct onder komt te staan, of <c>null</c> als hij bovenaan komt.
+    /// </summary>
+    public static string? PreviousSiblingId(IReadOnlyList<TaskItem> ordered, string taskId, int newIndex)
+    {
+        var list = ordered.ToList();
+        var oldIndex = list.FindIndex(t => t.Id == taskId);
+        if (oldIndex < 0) return null;
+
+        list.RemoveAt(oldIndex);
+        var index = TargetIndex(list.Count, oldIndex, newIndex);
+        return index == 0 ? null : list[index - 1].Id;
+    }
+
+    /// <summary>De plek in de lijst zónder de verplaatste taak, gegeven de plek in de lijst mét die taak.</summary>
+    private static int TargetIndex(int countWithoutTask, int oldIndex, int newIndex)
+    {
+        if (newIndex > oldIndex) newIndex--;
+        return newIndex < 0 || newIndex > countWithoutTask ? countWithoutTask : newIndex;
     }
 }

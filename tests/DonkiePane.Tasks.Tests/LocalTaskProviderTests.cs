@@ -1,4 +1,4 @@
-using DonkiePane.Tasks;
+﻿using DonkiePane.Tasks;
 
 namespace DonkiePane.Tasks.Tests;
 
@@ -75,12 +75,35 @@ public sealed class LocalTaskProviderTests : IDisposable
         await provider.AddAsync("werk", new TaskItem { Title = "B" });
         await provider.AddAsync("thuis", new TaskItem { Title = "C" });
 
-        await provider.DeleteAsync(a.Id);
+        await provider.DeleteAsync("werk", a.Id);
         Assert.Equal("B", Assert.Single(await provider.GetTasksAsync("werk")).Title);
 
         await provider.DeleteListAsync("werk");
         Assert.Empty(await provider.GetTasksAsync("werk"));
         Assert.Single(await NewProvider().GetTasksAsync("thuis"));
+    }
+
+    [Fact]
+    public async Task Move_reorders_the_open_tasks_and_keeps_the_order_after_a_restart()
+    {
+        var provider = NewProvider();
+        foreach (var (title, order) in new[] { ("A", 0), ("B", 1), ("C", 2) })
+            await provider.AddAsync("werk", new TaskItem { Title = title, SortOrder = order });
+        var c = (await provider.GetTasksAsync("werk")).Single(t => t.Title == "C");
+
+        await provider.MoveAsync("werk", c.Id, 0);
+
+        var order2 = TaskOrdering.Ordered(await NewProvider().GetTasksAsync("werk")).Select(t => t.Title);
+        Assert.Equal(["C", "A", "B"], order2);
+    }
+
+    [Fact]
+    public void Local_tasks_support_importance_and_belong_to_their_pane()
+    {
+        var capabilities = NewProvider().Capabilities;
+
+        Assert.True(capabilities.Importance);
+        Assert.True(capabilities.PaneOwnsTasks);
     }
 
     [Fact]
@@ -95,3 +118,4 @@ public sealed class LocalTaskProviderTests : IDisposable
         Assert.Equal(["werk"], changed);
     }
 }
+
