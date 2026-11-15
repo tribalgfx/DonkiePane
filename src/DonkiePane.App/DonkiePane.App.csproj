@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DonkiePane.Core\DonkiePane.Core.csproj" />
     <ProjectReference Include="..\DonkiePane.Shell\DonkiePane.Shell.csproj" />
+    <ProjectReference Include="..\DonkiePane.Tasks\DonkiePane.Tasks.csproj" />
   </ItemGroup>
 
 </Project>

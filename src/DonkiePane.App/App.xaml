@@ -8,5 +8,18 @@
         <SolidColorBrush x:Key="PaneTitleBackground" Color="#CCB3262D" />
         <SolidColorBrush x:Key="PaneBorder" Color="#66FFFFFF" />
         <SolidColorBrush x:Key="PaneText" Color="#FFF5F0E8" />
+        <SolidColorBrush x:Key="PaneMutedText" Color="#A6F5F0E8" />
+        <SolidColorBrush x:Key="PaneInputBackground" Color="#26FFFFFF" />
+        <SolidColorBrush x:Key="PaneAccent" Color="#FFF2C14E" />
+        <SolidColorBrush x:Key="PaneOverdue" Color="#FFFF9A8A" />
+
+        <Style x:Key="PaneTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource PaneInputBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource PaneText}" />
+            <Setter Property="CaretBrush" Value="{StaticResource PaneText}" />
+            <Setter Property="SelectionBrush" Value="#FFB3262D" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="3,2" />
+        </Style>
     </Application.Resources>
 </Application>

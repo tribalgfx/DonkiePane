@@ -1,0 +1,162 @@
+<UserControl x:Class="DonkiePane.App.TasksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:DonkiePane.App">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Ster: belangrijk aan/uit. -->
+        <Style x:Key="StarButton" TargetType="Button">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ToolTip" Value="Belangrijk" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- x:Shared="False": elke taak krijgt een eigen menu. -->
+        <ContextMenu x:Key="TaskMenu" x:Shared="False">
+            <MenuItem Header="Belangrijk" IsCheckable="True" IsChecked="{Binding IsImportant, Mode=OneWay}" Click="ToggleImportant_Click" />
+            <MenuItem Header="Naam wijzigen" Click="Edit_Click" />
+            <MenuItem Header="Deadline">
+                <MenuItem Header="Vandaag" Tag="today" Click="Due_Click" />
+                <MenuItem Header="Morgen" Tag="tomorrow" Click="Due_Click" />
+                <MenuItem Header="Volgende week" Tag="nextweek" Click="Due_Click" />
+                <MenuItem Header="Kies datum">
+                    <MenuItem StaysOpenOnClick="True">
+                        <MenuItem.Header>
+                            <Calendar SelectedDatesChanged="Calendar_SelectedDatesChanged" />
+                        </MenuItem.Header>
+                    </MenuItem>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Geen deadline" Tag="none" Click="Due_Click" />
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Verwijderen" Click="Delete_Click" />
+        </ContextMenu>
+
+        <DataTemplate x:Key="TaskTemplate" DataType="{x:Type local:TaskRow}">
+            <Border x:Name="Row"
+                    Padding="6,4" Margin="0,1"
+                    CornerRadius="4"
+                    Background="Transparent"
+                    ContextMenu="{StaticResource TaskMenu}"
+                    MouseLeftButtonDown="Row_MouseLeftButtonDown"
+                    MouseMove="Row_MouseMove">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox Grid.Column="0" VerticalAlignment="Top" Margin="0,3,8,0"
+                              Focusable="False"
+                              IsChecked="{Binding IsCompleted, Mode=OneWay}"
+                              Click="Complete_Click" />
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="TitleText"
+                                   Text="{Binding Title}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource PaneText}" />
+                        <TextBox x:Name="Editor"
+                                 Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}"
+                                 Style="{StaticResource PaneTextBox}"
+                                 KeyDown="Editor_KeyDown"
+                                 LostKeyboardFocus="Editor_LostKeyboardFocus"
+                                 IsVisibleChanged="Editor_IsVisibleChanged" />
+                        <TextBlock x:Name="DueText"
+                                   Text="{Binding DueText}"
+                                   FontSize="11"
+                                   Margin="0,1,0,0"
+                                   Foreground="{StaticResource PaneMutedText}"
+                                   Visibility="{Binding HasDueDate, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="2" x:Name="Star" Style="{StaticResource StarButton}" Click="ToggleImportant_Click">
+                        <TextBlock x:Name="StarGlyph" Text="☆" FontSize="15" Foreground="{StaticResource PaneMutedText}" />
+                    </Button>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Row" Property="Background" Value="#1FFFFFFF" />
+                </Trigger>
+                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                    <Setter TargetName="TitleText" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsImportant}" Value="True">
+                    <Setter TargetName="StarGlyph" Property="Text" Value="★" />
+                    <Setter TargetName="StarGlyph" Property="Foreground" Value="{StaticResource PaneAccent}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                    <Setter TargetName="DueText" Property="Foreground" Value="{StaticResource PaneOverdue}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                    <Setter TargetName="TitleText" Property="TextDecorations" Value="Strikethrough" />
+                    <Setter TargetName="TitleText" Property="Opacity" Value="0.55" />
+                    <Setter TargetName="Star" Property="Opacity" Value="0.55" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Nieuwe taak -->
+        <Grid Margin="8,8,8,4">
+            <TextBox x:Name="NewTaskBox" Style="{StaticResource PaneTextBox}" Padding="6,5" KeyDown="NewTaskBox_KeyDown" />
+            <TextBlock Text="+ Nieuwe taak (Enter)"
+                       Margin="9,0,0,0"
+                       VerticalAlignment="Center"
+                       IsHitTestVisible="False"
+                       Foreground="{StaticResource PaneMutedText}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Text, ElementName=NewTaskBox}" Value="">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="4,0,4,8">
+                <ItemsControl x:Name="OpenList"
+                              ItemTemplate="{StaticResource TaskTemplate}"
+                              Background="Transparent"
+                              AllowDrop="True"
+                              DragOver="OpenList_DragOver"
+                              Drop="OpenList_Drop" />
+
+                <TextBlock x:Name="EmptyHint"
+                           Margin="8,6"
+                           Foreground="{StaticResource PaneMutedText}"
+                           Text="Geen open taken." />
+
+                <Expander x:Name="CompletedExpander" Margin="4,8,0,0" Foreground="{StaticResource PaneMutedText}">
+                    <ItemsControl x:Name="CompletedList" ItemTemplate="{StaticResource TaskTemplate}" />
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

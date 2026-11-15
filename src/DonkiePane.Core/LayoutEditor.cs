@@ -84,7 +84,7 @@ public static class LayoutEditor
     public static bool MoveItem(Layout layout, string itemId, Guid targetPaneId, int index = -1)
     {
         var target = layout.Panes.FirstOrDefault(p => p.Id == targetPaneId);
-        if (target is null) return false;
+        if (target is null || target.Kind != PaneKind.Icons) return false;
 
         var source = layout.Panes.FirstOrDefault(p => p.Items.Contains(itemId, StringComparer.OrdinalIgnoreCase));
         if (source is null) return false;

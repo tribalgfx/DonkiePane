@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Threading;
 using DonkiePane.Core;
 using DonkiePane.Shell;
+using DonkiePane.Tasks;
 using Forms = System.Windows.Forms;
 
 namespace DonkiePane.App;
@@ -12,6 +13,8 @@ public partial class App : Application
 
     private readonly LayoutStore _store = new(LayoutStore.DefaultPath);
     private readonly List<PaneWindow> _windows = [];
+    private readonly Dictionary<Pane, IconsView> _iconViews = [];
+    private readonly ITaskProvider _taskProvider = new LocalTaskProvider(new TaskStore(TaskStore.DefaultPath));
     private readonly Dictionary<string, ItemView> _itemCache = new(StringComparer.OrdinalIgnoreCase);
     private Layout _layout = new();
     private DesktopFolders? _desktop;
@@ -77,8 +80,8 @@ public partial class App : Application
 
     private void RefreshItems()
     {
-        foreach (var window in _windows)
-            window.SetItems(window.Pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
+        foreach (var (pane, view) in _iconViews)
+            view.SetItems(pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
     }
 
     private ItemView? GetItemView(string id)
@@ -94,36 +97,68 @@ public partial class App : Application
 
     // ---------- Panes ----------
 
-    private void AddPane()
+    private void AddPane(Pane pane)
     {
         var offset = 30 * (_layout.Panes.Count % 10);
-        var pane = new Pane { Left = 500 + offset, Top = 140 + offset };
+        pane.Left = 500 + offset;
+        pane.Top = 140 + offset;
         _layout.Panes.Add(pane);
-        ShowPane(pane).SetItems([]);
+        ShowPane(pane);
+        RefreshItems();
         SaveLayout();
     }
 
-    private PaneWindow ShowPane(Pane pane)
+    private void ShowPane(Pane pane)
     {
         var window = new PaneWindow(pane);
         window.PaneChanged += (_, _) => SaveLayout();
-        window.DeleteRequested += (_, _) =>
+        window.DeleteRequested += async (_, _) => await DeletePaneAsync(window);
+
+        if (pane.Kind == PaneKind.Tasks)
         {
-            if (!LayoutEditor.DeletePane(_layout, pane.Id)) return;
-            _windows.Remove(window);
-            window.Close();
-            SaveLayout();
-            RefreshItems();
-        };
-        window.ItemDropped += (_, drop) =>
+            pane.TaskListId ??= Guid.NewGuid().ToString("N");
+            window.SetContent(new TasksView(_taskProvider, pane.TaskListId));
+        }
+        else
         {
-            if (!LayoutEditor.MoveItem(_layout, drop.ItemId, pane.Id, drop.Index)) return;
-            SaveLayout();
-            RefreshItems();
-        };
+            var view = new IconsView();
+            view.ItemDropped += (_, drop) =>
+            {
+                if (!LayoutEditor.MoveItem(_layout, drop.ItemId, pane.Id, drop.Index)) return;
+                SaveLayout();
+                RefreshItems();
+            };
+            _iconViews[pane] = view;
+            window.SetContent(view);
+        }
+
         _windows.Add(window);
         window.Show();
-        return window;
+    }
+
+    private async Task DeletePaneAsync(PaneWindow window)
+    {
+        var pane = window.Pane;
+        if (pane.Kind == PaneKind.Tasks && pane.TaskListId is { } listId)
+        {
+            // Iconen gaan naar de Inbox, maar taken zouden echt weg zijn: eerst vragen.
+            var count = (await _taskProvider.GetTasksAsync(listId)).Count;
+            if (count > 0)
+            {
+                var answer = MessageBox.Show(
+                    $"Pane \"{pane.Title}\" verwijderen? De {count} taken erin worden ook verwijderd.",
+                    "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (answer != MessageBoxResult.Yes) return;
+            }
+            await _taskProvider.DeleteListAsync(listId);
+        }
+
+        if (!LayoutEditor.DeletePane(_layout, pane.Id)) return;
+        _windows.Remove(window);
+        _iconViews.Remove(pane);
+        window.Close();
+        SaveLayout();
+        RefreshItems();
     }
 
     /// <summary>
@@ -140,6 +175,7 @@ public partial class App : Application
             foreach (var window in _windows.ToList())
                 window.Close();
             _windows.Clear();
+            _iconViews.Clear();
             foreach (var pane in _layout.Panes)
                 ShowPane(pane);
             RefreshItems();
@@ -179,7 +215,9 @@ public partial class App : Application
     private Forms.NotifyIcon CreateTrayIcon()
     {
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Nieuw pane", null, (_, _) => AddPane());
+        menu.Items.Add("Nieuw iconenpane", null, (_, _) => AddPane(new Pane()));
+        menu.Items.Add("Nieuw takenpane", null, (_, _) => AddPane(Pane.NewTaskPane()));
+        menu.Items.Add(new Forms.ToolStripSeparator());
         _hideIconsMenuItem = new Forms.ToolStripMenuItem("Windows-iconen verbergen")
         {
             Checked = _layout.HideDesktopIcons,
