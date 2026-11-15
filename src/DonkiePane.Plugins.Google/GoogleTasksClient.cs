@@ -1,3 +1,4 @@
+using DonkiePane.Tasks;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -5,7 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace DonkiePane.Tasks.Google;
+namespace DonkiePane.Plugins.Google;
 
 /// <summary>
 /// Dunne laag over de Google Tasks REST-API (<c>tasks.googleapis.com/tasks/v1</c>).
@@ -145,3 +146,5 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
         [JsonPropertyName("nextPageToken")] public string? NextPageToken { get; set; }
     }
 }
+
+

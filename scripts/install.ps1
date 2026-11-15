@@ -41,6 +41,18 @@ Write-Host "Publiceren naar $target ..."
     -c Release -r win-x64 --self-contained false -o $target --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw 'Publiceren is mislukt.' }
 
+# Bronnen zijn plug-ins in plugins\<naam>. Het programma verwijst er niet naar; hij laadt ze uit deze map.
+$plugins = [ordered]@{ google = 'DonkiePane.Plugins.Google'; rest = 'DonkiePane.Plugins.RestTasks' }
+foreach ($name in $plugins.Keys) {
+    $project = $plugins[$name]
+    $dest = Join-Path $target "plugins\$name"
+    Write-Host "Plug-in $name publiceren ..."
+    & $dotnet publish (Join-Path $repo "src\$project\$project.csproj") -c Release -o $dest --nologo -v quiet
+    if ($LASTEXITCODE -ne 0) { throw "Publiceren van plug-in $name is mislukt." }
+    # De gedeelde onderdelen komen van het programma zelf; een eigen kopie zou het contract breken.
+    Remove-Item (Join-Path $dest 'DonkiePane.Core.*'), (Join-Path $dest 'DonkiePane.Tasks.*') -ErrorAction SilentlyContinue
+}
+
 if ($Autostart) {
     $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
     Set-ItemProperty -Path $runKey -Name 'DonkiePane' -Value "`"$exe`""

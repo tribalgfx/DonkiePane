@@ -23,4 +23,24 @@
     <ProjectReference Include="..\DonkiePane.Tasks\DonkiePane.Tasks.csproj" />
   </ItemGroup>
 
+  <!--
+    Bronnen zijn plug-ins: aparte assemblies in een plugins-map naast het programma. De app verwijst er niet naar
+    (ReferenceOutputAssembly=false); de verwijzing zorgt alleen dat ze eerst gebouwd worden. Na het bouwen worden
+    ze naar plugins\naam gekopieerd, zodat een gewone build direct bruikbaar is. Voor de geïnstalleerde versie
+    doet scripts\install.ps1 hetzelfde.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\DonkiePane.Plugins.Google\DonkiePane.Plugins.Google.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\DonkiePane.Plugins.RestTasks\DonkiePane.Plugins.RestTasks.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginsToOutput" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
+    <ItemGroup>
+      <_GoogleFiles Include="..\DonkiePane.Plugins.Google\bin\$(Configuration)\net10.0\DonkiePane.Plugins.Google.*" />
+      <_RestFiles Include="..\DonkiePane.Plugins.RestTasks\bin\$(Configuration)\net10.0\DonkiePane.Plugins.RestTasks.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_GoogleFiles)" DestinationFolder="$(OutDir)plugins\google" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_RestFiles)" DestinationFolder="$(OutDir)plugins\rest" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

@@ -1,8 +1,9 @@
+using DonkiePane.Tasks;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace DonkiePane.Tasks.Google;
+namespace DonkiePane.Plugins.Google;
 
 /// <summary>
 /// Vangt de terugkeer van Google op na het inloggen in de browser: een klein
@@ -115,3 +116,5 @@ public sealed class LoopbackReceiver : IDisposable
 
     public void Dispose() => _listener.Stop();
 }
+
+

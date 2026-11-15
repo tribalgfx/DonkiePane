@@ -15,7 +15,6 @@ public partial class App : Application
     private readonly List<PaneWindow> _windows = [];
     private readonly Dictionary<Pane, IconsView> _iconViews = [];
     private readonly ITaskProvider _localTasks = new LocalTaskProvider(new TaskStore(TaskStore.DefaultPath));
-    private readonly GoogleAccount _google = new();
     private readonly Dictionary<string, ItemView> _itemCache = new(StringComparer.OrdinalIgnoreCase);
     private Layout _layout = new();
     private DesktopFolders? _desktop;
@@ -44,6 +43,8 @@ public partial class App : Application
         WaitForDesktop();
 
         _layout = _store.Load();
+        _sources = CreateSourceHost();
+        if (LegacyGoogleMigration.Run(_sources, _layout)) SaveLayout();
         _desktop = new DesktopFolders();
         LayoutEditor.Sync(_layout, _desktop.EnumerateItems());
         SaveLayout();
@@ -268,8 +269,8 @@ public partial class App : Application
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Nieuw iconenpane", null, (_, _) => AddPane(new Pane()));
         var newTasks = new Forms.ToolStripMenuItem("Nieuw takenpane");
-        newTasks.DropDownItems.Add("Lokaal (alleen op deze pc)", null, (_, _) => AddPane(Pane.NewTaskPane()));
-        newTasks.DropDownItems.Add("Google Taken…", null, (_, _) => _ = AddGoogleTaskPaneAsync());
+        newTasks.DropDownOpening += (_, _) => FillNewTasksMenu(newTasks);
+        FillNewTasksMenu(newTasks);
         menu.Items.Add(newTasks);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Instellingen…", null, (_, _) => ShowSettings());
@@ -301,7 +302,7 @@ public partial class App : Application
         SaveLayout();
         RestoreDesktopIcons();
         StopWatchingDisplays();
-        _google.Dispose();
+        _sources.Dispose();
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
         _singleInstance?.Dispose();
@@ -313,3 +314,4 @@ public partial class App : Application
         base.OnExit(e);
     }
 }
+

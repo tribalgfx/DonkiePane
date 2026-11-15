@@ -1,5 +1,5 @@
 using System.Net;
-using DonkiePane.Tasks.Google;
+using DonkiePane.Plugins.Google;
 
 namespace DonkiePane.Tasks.Tests;
 
@@ -270,3 +270,4 @@ public sealed class GoogleAuthTests
         url.Query.TrimStart('?').Split('&').Select(p => p.Split('='))
             .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
 }
+

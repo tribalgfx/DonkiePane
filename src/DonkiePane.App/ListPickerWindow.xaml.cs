@@ -1,21 +1,23 @@
 using System.Windows;
 using System.Windows.Input;
-using DonkiePane.Tasks.Google;
+using DonkiePane.Tasks.Plugins;
 
 namespace DonkiePane.App;
 
-/// <summary>Laat de Google Taken-lijsten zien en laat er één kiezen.</summary>
+/// <summary>Een eenvoudige keuzelijst: een lijst bij een bron, of het soort bron dat je toevoegt.</summary>
 public partial class ListPickerWindow : Window
 {
-    public ListPickerWindow(IReadOnlyList<GoogleTaskList> lists)
+    public ListPickerWindow(string title, string intro, IReadOnlyList<TaskListInfo> items)
     {
         InitializeComponent();
-        Lists.ItemsSource = lists;
-        if (lists.Count > 0) Lists.SelectedIndex = 0;
-        OkButton.IsEnabled = lists.Count > 0;
+        Title = title;
+        Intro.Text = intro;
+        Items.ItemsSource = items;
+        if (items.Count > 0) Items.SelectedIndex = 0;
+        OkButton.IsEnabled = items.Count > 0;
     }
 
-    public GoogleTaskList? Selected => Lists.SelectedItem as GoogleTaskList;
+    public TaskListInfo? Selected => Items.SelectedItem as TaskListInfo;
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
@@ -23,7 +25,7 @@ public partial class ListPickerWindow : Window
         DialogResult = true;
     }
 
-    private void Lists_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private void Items_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (Selected is not null && e.OriginalSource is FrameworkElement) DialogResult = true;
     }

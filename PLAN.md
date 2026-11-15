@@ -10,7 +10,7 @@ Aanpasbare vakken ("panes", naar de ruitjes van een theedoek) op het Windows-bur
   - De eigen iconenweergave van Windows wordt verborgen. DonkiePane tekent de iconen in de panes.
   - Een **Inbox-pane** vangt nieuwe bestanden op die op het bureaublad verschijnen, zodat niets onzichtbaar wordt.
   - Bij afsluiten of verwijderen van DonkiePane komt de Windows-iconenweergave terug.
-- **Taken zijn lokaal of gekoppeld** aan Google Taken (werk) en later een eigen dashboard (thuis), per pane te kiezen.
+- **Taken zijn lokaal of gekoppeld** aan een bron die de gebruiker zelf toevoegt (Google Taken, of elk dashboard dat het protocol Tasks REST v1 spreekt), per pane te kiezen. Er is geen bron ingebouwd.
 - **Eigen privé-repo op GitHub.**
 
 ## Eigen draai
@@ -29,7 +29,7 @@ DonkiePane/
 ├─ src/DonkiePane.App/        WPF: tray-icoon, pane-vensters, thema's
 ├─ src/DonkiePane.Core/       Model en logica: Pane, items, raster, opslag
 ├─ src/DonkiePane.Shell/      Win32: bureaubladlaag, iconen, .lnk, desktopweergave verbergen
-├─ src/DonkiePane.Tasks/      ITaskProvider + LocalTaskProvider + GoogleTaskProvider (later een eigen dashboard)
+├─ src/DonkiePane.Tasks/      ITaskProvider, plug-in-contract, lader en LocalTaskProvider
 └─ tests/DonkiePane.Core.Tests/
 ```
 
@@ -48,7 +48,7 @@ DonkiePane/
 | 4. Taakpane | Taken toevoegen, afvinken, bewerken, ordenen, via `LocalTaskProvider` | Dagelijks bruikbaar |
 | 5. Ruitjes-identiteit | Raster met snappen, theedoek-thema's, oprollen | Het voelt als DonkiePane |
 | 6. Afwerking | Starten met Windows, meerdere monitoren, DPI, instellingen, installer | Kan dagelijks draaien |
-| 7. Koppelingen | Google Taken (klaar), dashboard-provider (nog te doen) | Taken synchroniseren |
+| 7. Takenbronnen als plug-ins | Contract + lader, bronnenbeheer in Instellingen, generieke REST-bron, Google Taken (klaar); Home Assistant (nog te doen) | Elke gebruiker voegt zelf bronnen toe |
 
 ## Risico's
 
@@ -58,15 +58,15 @@ DonkiePane/
 
 ## Takenbronnen (fase 7)
 
-Elk takenpane kiest zijn eigen bron; taken en layout staan per pc in `%APPDATA%\DonkiePane`.
+Zie [docs/Bronnen.md](docs/Bronnen.md) voor het gebruik. Samengevat:
 
-- **Lokaal:** klaar (fase 4).
-- **Google Taken (werk-pc): klaar.** Eigen OAuth-client (Desktop app) in een intern Cloud-project van de Workspace. Inloggen via de browser met PKCE en een loopback-adres; het inlogtoken staat met DPAPI versleuteld in `google.token`, client-ID en secret in `google.json` (beide buiten git). Wijzigingen gaan direct naar Google, elke 60 s wordt gekeken of er buiten DonkiePane iets veranderd is. Google kent geen "belangrijk" en geen tijdstip bij een deadline, dus daar is geen ster. Een Google-pane verwijderen laat de lijst bij Google staan.
-- **Een eigen dashboard (thuis): nog te doen.** Daarvoor is een API met een eigen toegangssleutel nodig.
+- **Eén algemene app.** Er is geen bron ingebouwd en er staat geen adres of naam van iemands eigen dashboard in de app. Wat een gebruiker gebruikt, vult hij zelf in.
+- **Bronnen zijn plug-ins** (`DonkiePane.Plugins.*.dll`) uit `plugins\` naast het programma en uit `%APPDATA%\DonkiePane\plugins`. Alleen daaruit, nooit van internet. Een plug-in beschrijft zijn invoervelden; de app tekent het formulier en bewaart geheimen versleuteld (DPAPI, `secrets\`), nooit in `sources.json`.
+- **Meegeleverd:** Taken via REST (Tasks REST v1, met optionele vastgepinde certificaat-vingerafdruk) en Google Taken (de gebruiker maakt zelf een OAuth-client; er wordt geen client-ID meegeleverd).
+- **Gedrag naar de bron toe:** na een 401 stopt DonkiePane met verzoeken (een bron kan na een paar mislukte pogingen alles blokkeren), bij 429 wacht het de opgegeven tijd, elke minuut volstaat één vraag met de revisie (304).
 - **Microsoft To Do: vervallen.** Een persoonlijk hotmail-account heeft geen Entra-tenant en kan dus geen app registreren.
 
-Bekend en nog niet gedaan: offline wijzigingen worden niet in een wachtrij bewaard (een mislukte wijziging geeft een melding en de lijst wordt opnieuw opgehaald), en subtaken van Google worden vlak getoond.
-
+Nog te doen: een Home Assistant-bron (todo-entiteiten). Bekend en nog niet gedaan: wijzigingen die je offline maakt worden niet in een wachtrij bewaard (een mislukte wijziging geeft een melding en de lijst wordt opnieuw opgehaald), en subtaken van Google worden vlak getoond.
 ## Open punten
 
-- Hoe een eigen dashboard taken aanbiedt (daar is een API voor nodig).
+- Een Home Assistant-bron toevoegen.

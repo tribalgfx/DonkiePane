@@ -1,7 +1,8 @@
+using DonkiePane.Tasks;
 using System.Globalization;
 using System.Text.Json.Nodes;
 
-namespace DonkiePane.Tasks.Google;
+namespace DonkiePane.Plugins.Google;
 
 /// <summary>
 /// Taken uit Google Taken. De lijst blijft bij Google staan; DonkiePane toont hem en
@@ -232,3 +233,5 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : ITaskProvider
 
     public void Dispose() => _stop.Cancel();
 }
+
+

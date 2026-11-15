@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- De app kopieert deze plug-in naar plugins\rest; de gedeelde onderdelen komen van de app zelf. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DonkiePane.Tasks\DonkiePane.Tasks.csproj" Private="false" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+</Project>

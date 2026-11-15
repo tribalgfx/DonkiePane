@@ -1,7 +1,6 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using DonkiePane.Tasks.Google;
 
 namespace DonkiePane.App;
 
@@ -9,7 +8,7 @@ namespace DonkiePane.App;
 /// Bewaart het Google-inlogtoken versleuteld met Windows DPAPI: alleen jouw Windows-account
 /// op deze pc kan het lezen. Het staat in <c>%APPDATA%\DonkiePane\google.token</c>, nooit in git.
 /// </summary>
-public sealed class DpapiTokenStore(string? path = null) : ITokenStore
+public sealed class DpapiTokenStore(string? path = null)
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("DonkiePane.Google.RefreshToken");
 

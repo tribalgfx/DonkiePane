@@ -2,10 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/DonkiePane.App/DonkiePane.App.csproj" />
     <Project Path="src/DonkiePane.Core/DonkiePane.Core.csproj" />
+    <Project Path="src/DonkiePane.Plugins.Google/DonkiePane.Plugins.Google.csproj" />
+    <Project Path="src/DonkiePane.Plugins.RestTasks/DonkiePane.Plugins.RestTasks.csproj" />
     <Project Path="src/DonkiePane.Shell/DonkiePane.Shell.csproj" />
     <Project Path="src/DonkiePane.Tasks/DonkiePane.Tasks.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/DonkiePane.App.Tests/DonkiePane.App.Tests.csproj" />
     <Project Path="tests/DonkiePane.Core.Tests/DonkiePane.Core.Tests.csproj" />
     <Project Path="tests/DonkiePane.Tasks.Tests/DonkiePane.Tasks.Tests.csproj" />
   </Folder>

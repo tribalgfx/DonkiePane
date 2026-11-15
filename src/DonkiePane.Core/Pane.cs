@@ -56,17 +56,23 @@ public sealed class Pane
     /// <summary>De takenlijst die dit pane toont. Alleen bij <see cref="PaneKind.Tasks"/>. Bij Google Taken is dit het ID van de lijst bij Google.</summary>
     public string? TaskListId { get; set; }
 
-    /// <summary>Waar de taken vandaan komen: <see cref="TaskSources.Local"/> of <see cref="TaskSources.Google"/>. Alleen bij <see cref="PaneKind.Tasks"/>.</summary>
+    /// <summary>
+    /// De verbinding (zie <c>sources.json</c>) waar de taken van dit pane vandaan komen. Leeg = lokale taken.
+    /// Alleen bij <see cref="PaneKind.Tasks"/>.
+    /// </summary>
+    public string? SourceId { get; set; }
+
+    /// <summary>Oud veld uit de tijd dat Google Taken ingebouwd was; alleen nog gelezen door de eenmalige overgang.</summary>
     public string TaskSource { get; set; } = TaskSources.Local;
 
-    public static Pane NewGoogleTaskPane(string googleListId, string listTitle) => new()
+    public static Pane NewSourcePane(string sourceId, string listId, string listTitle) => new()
     {
         Kind = PaneKind.Tasks,
         Title = listTitle,
         Width = 320,
         Height = 384,
-        TaskSource = TaskSources.Google,
-        TaskListId = googleListId,
+        SourceId = sourceId,
+        TaskListId = listId,
     };
 
     public static Pane NewTaskPane() => new()

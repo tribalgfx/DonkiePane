@@ -1,6 +1,6 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json.Nodes;
-using DonkiePane.Tasks.Google;
+using DonkiePane.Plugins.Google;
 
 namespace DonkiePane.Tasks.Tests;
 
@@ -177,7 +177,7 @@ public sealed class GoogleTaskProviderTests
 
         await f.Provider.MoveAsync("L1", "a", 3);   // achteraan
         await f.Provider.MoveAsync("L1", "c", 0);   // bovenaan
-        await f.Provider.MoveAsync("L1", "a", 2);   // vÃ³Ã³r "c", dus onder "b"
+        await f.Provider.MoveAsync("L1", "a", 2);   // vóór "c", dus onder "b"
 
         var moves = f.Writes.ToList();
         Assert.EndsWith("/tasks/a/move?previous=c", moves[0].PathAndQuery);
@@ -318,4 +318,5 @@ public sealed class GoogleTaskProviderTests
 
     private static Task<string> Task_(string value) => System.Threading.Tasks.Task.FromResult(value);
 }
+
 

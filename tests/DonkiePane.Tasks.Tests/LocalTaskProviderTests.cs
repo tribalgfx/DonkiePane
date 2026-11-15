@@ -1,4 +1,4 @@
-﻿using DonkiePane.Tasks;
+using DonkiePane.Tasks;
 
 namespace DonkiePane.Tasks.Tests;
 
