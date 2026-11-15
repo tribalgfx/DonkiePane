@@ -56,6 +56,7 @@ public partial class App : Application
         ApplyDesktopIconsSetting();
         EnsurePanesVisible();
         WatchDisplays();
+        WatchDesktopDoubleClick();
 
         _resyncTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
         _resyncTimer.Tick += (_, _) =>
@@ -131,6 +132,7 @@ public partial class App : Application
 
     private void AddPane(Pane pane)
     {
+        if (_panesHidden) ShowAllPanes(); // een nieuw pane moet je zien
         var offset = 30 * (_layout.Panes.Count % 10);
         pane.Left = 500 + offset;
         pane.Top = 140 + offset;
@@ -225,6 +227,7 @@ public partial class App : Application
             foreach (var window in _windows.ToList())
                 window.Close();
             _windows.Clear();
+            _panesHidden = false; // de nieuwe panes zijn zichtbaar
             _iconViews.Clear();
             _gridOverlay?.Close(); // hing aan het oude bureaublad
             _gridOverlay = null;
@@ -274,6 +277,8 @@ public partial class App : Application
         FillNewTasksMenu(newTasks);
         menu.Items.Add(newTasks);
         menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add("Panes verbergen of tonen", null, (_, _) => TogglePanesHidden());
+        menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Instellingen…", null, (_, _) => ShowSettings());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Afsluiten", null, (_, _) => Shutdown());
@@ -303,6 +308,7 @@ public partial class App : Application
         SaveLayout();
         RestoreDesktopIcons();
         StopWatchingDisplays();
+        _doubleClickWatcher?.Dispose();
         _sources.Dispose();
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
