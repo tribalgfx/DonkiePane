@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/DonkiePane.App/DonkiePane.App.csproj" />
     <Project Path="src/DonkiePane.Core/DonkiePane.Core.csproj" />
+    <Project Path="src/DonkiePane.Shell/DonkiePane.Shell.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DonkiePane.Core.Tests/DonkiePane.Core.Tests.csproj" />
