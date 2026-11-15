@@ -23,13 +23,21 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <Border x:Name="Box" Width="18" Height="18" CornerRadius="4"
-                                BorderThickness="1.5" BorderBrush="#99F5F0E8" Background="Transparent">
-                            <TextBlock x:Name="Mark" Text="✓" FontSize="12" FontWeight="Bold"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                       Foreground="#FFF5F0E8" Visibility="Collapsed" />
-                        </Border>
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" VerticalAlignment="Top"
+                                    BorderThickness="1.5" BorderBrush="#99F5F0E8" Background="Transparent">
+                                <TextBlock x:Name="Mark" Text="✓" FontSize="12" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="#FFF5F0E8" Visibility="Collapsed" />
+                            </Border>
+                            <!-- Label (alleen als er inhoud is; de taakregels hebben geen label). -->
+                            <ContentPresenter x:Name="Label" Visibility="Collapsed" Margin="8,0,0,0"
+                                              VerticalAlignment="Center" />
+                        </StackPanel>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="HasContent" Value="True">
+                                <Setter TargetName="Label" Property="Visibility" Value="Visible" />
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Box" Property="BorderBrush" Value="#FFF5F0E8" />
                             </Trigger>
