@@ -16,7 +16,9 @@ Aanpasbare vakken ("panes", naar de ruitjes van een theedoek) op het Windows-bur
 ## Eigen draai
 
 - **Ruitjesraster:** panes klikken vast op een raster; bij verslepen licht het raster op.
-- **Theedoek-thema's:** randen/achtergronden met ruit- of streeppatroon, kleuren per pane.
+- **Rustige thema's:** een effen antracietkleurige pane is de standaard (verder Blauw, Groen, Rood en Mosterd). Per pane kun je via het submenu Thema een eigen kleur en de transparantie instellen. Het theedoek-ruitpatroon blijft bestaan als keuze (Ruitpatroon), niet als standaard: te druk voor dagelijks gebruik.
+- **Dubbelklik op het bureaublad:** op een leeg stuk bureaublad verbergt alle panes met hun inhoud, nog een keer toont ze weer (uit te zetten in Instellingen).
+- **Eigen icoon:** in de stijl van de andere Donkie-apps (tegel met verloop, wit glyph), gemaakt met `scripts\make-icon.ps1`.
 - **Oprollen tot titelbalk:** dubbelklik op de titel.
 - **Soorten panes:** iconen/snelkoppelingen, taken; later notities, live-map, klok.
 
@@ -30,7 +32,10 @@ DonkiePane/
 ├─ src/DonkiePane.Core/       Model en logica: Pane, items, raster, opslag
 ├─ src/DonkiePane.Shell/      Win32: bureaubladlaag, iconen, .lnk, desktopweergave verbergen
 ├─ src/DonkiePane.Tasks/      ITaskProvider, plug-in-contract, lader en LocalTaskProvider
-└─ tests/DonkiePane.Core.Tests/
+├─ src/DonkiePane.Plugins.*/  de bronnen als plug-ins (Google Taken, REST, Home Assistant)
+├─ installer/                 Inno Setup-script voor Setup.exe
+├─ scripts/                   install, uninstall, build-installer, make-icon
+└─ tests/                     Core, Tasks en App
 ```
 
 - **Opslag:** JSON in `%APPDATA%\DonkiePane\` (layout + taken), met automatische back-ups.
@@ -49,6 +54,8 @@ DonkiePane/
 | 5. Ruitjes-identiteit | Raster met snappen, theedoek-thema's, oprollen | Het voelt als DonkiePane |
 | 6. Afwerking | Starten met Windows, meerdere monitoren, DPI, instellingen, installer | Kan dagelijks draaien |
 | 7. Takenbronnen als plug-ins | Contract + lader, bronnenbeheer in Instellingen, generieke REST-bron, Google Taken, Home Assistant, instelbare synchronisatie met verversknop, offline wachtrij, subtaken | Elke gebruiker voegt zelf bronnen toe (klaar) |
+| 8. Uiterlijk en gebruik | Rustige thema's met eigen kleur en transparantie, dubbelklik om panes te verbergen, eigen icoon | Ziet er zakelijk uit en voelt als een eigen programma (klaar) |
+| 9. Voor andere gebruikers | Zelfstandige installer (Inno Setup), welkomstscherm bij de eerste start, netjes afsluiten voor updates | Iemand anders installeert zonder .NET of beheerdersrechten (klaar) |
 
 ## Risico's
 
@@ -69,7 +76,19 @@ Zie [docs/Bronnen.md](docs/Bronnen.md) voor het gebruik. Samengevat:
 
 Bekende beperkingen: taken verplaatsen wordt niet offline bewaard; een taak die offline wordt aangemaakt en meteen afgevinkt komt open aan (met een melding); bij Home Assistant kan een toevoeging die precies tijdens een netwerkfout gebeurt dubbel aankomen; of Home Assistant een deadline wist met `due_date: null` staat niet in de documentatie en is niet met een echte Home Assistant geprobeerd.
 
+## Distributie (fase 9)
+
+Zie [docs/Installeren.md](docs/Installeren.md) voor installeren, bijwerken en verwijderen. Samengevat:
+
+- `scripts\build-installer.ps1` publiceert zelfstandig (met .NET erin, ongeveer 50 MB) en laat Inno Setup `artifacts\DonkiePane-Setup-<versie>.exe` maken. Per gebruiker, geen beheerdersrechten, een snelkoppeling in het Startmenu en verwijderen via Apps en functies.
+- Een update kan eroverheen: het setup-programma vraagt een draaiende DonkiePane met `DonkiePane.exe --quit` netjes af te sluiten (dan komen de Windows-bureaubladiconen terug) en laat panes, taken en instellingen staan.
+- Bij de eerste start (er is nog geen `layout.json`) komt een welkomstscherm met twee keuzes: de Windows-iconen verbergen en starten met Windows. Pas daarna verandert er iets aan het bureaublad.
+- Bij het verwijderen wordt gevraagd of je gegevens ook weg moeten (standaard niet). Je bureaubladbestanden blijven altijd staan.
+
 ## Open punten
 
 - De Home Assistant-bron proberen met een echte Home Assistant (door de gebruiker, met een eigen token).
-- Een installatiepakket en een eerste-start-scherm voor andere gebruikers.
+- De installer is niet digitaal ondertekend: Windows kan een SmartScreen-waarschuwing tonen. Ondertekenen kan met een code-signing-certificaat.
+- Het installatiepakket staat alleen lokaal in `artifacts\`; publiceren (bijvoorbeeld als GitHub-release) en een controle op nieuwe versies moeten nog.
+- De app is alleen in het Nederlands.
+- Het welkomstscherm en de installer zijn getest met stille installaties en een gerenderde afbeelding, nog niet met een echte nieuwe gebruiker op een schone pc.

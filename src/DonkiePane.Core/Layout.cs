@@ -12,6 +12,12 @@ public sealed class Layout
     /// <summary>Dubbelklikken op een leeg stuk bureaublad verbergt alle panes; nog een keer haalt ze terug.</summary>
     public bool HideOnDesktopDoubleClick { get; set; } = true;
 
+    /// <summary>
+    /// <c>false</c> = nog niet getoond: het welkomstscherm komt bij de volgende start. <c>true</c> = getoond.
+    /// <c>null</c> = layout van vóór het welkomstscherm: die gebruiker kent DonkiePane al en ziet het niet.
+    /// </summary>
+    public bool? WelcomeShown { get; set; }
+
     /// <summary>Panes klikken bij verplaatsen en vergroten vast op het ruitjesraster.</summary>
     public bool SnapToGrid { get; set; } = true;
 

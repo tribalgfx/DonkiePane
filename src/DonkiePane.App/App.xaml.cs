@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using DonkiePane.Core;
@@ -31,18 +32,25 @@ public partial class App : Application
 
         // Maar één DonkiePane tegelijk: twee zouden elkaars panes en de
         // Windows-iconen door elkaar halen.
+        var options = StartupOptions.Parse(e.Args);
         _singleInstance = new Mutex(initiallyOwned: true, @"Local\DonkiePane.SingleInstance", out var isFirst);
-        if (!isFirst)
+        if (!isFirst || options.Quit)
         {
+            // --quit: een draaiende DonkiePane netjes laten afsluiten (de installer en het verwijderprogramma doen dat).
+            // Draait er niets, dan is er niets te doen en start dit proces ook niets op.
+            if (options.Quit && !isFirst) RequestRunningInstanceToQuit();
             _isDuplicate = true;
             Shutdown();
             return;
         }
 
+        ListenForQuitRequest();
         InstallCrashSafety();
         WaitForDesktop();
 
+        var firstRun = !File.Exists(LayoutStore.DefaultPath);
         _layout = _store.Load();
+        if (firstRun) _layout.WelcomeShown = false; // oude layouts hebben deze waarde niet: die gebruikers kennen DonkiePane al
         _sources = CreateSourceHost();
         _sources.SetPollInterval(_layout.SyncInterval);
         if (LegacyGoogleMigration.Run(_sources, _layout)) SaveLayout();
@@ -53,6 +61,7 @@ public partial class App : Application
         foreach (var pane in _layout.Panes)
             ShowPane(pane);
         RefreshItems();
+        var openSettingsAfterWelcome = ShowWelcomeIfFirstRun(); // vóór het verbergen van de Windows-iconen
         ApplyDesktopIconsSetting();
         EnsurePanesVisible();
         WatchDisplays();
@@ -73,7 +82,7 @@ public partial class App : Application
         _desktop.StartWatching();
 
         _trayIcon = CreateTrayIcon();
-        if (e.Args.Contains("--settings")) ShowSettings(); // handig voor een snelkoppeling
+        if (options.OpenSettings || openSettingsAfterWelcome) ShowSettings(); // --settings is handig voor een snelkoppeling
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
