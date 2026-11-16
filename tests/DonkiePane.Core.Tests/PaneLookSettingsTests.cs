@@ -48,3 +48,25 @@ public sealed class PaneLookSettingsTests
         Assert.True(back.ShowPattern);
     }
 }
+
+public sealed class WelcomeShownTests
+{
+    [Fact]
+    public void An_old_layout_without_the_flag_is_not_a_first_run()
+    {
+        var layout = JsonSerializer.Deserialize<Layout>("""{"Version":1,"Panes":[]}""")!;
+
+        Assert.Null(layout.WelcomeShown);   // null = bestond al vóór het welkomstscherm: niet tonen
+        Assert.NotEqual(false, layout.WelcomeShown);
+    }
+
+    [Fact]
+    public void The_flag_survives_saving_and_loading()
+    {
+        var shown = new Layout { WelcomeShown = true };
+        var pending = new Layout { WelcomeShown = false };
+
+        Assert.True(JsonSerializer.Deserialize<Layout>(JsonSerializer.Serialize(shown))!.WelcomeShown);
+        Assert.False(JsonSerializer.Deserialize<Layout>(JsonSerializer.Serialize(pending))!.WelcomeShown);
+    }
+}
