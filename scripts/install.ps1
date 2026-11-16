@@ -21,9 +21,9 @@ $repo = Split-Path -Parent $PSScriptRoot
 $target = Join-Path $env:LOCALAPPDATA 'Programs\DonkiePane'
 $exe = Join-Path $target 'DonkiePane.exe'
 
-$dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
-$dotnet = if ($dotnetCommand) { $dotnetCommand.Source } else { 'C:\Program Files\dotnet\dotnet.exe' }
-if (-not (Test-Path $dotnet)) { throw '.NET SDK niet gevonden. Installeer het met: winget install Microsoft.DotNet.SDK.10' }
+# Ontbreekt de .NET SDK, dan wordt hij met winget geinstalleerd (zie prerequisites.ps1).
+. (Join-Path $PSScriptRoot 'prerequisites.ps1')
+$dotnet = Ensure-DotnetSdk $repo
 
 # Een draaiende versie stoppen (de bestanden zijn anders in gebruik). DonkiePane heeft geen
 # hoofdvenster, dus dit is een harde stop. De nieuwe versie neemt de bureaubladweergave

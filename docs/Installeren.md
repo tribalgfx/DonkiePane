@@ -29,18 +29,18 @@ Is DonkiePane ooit hard gestopt (bijvoorbeeld via Taakbeheer) en blijven je Wind
 
 ## Voor wie de installer bouwt
 
-Nodig: de .NET SDK (zie `global.json`) en Inno Setup 6.
+Nodig: de .NET SDK (zie `global.json`) en Inno Setup 6. Het script controleert beide en installeert wat ontbreekt met winget (`scripts\prerequisites.ps1`); Windows kan daarbij om toestemming vragen. Heeft de pc geen winget, dan meldt het script wat je zelf moet installeren.
 
 ```powershell
-winget install JRSoftware.InnoSetup
 .\scripts\build-installer.ps1
 ```
 
 Het script:
 
-1. leest de versie uit `Directory.Build.props`;
-2. publiceert het programma zelfstandig (`win-x64`, .NET erin) en de plug-ins in `plugins\<naam>` naar `artifacts\publish`;
-3. laat Inno Setup (`installer\DonkiePane.iss`) er `artifacts\DonkiePane-Setup-<versie>.exe` van maken (ongeveer 50 MB).
+1. controleert de .NET SDK en Inno Setup en installeert die zo nodig;
+2. leest de versie uit `Directory.Build.props`;
+3. publiceert het programma zelfstandig (`win-x64`, .NET erin) en de plug-ins in `plugins\<naam>` naar `artifacts\publish`;
+4. laat Inno Setup (`installer\DonkiePane.iss`) er `artifacts\DonkiePane-Setup-<versie>.exe` van maken (ongeveer 50 MB).
 
 `artifacts\` staat in `.gitignore`. Het pakket is niet ondertekend; met een code-signing-certificaat kan dat met `SignTool` in het Inno Setup-script.
 

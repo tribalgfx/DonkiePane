@@ -17,16 +17,10 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $publish = Join-Path $repo 'artifacts\publish'
 
-$dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
-$dotnet = if ($dotnetCommand) { $dotnetCommand.Source } else { 'C:\Program Files\dotnet\dotnet.exe' }
-if (-not (Test-Path $dotnet)) { throw '.NET SDK niet gevonden. Installeer het met: winget install Microsoft.DotNet.SDK.10' }
-
-$iscc = @(
-    (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
-    'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
-    'C:\Program Files\Inno Setup 6\ISCC.exe'
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $iscc) { throw 'Inno Setup niet gevonden. Installeer het met: winget install JRSoftware.InnoSetup' }
+# Ontbreekt de .NET SDK of Inno Setup, dan worden ze met winget geinstalleerd (zie prerequisites.ps1).
+. (Join-Path $PSScriptRoot 'prerequisites.ps1')
+$dotnet = Ensure-DotnetSdk $repo
+$iscc = Ensure-InnoSetup
 
 # De versie komt uit Directory.Build.props.
 [xml]$props = Get-Content (Join-Path $repo 'Directory.Build.props') -Raw
