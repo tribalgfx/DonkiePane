@@ -28,14 +28,15 @@ Bij de eerste start legt een welkomstscherm uit wat er met je bureaublad gebeurt
 
 ## Zelf bouwen
 
-Nodig: Windows 10 of 11, de .NET SDK (zie `global.json`).
+Nodig: Windows 10 of 11. De scripts controleren zelf of de .NET SDK (zie `global.json`) en, voor de installer, Inno Setup aanwezig zijn en installeren wat ontbreekt met winget. Windows kan daarbij om toestemming vragen.
 
 ```powershell
-dotnet build
-dotnet test
 .\scripts\install.ps1            # bouwt en installeert naar %LOCALAPPDATA%\Programs\DonkiePane
-.\scripts\build-installer.ps1    # maakt artifacts\DonkiePane-Setup-<versie>.exe (Inno Setup nodig)
+.\scripts\build-installer.ps1    # maakt artifacts\DonkiePane-Setup-<versie>.exe
+dotnet test                      # de tests (de .NET SDK moet dan al aanwezig zijn)
 ```
+
+Wie alleen DonkiePane gebruikt, heeft dit niet nodig: de installer bevat alles, ook .NET.
 
 ## Opbouw
 
