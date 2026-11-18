@@ -22,6 +22,7 @@ public partial class App : Application
     private DispatcherTimer? _resyncTimer;
     private Forms.NotifyIcon? _trayIcon;
     private ShellRestartWatcher? _shellWatcher;
+    private RecycleBinWatcher? _recycleBinWatcher;
     private GridOverlayWindow? _gridOverlay;
     private Mutex? _singleInstance;
     private bool _isDuplicate;
@@ -46,6 +47,7 @@ public partial class App : Application
 
         ListenForQuitRequest();
         InstallCrashSafety();
+        RepairAutoStart();
         WaitForDesktop();
 
         var firstRun = !File.Exists(LayoutStore.DefaultPath);
@@ -80,12 +82,21 @@ public partial class App : Application
             LayoutEditor.Rename(_layout, ids.OldId, ids.NewId);
         });
         _desktop.StartWatching();
+        _recycleBinWatcher = new RecycleBinWatcher();
+        _recycleBinWatcher.Changed += (_, _) => RefreshVirtualItems();
 
         _trayIcon = CreateTrayIcon();
         if (options.OpenSettings || openSettingsAfterWelcome) ShowSettings(); // --settings is handig voor een snelkoppeling
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
+    }
+
+    /// <summary>Zet "starten met Windows" van een oudere versie recht (zie <see cref="AutoStart.RepairApproval"/>).</summary>
+    private static void RepairAutoStart()
+    {
+        try { AutoStart.RepairApproval(); }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }
     }
 
     /// <summary>
@@ -124,6 +135,14 @@ public partial class App : Application
     {
         foreach (var (pane, view) in _iconViews)
             view.SetItems(pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
+    }
+
+    /// <summary>De Prullenbak is veranderd: icoon (vol/leeg) en naam van de systeemiconen opnieuw ophalen.</summary>
+    private void RefreshVirtualItems()
+    {
+        foreach (var id in _itemCache.Where(entry => VirtualDesktopItems.IsVirtual(entry.Value.Path)).Select(entry => entry.Key).ToList())
+            _itemCache.Remove(id);
+        RefreshItems();
     }
 
     private ItemView? GetItemView(string id)
@@ -321,6 +340,7 @@ public partial class App : Application
         _sources.Dispose();
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
+        _recycleBinWatcher?.Dispose();
         _singleInstance?.Dispose();
         if (_trayIcon is not null)
         {

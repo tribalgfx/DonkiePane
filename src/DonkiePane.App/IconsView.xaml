@@ -5,6 +5,12 @@
     <UserControl.Resources>
         <DropShadowEffect x:Key="TextShadow" BlurRadius="3" ShadowDepth="1" Opacity="0.8" />
 
+        <!-- Rechtermuisknop toont het menu van Verkenner; dit is alleen de terugval als dat niet lukt. -->
+        <ContextMenu x:Key="FallbackMenu" x:Shared="False">
+            <MenuItem Header="Openen" FontWeight="Bold" Click="OpenItem_Click" />
+            <MenuItem Header="Bestandslocatie openen" Click="ShowInExplorer_Click" />
+        </ContextMenu>
+
         <DataTemplate x:Key="ItemTemplate" DataType="{x:Type local:ItemView}">
             <Border x:Name="Tile"
                     Width="84" Margin="2" Padding="4,6,4,4"
@@ -12,13 +18,8 @@
                     Background="Transparent"
                     ToolTip="{Binding DisplayName}"
                     MouseLeftButtonDown="Tile_MouseLeftButtonDown"
+                    MouseRightButtonUp="Tile_MouseRightButtonUp"
                     MouseMove="Tile_MouseMove">
-                <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Openen" FontWeight="Bold" Click="OpenItem_Click" />
-                        <MenuItem Header="Bestandslocatie openen" Click="ShowInExplorer_Click" />
-                    </ContextMenu>
-                </Border.ContextMenu>
                 <StackPanel>
                     <Image Source="{Binding Icon}" Width="48" Height="48"
                            RenderOptions.BitmapScalingMode="HighQuality" />
