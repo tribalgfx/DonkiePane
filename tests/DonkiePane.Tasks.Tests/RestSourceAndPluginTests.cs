@@ -194,10 +194,9 @@ public sealed class RestSourceTests
     }
 
     [Fact]
-    public void The_plugin_describes_itself_without_naming_any_specific_dashboard()
+    public void The_plugin_has_the_protocol_type_a_secret_token_and_an_optional_fingerprint()
     {
         var plugin = new RestTasksPlugin();
-        var text = plugin.DisplayName + plugin.Description + string.Join("", plugin.Fields.Select(f => f.Label + f.Help));
 
         Assert.Equal("tasks-rest-v1", plugin.TypeId);
         Assert.Equal(SettingKind.Secret, plugin.Fields.Single(f => f.Key == RestTasksPlugin.TokenKey).Kind);

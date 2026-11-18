@@ -16,6 +16,7 @@ namespace DonkiePane.App.Tests;
 /// het te tonen) met de velden van de echte plug-ins, zodat een fout hier niet pas bij het klikken op
 /// "Toevoegen" naar boven komt. Zet <c>DONKIEPANE_SNAPSHOTS</c> op een map om er een afbeelding van te laten maken.
 /// </summary>
+[Collection("WPF-vensters")] // WPF heeft één Application per proces: vensters niet tegelijk vanaf verschillende threads bouwen
 public sealed class SourceEditWindowTests : TempData
 {
     /// <summary>WPF-schermonderdelen moeten op een STA-thread; fouten daar komen terug naar de test.</summary>
