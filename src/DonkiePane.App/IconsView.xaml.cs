@@ -79,6 +79,19 @@ public partial class IconsView : UserControl
         return -1;
     }
 
+    /// <summary>Het menu van Verkenner, zodat je bijv. de Prullenbak kunt leegmaken zonder hem te openen.</summary>
+    private void Tile_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement tile || ItemOf(sender) is not { } item) return;
+        e.Handled = true;
+        if (ShellContextMenu.TryShow(item.Path)) return;
+
+        var menu = (ContextMenu)FindResource("FallbackMenu");
+        menu.DataContext = item;
+        menu.PlacementTarget = tile;
+        menu.IsOpen = true;
+    }
+
     private void OpenItem_Click(object sender, RoutedEventArgs e)
     {
         if (ItemOf(sender) is { } item) Open(item);

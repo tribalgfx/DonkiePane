@@ -37,8 +37,11 @@ if ($running) {
 }
 
 Write-Host "Publiceren naar $target ..."
+# Zelfstandig (met .NET erin), net als de installer: die gebruikt dezelfde map. Een versie die .NET van Windows
+# verwacht, start niet tussen de .NET-bestanden die de installer daar heeft neergezet (hostfxr.dll naast het
+# programma laat het daar naar .NET zoeken).
 & $dotnet publish (Join-Path $repo 'src\DonkiePane.App\DonkiePane.App.csproj') `
-    -c Release -r win-x64 --self-contained false -o $target --nologo -v quiet
+    -c Release -r win-x64 --self-contained true -p:SatelliteResourceLanguages=en -o $target --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw 'Publiceren is mislukt.' }
 
 # Bronnen zijn plug-ins in plugins\<naam>. Het programma verwijst er niet naar; hij laadt ze uit deze map.
@@ -56,6 +59,10 @@ foreach ($name in $plugins.Keys) {
 if ($Autostart) {
     $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
     Set-ItemProperty -Path $runKey -Name 'DonkiePane' -Value "`"$exe`""
+    # Zonder "aan" in StartupApproved slaat Windows 11 de Run-waarde bij het inloggen over.
+    $approvedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run'
+    if (-not (Test-Path $approvedKey)) { New-Item -Path $approvedKey -Force | Out-Null }
+    Set-ItemProperty -Path $approvedKey -Name 'DonkiePane' -Type Binary -Value ([byte[]](2,0,0,0,0,0,0,0,0,0,0,0))
     Write-Host 'Starten met Windows: aan'
 }
 

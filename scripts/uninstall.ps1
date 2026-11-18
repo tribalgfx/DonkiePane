@@ -53,6 +53,7 @@ if (Get-ItemProperty -Path $runKey -Name 'DonkiePane' -ErrorAction SilentlyConti
     Remove-ItemProperty -Path $runKey -Name 'DonkiePane'
     Write-Host 'Starten met Windows: uit'
 }
+Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' -Name 'DonkiePane' -ErrorAction SilentlyContinue
 
 # 4. Programma verwijderen.
 if (Test-Path $target) {

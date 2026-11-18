@@ -49,9 +49,10 @@ public partial class SettingsWindow : Window
 
     private void RefreshAutoStart()
     {
-        AutoStartBox.IsChecked = AutoStart.IsEnabled();
+        var enabled = AutoStart.IsEnabled();
+        AutoStartBox.IsChecked = enabled;
         AutoStartHint.Text = AutoStart.RegisteredPath() is { } path
-            ? $"Start met: {path}"
+            ? enabled ? $"Start met: {path}" : "Uitgezet in Taakbeheer onder Opstarten. Vink aan om het weer aan te zetten."
             : "Je kunt dit ook in Taakbeheer onder Opstarten aan- of uitzetten.";
     }
 

@@ -48,6 +48,7 @@ Filename: "{app}\DonkiePane.exe"; Description: "DonkiePane nu starten"; Flags: n
 [Code]
 const
   RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
+  ApprovedKey = 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run';
   SingleInstanceMutex = 'Local\DonkiePane.SingleInstance';
 
 function IsRunning: Boolean;
@@ -98,6 +99,7 @@ begin
 
   { "Starten met Windows" weghalen. }
   RegDeleteValue(HKEY_CURRENT_USER, RunKey, 'DonkiePane');
+  RegDeleteValue(HKEY_CURRENT_USER, ApprovedKey, 'DonkiePane');
 
   { Panes, taken en instellingen blijven standaard staan (ook bij een stille verwijdering). }
   if SuppressibleMsgBox('Wil je ook je panes, taken en instellingen verwijderen?' + #13#10 +
