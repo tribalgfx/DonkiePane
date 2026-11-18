@@ -5,6 +5,7 @@ using DonkiePane.App;
 
 namespace DonkiePane.App.Tests;
 
+[Collection("WPF-vensters")] // WPF heeft één Application per proces: vensters niet tegelijk vanaf verschillende threads bouwen
 public sealed class WelcomeAndStartupTests
 {
     [Fact]

@@ -9,6 +9,7 @@ namespace DonkiePane.App.Tests;
 /// Het instellingenvenster wordt pas gebouwd als je het opent. Een fout in het opbouwen (bijvoorbeeld een schuifje dat
 /// al een gebeurtenis afvuurt voordat de rest bestaat) zou dan de hele app laten crashen. Deze test bouwt het echt op.
 /// </summary>
+[Collection("WPF-vensters")] // WPF heeft één Application per proces: vensters niet tegelijk vanaf verschillende threads bouwen
 public sealed class SettingsWindowTests : TempData
 {
     private static void OnStaThread(Action action)

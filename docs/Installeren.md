@@ -12,7 +12,14 @@
 
 ### Bijwerken
 
-Draai de nieuwe `DonkiePane-Setup-<versie>.exe`. Het setup-programma vraagt een draaiende DonkiePane netjes af te sluiten (dan komen de Windows-bureaubladiconen even terug), vervangt de bestanden en laat je panes, taken en instellingen staan.
+DonkiePane kijkt zelf of er een nieuwe versie is: een minuut na het starten en daarna eens per dag, bij de releases op GitHub. Is er een, dan krijg je één melding bij het icoon bij de klok, en bovenaan het tray-menu staat **Bijwerken naar versie …**. Daar zie je wat er nieuw is en kies je **Nu bijwerken**:
+
+1. DonkiePane downloadt de installer en controleert hem met het SHA-256-controlegetal dat GitHub bij de release vermeldt. Klopt dat niet, dan wordt het bestand weggegooid.
+2. De installer start zonder vragen (je ziet alleen de voortgang), sluit DonkiePane netjes af, vervangt de bestanden en start DonkiePane daarna opnieuw.
+
+Zonder klik op Nu bijwerken wordt er niets gedownload of geïnstalleerd. Het automatisch kijken zet je uit in **Instellingen → Updates**; daar kun je ook meteen controleren. Er gaat bij het kijken niets over jou of je pc mee, alleen een verzoek om de nieuwste release.
+
+Zelf bijwerken kan ook: draai de nieuwe `DonkiePane-Setup-<versie>.exe`. Het setup-programma vraagt een draaiende DonkiePane netjes af te sluiten (dan komen de Windows-bureaubladiconen even terug), vervangt de bestanden en laat je panes, taken en instellingen staan.
 
 ### Verwijderen
 

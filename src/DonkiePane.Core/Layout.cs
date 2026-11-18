@@ -27,6 +27,12 @@ public sealed class Layout
     /// <summary>Hoe vaak (in seconden) takenbronnen op veranderingen van andere apparaten controleren.</summary>
     public int SyncSeconds { get; set; } = DefaultSyncSeconds;
 
+    /// <summary>Bij het starten en daarna eens per dag op GitHub kijken of er een nieuwe versie is.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>De nieuwste versie waarover al een melding is getoond; die melding komt niet bij elke start terug.</summary>
+    public string? NotifiedUpdateVersion { get; set; }
+
     public const int DefaultSyncSeconds = 60;
     public const int MinSyncSeconds = 15;
     public const int MaxSyncSeconds = 300;

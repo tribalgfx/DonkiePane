@@ -16,12 +16,15 @@ public partial class SettingsWindow : Window
     private readonly Action _save;
     private readonly Action _bringPanes;
     private readonly TaskSourceHost _sources;
+    private readonly UpdateService? _updates;
+    private readonly Action? _showUpdate;
     private bool _loading = true;
 
     /// <summary>Een regel in de lijst met bronnen.</summary>
     private sealed record SourceRow(SourceConnection Connection, string Label);
 
-    public SettingsWindow(Layout layout, Action save, Action bringPanes, TaskSourceHost sources)
+    internal SettingsWindow(Layout layout, Action save, Action bringPanes, TaskSourceHost sources,
+        UpdateService? updates = null, Action? showUpdate = null)
     {
         InitializeComponent();
         // Nooit hoger dan het scherm; wat er niet in past, scrolt.
@@ -30,6 +33,10 @@ public partial class SettingsWindow : Window
         _save = save;
         _bringPanes = bringPanes;
         _sources = sources;
+        _updates = updates;
+        _showUpdate = showUpdate;
+        UpdatesBox.IsChecked = layout.CheckForUpdates;
+        RefreshUpdateStatus();
 
         HideIconsBox.IsChecked = layout.HideDesktopIcons;
         SnapBox.IsChecked = layout.SnapToGrid;
@@ -180,6 +187,44 @@ public partial class SettingsWindow : Window
 
         _sources.Remove(connection.Id);
         RefreshSources();
+    }
+
+    // ---------- Updates ----------
+
+    private void Updates_Click(object sender, RoutedEventArgs e)
+    {
+        _layout.CheckForUpdates = UpdatesBox.IsChecked == true;
+        _save();
+    }
+
+    private async void CheckNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updates is null) return;
+        CheckNowButton.IsEnabled = false;
+        UpdateStatus.Text = "Bezig met controleren…";
+        var outcome = await _updates.CheckAsync();
+        CheckNowButton.IsEnabled = true;
+        RefreshUpdateStatus(outcome);
+        if (outcome == UpdateCheckOutcome.Available) _showUpdate?.Invoke();
+    }
+
+    private void ShowUpdate_Click(object sender, RoutedEventArgs e) => _showUpdate?.Invoke();
+
+    private void RefreshUpdateStatus(UpdateCheckOutcome? outcome = null)
+    {
+        CheckNowButton.IsEnabled = _updates is not null;
+        ShowUpdateButton.Visibility = _updates?.Available is null ? Visibility.Collapsed : Visibility.Visible;
+        UpdateStatus.Text = UpdateStatusText(_updates, outcome);
+    }
+
+    internal static string UpdateStatusText(UpdateService? updates, UpdateCheckOutcome? outcome)
+    {
+        if (updates is null) return "";
+        if (updates.Available is { } release)
+            return $"Versie {DonkiePane.Core.Updates.AppVersion.Format(release.Version)} is beschikbaar.";
+        if (updates.LastError is { } error) return "Controleren lukte niet: " + error;
+        if (outcome == UpdateCheckOutcome.NoReleases) return "Er zijn nog geen versies gepubliceerd.";
+        return updates.LastChecked is { } at ? $"Je hebt de nieuwste versie (gecontroleerd om {at:HH:mm})." : "";
     }
 
     private void BringPanes_Click(object sender, RoutedEventArgs e) => _bringPanes();

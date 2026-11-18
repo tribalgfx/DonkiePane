@@ -44,12 +44,19 @@ Name: "{autoprograms}\DonkiePane"; Filename: "{app}\DonkiePane.exe"
 
 [Run]
 Filename: "{app}\DonkiePane.exe"; Description: "DonkiePane nu starten"; Flags: nowait postinstall skipifsilent
+; Bijwerken vanuit DonkiePane zelf start de installer met /SILENT /STARTAFTER=1: daarna DonkiePane weer starten.
+Filename: "{app}\DonkiePane.exe"; Flags: nowait; Check: StartAfterUpdate
 
 [Code]
 const
   RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
   ApprovedKey = 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run';
   SingleInstanceMutex = 'Local\DonkiePane.SingleInstance';
+
+function StartAfterUpdate: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:STARTAFTER|0}') = '1');
+end;
 
 function IsRunning: Boolean;
 begin

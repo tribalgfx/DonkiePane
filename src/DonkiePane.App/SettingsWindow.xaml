@@ -130,6 +130,18 @@
             <Button Style="{StaticResource Action}" Click="OpenData_Click" Content="Map openen" />
         </StackPanel>
 
+        <TextBlock Style="{StaticResource Heading}" Text="Updates" />
+        <CheckBox x:Name="UpdatesBox" Style="{StaticResource Option}" Click="Updates_Click">
+            <TextBlock Text="Automatisch kijken of er een nieuwe versie is" />
+        </CheckBox>
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="Kort na het starten en daarna eens per dag kijkt DonkiePane op GitHub. Is er een nieuwe versie, dan krijg je een melding; installeren gebeurt pas als jij op Nu bijwerken klikt." />
+        <StackPanel Orientation="Horizontal">
+            <Button x:Name="CheckNowButton" Style="{StaticResource Action}" Click="CheckNow_Click" Content="Nu controleren" />
+            <Button x:Name="ShowUpdateButton" Style="{StaticResource Action}" Click="ShowUpdate_Click" Content="Bijwerken…" Visibility="Collapsed" />
+        </StackPanel>
+        <TextBlock x:Name="UpdateStatus" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+
         <TextBlock x:Name="VersionText" Style="{StaticResource Hint}" Margin="0,22,0,0" />
     </StackPanel>
     </ScrollViewer>

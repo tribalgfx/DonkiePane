@@ -86,6 +86,7 @@ public partial class App : Application
         _recycleBinWatcher.Changed += (_, _) => RefreshVirtualItems();
 
         _trayIcon = CreateTrayIcon();
+        StartUpdateChecks();
         if (options.OpenSettings || openSettingsAfterWelcome) ShowSettings(); // --settings is handig voor een snelkoppeling
 
         _shellWatcher = new ShellRestartWatcher();
@@ -299,6 +300,7 @@ public partial class App : Application
     private Forms.NotifyIcon CreateTrayIcon()
     {
         var menu = new Forms.ContextMenuStrip();
+        AddUpdateMenuItem(menu);
         menu.Items.Add("Nieuw iconenpane", null, (_, _) => AddPane(new Pane()));
         var newTasks = new Forms.ToolStripMenuItem("Nieuw takenpane");
         newTasks.DropDownOpening += (_, _) => FillNewTasksMenu(newTasks);
@@ -319,6 +321,7 @@ public partial class App : Application
             Visible = true,
         };
         icon.DoubleClick += (_, _) => ShowSettings();
+        icon.BalloonTipClicked += (_, _) => ShowUpdateWindow(); // de enige melding is die over een nieuwe versie
         return icon;
     }
 
@@ -335,6 +338,7 @@ public partial class App : Application
 
         SaveLayout();
         RestoreDesktopIcons();
+        StopUpdateChecks();
         StopWatchingDisplays();
         _doubleClickWatcher?.Dispose();
         _sources.Dispose();

@@ -6,6 +6,7 @@ using DonkiePane.Core;
 namespace DonkiePane.App.Tests;
 
 /// <summary>Een pane-venster wordt pas gebouwd als de app draait; een fout in het opbouwen of in het menu zou de hele app laten crashen.</summary>
+[Collection("WPF-vensters")] // WPF heeft één Application per proces: vensters niet tegelijk vanaf verschillende threads bouwen
 public sealed class PaneWindowTests
 {
     private static void OnStaThread(Action action)
