@@ -11,7 +11,7 @@ Aanpasbare vakken ("panes", naar de ruitjes van een theedoek) op het Windows-bur
   - Een **Inbox-pane** vangt nieuwe bestanden op die op het bureaublad verschijnen, zodat niets onzichtbaar wordt.
   - Bij afsluiten of verwijderen van DonkiePane komt de Windows-iconenweergave terug.
 - **Taken zijn lokaal of gekoppeld** aan een bron die de gebruiker zelf toevoegt (Google Taken, of elk dashboard dat het protocol Tasks REST v1 spreekt), per pane te kiezen. Er is geen bron ingebouwd.
-- **Eigen privé-repo op GitHub.**
+- **Eigen repo op GitHub,** sinds 18 november 2026 publiek, zodat de update-controle de releases zonder token kan lezen.
 
 ## Eigen draai
 
@@ -84,7 +84,7 @@ Zie [docs/Installeren.md](docs/Installeren.md) voor installeren, bijwerken en ve
 - Een update kan eroverheen: het setup-programma vraagt een draaiende DonkiePane met `DonkiePane.exe --quit` netjes af te sluiten (dan komen de Windows-bureaubladiconen terug) en laat panes, taken en instellingen staan.
 - Bij de eerste start (er is nog geen `layout.json`) komt een welkomstscherm met twee keuzes: de Windows-iconen verbergen en starten met Windows. Pas daarna verandert er iets aan het bureaublad.
 - Bij het verwijderen wordt gevraagd of je gegevens ook weg moeten (standaard niet). Je bureaubladbestanden blijven altijd staan.
-- **Controle op updates:** een minuut na het starten en daarna eens per dag vraagt DonkiePane zonder token `api.github.com/repos/tribalgfx/DonkiePane/releases/latest` op (werkt alleen als de repo publiek is; bij 404 is er "nog geen versie"). Concepten en voorlopige versies tellen niet mee; de versie komt uit de tag (`v0.2.0`). Eén ballonmelding per nieuwe versie, een menu-item zolang hij er is, en een schakelaar en knop in Instellingen → Updates.
+- **Controle op updates:** een minuut na het starten en daarna eens per dag vraagt DonkiePane zonder token `api.github.com/repos/tribalgfx/DonkiePane/releases/latest` op (kan zonder token omdat de repo publiek is; bij 404 is er "nog geen versie"). Concepten en voorlopige versies tellen niet mee; de versie komt uit de tag (`v0.2.0`). Eén ballonmelding per nieuwe versie, een menu-item zolang hij er is, en een schakelaar en knop in Instellingen → Updates.
 - **Bijwerken alleen na een klik:** de installer `DonkiePane-Setup-*.exe` moet op `github.com` staan en een `sha256`-digest van GitHub hebben; zonder digest biedt DonkiePane alleen de releasepagina aan. Na de controle start de installer met `/SILENT /NORESTART /STARTAFTER=1`; de installer sluit DonkiePane met `--quit` en start hem daarna weer (`StartAfterUpdate` in het Inno-script). Het controlegetal beschermt tegen een kapotte of verwisselde download, niet tegen iemand die de GitHub-account zelf overneemt; daarvoor is ondertekenen nodig.
 - **Een release publiceren:** versie ophogen in `Directory.Build.props`, `scripts\build-installer.ps1`, en dan `gh release create v<versie> artifacts\DonkiePane-Setup-<versie>.exe`. De tag moet met de versie overeenkomen, anders ziet de update-controle het verkeerde nummer.
 
@@ -92,6 +92,6 @@ Zie [docs/Installeren.md](docs/Installeren.md) voor installeren, bijwerken en ve
 
 - De Home Assistant-bron proberen met een echte Home Assistant (door de gebruiker, met een eigen token).
 - De installer is niet digitaal ondertekend: Windows kan een SmartScreen-waarschuwing tonen. Ondertekenen kan met een code-signing-certificaat.
-- De update-controle werkt pas als de repo publiek is; tot dan meldt Instellingen "Er zijn nog geen versies gepubliceerd". Bijwerken vanuit de app is getest met nagebootste GitHub-antwoorden, nog niet van een echte versie naar de volgende.
+- Bijwerken vanuit de app is getest met nagebootste GitHub-antwoorden, en de echte release-API geeft zonder token alles wat nodig is (tag, installer, controlegetal). Nog niet geprobeerd: echt bijwerken van de ene versie naar de volgende. Dat kan vanaf 0.2.0, want 0.1.0 heeft de update-controle nog niet.
 - De app is alleen in het Nederlands.
 - Het welkomstscherm en de installer zijn getest met stille installaties en een gerenderde afbeelding, nog niet met een echte nieuwe gebruiker op een schone pc.
