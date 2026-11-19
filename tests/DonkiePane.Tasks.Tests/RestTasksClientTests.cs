@@ -157,7 +157,7 @@ public sealed class RestTasksClientTests
     [InlineData(HttpStatusCode.BadRequest, """{"error":"https_required"}""", "https://")]
     [InlineData(HttpStatusCode.BadRequest, """{"error":"invalid"}""", "ongeldige")]
     [InlineData(HttpStatusCode.RequestEntityTooLarge, """{"error":"payload_too_large"}""", "te groot")]
-    [InlineData(HttpStatusCode.InternalServerError, "kapot", "500")]
+    [InlineData(HttpStatusCode.Conflict, "kapot", "409")]
     public async Task Other_errors_become_readable_messages(HttpStatusCode status, string body, string expected)
     {
         var handler = new FakeHandler(_ => Responses.Raw(body, status));

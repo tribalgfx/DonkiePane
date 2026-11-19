@@ -20,6 +20,7 @@ public partial class App : Application
     private Layout _layout = new();
     private DesktopFolders? _desktop;
     private DispatcherTimer? _resyncTimer;
+    private DispatcherTimer? _watchTimer;
     private Forms.NotifyIcon? _trayIcon;
     private ShellRestartWatcher? _shellWatcher;
     private RecycleBinWatcher? _recycleBinWatcher;
@@ -57,7 +58,8 @@ public partial class App : Application
         _sources.SetPollInterval(_layout.SyncInterval);
         if (LegacyGoogleMigration.Run(_sources, _layout)) SaveLayout();
         _desktop = new DesktopFolders();
-        LayoutEditor.Sync(_layout, _desktop.EnumerateItems());
+        var unavailable = new List<string>();
+        LayoutEditor.Sync(_layout, _desktop.EnumerateItems(unavailable), unavailable);
         SaveLayout();
 
         foreach (var pane in _layout.Panes)
@@ -82,6 +84,11 @@ public partial class App : Application
             LayoutEditor.Rename(_layout, ids.OldId, ids.NewId);
         });
         _desktop.StartWatching();
+        // Een bureaubladmap die bij het starten nog niet bereikbaar was, of een watcher die na een fout is gestopt,
+        // wordt zo alsnog gevolgd; dan meteen opnieuw inlezen.
+        _watchTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        _watchTimer.Tick += (_, _) => { if (_desktop.StartWatching()) ScheduleResync(); };
+        _watchTimer.Start();
         _recycleBinWatcher = new RecycleBinWatcher();
         _recycleBinWatcher.Changed += (_, _) => RefreshVirtualItems();
 
@@ -123,11 +130,17 @@ public partial class App : Application
 
     private void Resync()
     {
-        var items = _desktop!.EnumerateItems();
+        var unavailable = new List<string>();
+        var items = _desktop!.EnumerateItems(unavailable);
         foreach (var stale in _itemCache.Keys.Except(items, StringComparer.OrdinalIgnoreCase).ToList())
+        {
+            if (unavailable.Any(location => stale.StartsWith(location + "/", StringComparison.OrdinalIgnoreCase))) continue; // icoon houden
             _itemCache.Remove(stale);
+        }
 
-        LayoutEditor.Sync(_layout, items);
+        // Een map die even weg is (netwerk, OneDrive) wist de indeling niet: die items blijven staan.
+        LayoutEditor.Sync(_layout, items, unavailable);
+        _desktop.StartWatching(); // na een fout van de watcher: opnieuw volgen
         SaveLayout();
         RefreshItems();
     }
@@ -218,20 +231,30 @@ public partial class App : Application
         if (pane.Kind == PaneKind.Tasks && pane.TaskListId is { } listId)
         {
             var provider = TaskProviderFor(pane);
-            // Lokale taken staan alleen in dit pane en zouden echt weg zijn: eerst vragen.
-            // Een Google-lijst blijft bij Google staan, dus daar valt niets te verliezen.
-            if (provider.Capabilities.PaneOwnsTasks)
+            try
             {
-                var count = (await provider.GetTasksAsync(listId)).Count;
-                if (count > 0)
+                // Lokale taken staan alleen in dit pane en zouden echt weg zijn: eerst vragen.
+                // Een Google-lijst blijft bij Google staan, dus daar valt niets te verliezen.
+                if (provider.Capabilities.PaneOwnsTasks)
                 {
-                    var answer = MessageBox.Show(
-                        $"Pane \"{pane.Title}\" verwijderen? De {count} taken erin worden ook verwijderd.",
-                        "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-                    if (answer != MessageBoxResult.Yes) return;
+                    var count = (await provider.GetTasksAsync(listId)).Count;
+                    if (count > 0)
+                    {
+                        var answer = MessageBox.Show(
+                            $"Pane \"{pane.Title}\" verwijderen? De {count} taken erin worden ook verwijderd.",
+                            "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                        if (answer != MessageBoxResult.Yes) return;
+                    }
                 }
+                await provider.DeleteListAsync(listId);
             }
-            await provider.DeleteListAsync(listId);
+            catch (Exception ex) when (TaskErrors.IsHandled(ex))
+            {
+                // Aangeroepen vanuit een async void-handler: een fout hier mag de app niet laten crashen.
+                MessageBox.Show($"Pane \"{pane.Title}\" is niet verwijderd. {TaskErrors.Message(ex)}",
+                    "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
         }
 
         if (!LayoutEditor.DeletePane(_layout, pane.Id)) return;
@@ -340,6 +363,7 @@ public partial class App : Application
         RestoreDesktopIcons();
         StopUpdateChecks();
         StopWatchingDisplays();
+        _watchTimer?.Stop();
         _doubleClickWatcher?.Dispose();
         _sources.Dispose();
         _desktop?.Dispose();

@@ -7,4 +7,13 @@
     <Product>DonkiePane</Product>
     <Version>0.2.0</Version>
   </PropertyGroup>
+
+  <!--
+    Een Release-build is wat gebruikers krijgen. Zonder dit staat het pad van de bouwmap (met de naam van wie
+    bouwde) in elke DLL en elk .pdb-bestand. Met PathMap wordt dat /_/; de stacktraces blijven bruikbaar.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+  </PropertyGroup>
 </Project>

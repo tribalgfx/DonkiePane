@@ -96,9 +96,9 @@ public partial class App
             if (picker.ShowDialog() == true && picker.Selected is { } chosen)
                 AddPane(Pane.NewSourcePane(connection.Id, chosen.Id, chosen.Title));
         }
-        catch (TaskProviderException ex)
+        catch (Exception ex) when (TaskErrors.IsHandled(ex))
         {
-            MessageBox.Show(ex.Message, connection.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(TaskErrors.Message(ex), connection.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
         {

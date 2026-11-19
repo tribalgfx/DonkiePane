@@ -33,6 +33,21 @@ public sealed class LayoutEditorTests
     }
 
     [Fact]
+    public void Sync_keeps_the_items_of_a_desktop_folder_that_is_briefly_unreachable()
+    {
+        // Bijv. een OneDrive- of netwerkbureaublad dat bij het inloggen nog niet verbonden is.
+        var work = new Pane { Items = ["user/werk.lnk", "public/firefox.lnk", "public/weg.lnk"] };
+        var inbox = new Pane { IsInbox = true };
+        var layout = LayoutWith(work, inbox);
+
+        var changed = LayoutEditor.Sync(layout, ["public/firefox.lnk"], unavailableLocations: ["user"]);
+
+        Assert.True(changed);
+        Assert.Equal(["user/werk.lnk", "public/firefox.lnk"], work.Items); // alleen wat in een leesbare map echt weg is
+        Assert.Empty(inbox.Items);
+    }
+
+    [Fact]
     public void Sync_reports_no_change_when_layout_already_matches()
     {
         var layout = LayoutWith(new Pane { IsInbox = true, Items = ["user/a.txt"] });

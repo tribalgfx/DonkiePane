@@ -41,13 +41,10 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
         var lists = new List<HaList>();
         foreach (var state in doc.RootElement.EnumerateArray())
         {
-            var id = state.TryGetProperty("entity_id", out var e) ? e.GetString() : null;
+            var id = Str(state, "entity_id");
             if (id is null || !id.StartsWith("todo.", StringComparison.Ordinal)) continue;
 
-            string? name = null;
-            if (state.TryGetProperty("attributes", out var attributes) && attributes.ValueKind == JsonValueKind.Object
-                && attributes.TryGetProperty("friendly_name", out var f))
-                name = f.GetString();
+            var name = Prop(state, "attributes") is { } attributes ? Str(attributes, "friendly_name") : null;
             lists.Add(new HaList(id, string.IsNullOrWhiteSpace(name) ? id : name));
         }
         return lists.OrderBy(l => l.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -60,21 +57,22 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
         var json = await SendAsync(HttpMethod.Post, "api/services/todo/get_items?return_response", body, ct);
         using var doc = Parse(json);
 
-        if (!doc.RootElement.TryGetProperty("service_response", out var response)
-            || !response.TryGetProperty(entityId, out var list)
-            || !list.TryGetProperty("items", out var items)
-            || items.ValueKind != JsonValueKind.Array)
+        if (Prop(doc.RootElement, "service_response") is not { } response
+            || Prop(response, entityId) is not { } list
+            || Prop(list, "items") is not { ValueKind: JsonValueKind.Array } items)
             throw Unexpected();
 
         var result = new List<HaItem>();
         foreach (var item in items.EnumerateArray())
         {
+            // Een item zonder uid kan DonkiePane niet aanpassen of afvinken.
+            if (Str(item, "uid") is not { Length: > 0 } uid) continue;
             result.Add(new HaItem
             {
-                Uid = item.TryGetProperty("uid", out var uid) ? uid.GetString() ?? "" : "",
-                Summary = item.TryGetProperty("summary", out var summary) ? summary.GetString() ?? "" : "",
-                Status = item.TryGetProperty("status", out var status) ? status.GetString() ?? "needs_action" : "needs_action",
-                Due = item.TryGetProperty("due", out var due) && due.ValueKind == JsonValueKind.String ? due.GetString() : null,
+                Uid = uid,
+                Summary = Str(item, "summary") ?? "",
+                Status = Str(item, "status") ?? "needs_action",
+                Due = Str(item, "due"),
             });
         }
         return result;
@@ -109,9 +107,18 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
         }
         catch (JsonException ex)
         {
-            throw new TaskProviderException("Home Assistant gaf een onverwacht antwoord.", ex);
+            // Bijv. de HTML-inlogpagina van een proxy: een haperende bron, geen crash.
+            throw new SourceUnavailableException(SourceUnavailableException.UnreadableMessage, ex);
         }
     }
+
+    /// <summary>Een eigenschap van een object; <c>null</c> als het geen object is of de eigenschap ontbreekt.</summary>
+    private static JsonElement? Prop(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) ? value : null;
+
+    /// <summary>Een tekst-eigenschap; <c>null</c> bij elke andere vorm, zodat een vreemd antwoord nooit een crash geeft.</summary>
+    private static string? Str(JsonElement element, string name) =>
+        Prop(element, name) is { ValueKind: JsonValueKind.String } value ? value.GetString() : null;
 
     private static TaskProviderException Unexpected() => new("Home Assistant gaf een onverwacht antwoord. Is dit wel een to-do lijst?");
 
@@ -154,7 +161,11 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
             HttpStatusCode.BadRequest => new TaskProviderException("Home Assistant weigerde de aanvraag (400)." + detail),
             // Een herstart of afsluiten is tijdelijk: wijzigingen blijven wachten en gaan daarna vanzelf mee.
             HttpStatusCode.ServiceUnavailable => new SourceRateLimitedException(TimeSpan.FromSeconds(30)),
+            // Home Assistant geeft 500 ook voor "dit item bestaat niet": opnieuw proberen helpt dan niet.
             HttpStatusCode.InternalServerError => new TaskProviderException("Home Assistant gaf een fout (500)." + detail),
+            // Een proxy die Home Assistant (even) niet bereikt: later opnieuw, niets weggooien.
+            HttpStatusCode.BadGateway or HttpStatusCode.GatewayTimeout =>
+                new SourceUnavailableException($"Home Assistant is even niet bereikbaar ({(int)status}). DonkiePane probeert het later opnieuw."),
             _ => new TaskProviderException($"Home Assistant gaf een fout ({(int)status})." + detail),
         };
     }
@@ -167,7 +178,7 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
         try
         {
             using var doc = JsonDocument.Parse(text);
-            if (doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("message", out var m) && m.GetString() is { } message)
+            if (Str(doc.RootElement, "message") is { } message)
                 text = message;
         }
         catch (JsonException)

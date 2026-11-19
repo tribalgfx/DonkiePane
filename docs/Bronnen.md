@@ -92,7 +92,9 @@ niets kost. Een deadline wissen stuurt `due_date: null`; of Home Assistant dat a
   **Instellingen → Synchronisatie** (15 seconden tot 5 minuten) en het geldt direct. Met de knop **↻** naast het invoervak
   van een pane kijk je meteen.
 - **Van DonkiePane naar de bron:** direct.
-- **Geen verbinding:** je ziet de laatst bekende taken met een melding. Wat je dan toevoegt, aanpast, afvinkt of verwijdert
+- **Geen verbinding of een haperende bron:** je ziet de laatst bekende taken met een melding. Dat geldt ook bij een
+  serverfout (bijvoorbeeld een proxy die 502 geeft terwijl de dienst herstart) of een antwoord dat geen taken zijn (zoals de
+  inlogpagina van een proxy). Wat je dan toevoegt, aanpast, afvinkt of verwijdert
   blijft direct zichtbaar, wordt bewaard (in `%APPDATA%\DonkiePane\queue`, dus ook na een herstart) en gaat in dezelfde volgorde
   naar de bron zodra die weer bereikbaar is.
 - **Wat niet wordt bewaard:** taken verplaatsen (een positie zegt niets meer als de lijst intussen veranderd is), en een

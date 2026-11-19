@@ -22,7 +22,9 @@ public static class ShellItemInfo
             try { return Marshal.PtrToStringUni(namePtr) ?? Path.GetFileName(path); }
             finally { Marshal.FreeCoTaskMem(namePtr); }
         }
-        catch (Exception ex) when (ex is COMException or FileNotFoundException or ArgumentException)
+        // Een bestand of map die (even) weg is of niet toegankelijk: Windows geeft dan ook IOException-soorten
+        // (bijv. DirectoryNotFoundException) of UnauthorizedAccessException.
+        catch (Exception ex) when (ex is COMException or IOException or UnauthorizedAccessException or ArgumentException)
         {
             return Path.GetFileNameWithoutExtension(path);
         }
@@ -39,7 +41,7 @@ public static class ShellItemInfo
             try { return ToBitmapSource(hbitmap); }
             finally { DeleteObject(hbitmap); }
         }
-        catch (Exception ex) when (ex is COMException or FileNotFoundException or ArgumentException or InvalidCastException)
+        catch (Exception ex) when (ex is COMException or IOException or UnauthorizedAccessException or ArgumentException or InvalidCastException)
         {
             return null;
         }
