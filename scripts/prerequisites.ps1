@@ -26,8 +26,15 @@ function Test-DotnetSdk([string]$Dotnet, [string]$RepoRoot) {
     if (-not $Dotnet) { return $false }
     Push-Location $RepoRoot
     try {
-        cmd /c "`"$Dotnet`" --version >nul 2>&1"
-        return ($LASTEXITCODE -eq 0)
+        # Rechtstreeks, niet via cmd: dan kan een % of & in het pad niets doen. In PowerShell 5.1 wordt foutuitvoer
+        # van een programma met 'Stop' een uitzondering, dus hier even 'Continue'.
+        $previous = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & $Dotnet --version *> $null
+            return ($LASTEXITCODE -eq 0)
+        }
+        finally { $ErrorActionPreference = $previous }
     }
     finally { Pop-Location }
 }

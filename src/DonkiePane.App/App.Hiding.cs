@@ -25,17 +25,20 @@ public partial class App
         else HideAllPanes();
     }
 
+    // Vlak na een herstart van Verkenner heeft Windows de vensters al gesloten en zijn ze nog niet opnieuw gemaakt
+    // (zie RebuildPanesSoon); die slaan we over.
+
     private void HideAllPanes()
     {
-        _gridOverlay?.Hide();
-        foreach (var window in _windows) window.Hide(); // de inhoud (iconen, taken) gaat vanzelf mee
+        if (_gridOverlay is { IsVisible: true }) _gridOverlay.Hide();
+        foreach (var window in _windows.Where(w => !w.IsClosed)) window.Hide(); // de inhoud (iconen, taken) gaat vanzelf mee
         _panesHidden = true;
     }
 
     private void ShowAllPanes()
     {
         _panesHidden = false;
-        foreach (var window in _windows)
+        foreach (var window in _windows.Where(w => !w.IsClosed))
         {
             window.Show();
             DesktopLayer.SendToBottom(window);

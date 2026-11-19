@@ -74,13 +74,13 @@ public partial class App
     private void ShowUpdateWindow()
     {
         if (_updates?.Available is not { } release) return;
-        if (_updateWindow is { IsLoaded: true })
+        if (_updateWindow is not null) // ook als hij net geopend en nog niet geladen is
         {
             _updateWindow.Activate();
             return;
         }
 
-        _updateWindow = new UpdateWindow(release, _updates.Current, _updates.DownloadAsync, UpdateService.LaunchInstaller);
+        _updateWindow = new UpdateWindow(release, _updates.Current, _updates.DownloadAsync, _updates.LaunchInstaller);
         _updateWindow.Closed += (_, _) => _updateWindow = null;
         _updateWindow.Show();
         _updateWindow.Activate();

@@ -19,6 +19,10 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
     private readonly Dictionary<string, string> _notices = [];
     private readonly SemaphoreSlim _flushGate = new(1, 1);
 
+    // Na Dispose (bijv. de bron is opnieuw gestart) neemt een nieuwe wachtrij hetzelfde bestand over: deze verstuurt
+    // en bewaart dan niets meer, anders zou hij een verouderde lijst over die van de nieuwe heen schrijven.
+    private readonly CancellationTokenSource _disposed = new();
+
     protected OfflineQueueProvider(ITaskProvider inner, PendingQueueStore store, TimeProvider? time)
     {
         _inner = inner;
@@ -283,6 +287,7 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
 
     private void Save()
     {
+        if (_disposed.IsCancellationRequested) return;
         lock (_lock) _store.Save(new PendingQueueData { Operations = [.. _operations] });
     }
 
@@ -328,13 +333,14 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
         StatusChanged?.Invoke(this, status with { Message = message });
 
         if (status.IsOnline && status.Message is null && PendingCount > 0)
-            _ = Task.Run(() => FlushAsync(CancellationToken.None));
+            _ = Task.Run(() => FlushAsync(_disposed.Token));
     }
 
     public void Dispose()
     {
         _inner.ListChanged -= OnInnerListChanged;
         _inner.StatusChanged -= OnInnerStatusChanged;
+        _disposed.Cancel(); // een lopende ronde versturen stopt
         GC.SuppressFinalize(this);
     }
 }

@@ -15,9 +15,10 @@ public static class ShellItemInfo
 {
     public static string GetDisplayName(string path)
     {
+        IShellItem? item = null;
         try
         {
-            var item = CreateItem(path);
+            item = CreateItem(path);
             item.GetDisplayName(SIGDN_NORMALDISPLAY, out var namePtr);
             try { return Marshal.PtrToStringUni(namePtr) ?? Path.GetFileName(path); }
             finally { Marshal.FreeCoTaskMem(namePtr); }
@@ -28,14 +29,20 @@ public static class ShellItemInfo
         {
             return Path.GetFileNameWithoutExtension(path);
         }
+        finally
+        {
+            Release(item);
+        }
     }
 
     /// <summary>Icoon van <paramref name="pixelSize"/> fysieke pixels, of <c>null</c> als het niet lukt.</summary>
     public static BitmapSource? GetIcon(string path, int pixelSize)
     {
+        IShellItem? item = null;
         try
         {
-            var factory = (IShellItemImageFactory)CreateItem(path);
+            item = CreateItem(path);
+            var factory = (IShellItemImageFactory)item;
             var hr = factory.GetImage(new SIZE { cx = pixelSize, cy = pixelSize }, SIIGBF_RESIZETOFIT, out var hbitmap);
             if (hr < 0 || hbitmap == IntPtr.Zero) return null;
             try { return ToBitmapSource(hbitmap); }
@@ -45,6 +52,19 @@ public static class ShellItemInfo
         {
             return null;
         }
+        finally
+        {
+            Release(item);
+        }
+    }
+
+    /// <summary>
+    /// Meteen loslaten in plaats van wachten op de garbage collector: een icoon- of miniatuurhandler houdt het
+    /// bestand anders soms open (en dan kun je het niet verplaatsen of verwijderen).
+    /// </summary>
+    private static void Release(object? comObject)
+    {
+        if (comObject is not null && Marshal.IsComObject(comObject)) Marshal.ReleaseComObject(comObject);
     }
 
     private static IShellItem CreateItem(string path)

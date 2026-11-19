@@ -37,7 +37,9 @@ public sealed class TaskSourceHost : IDisposable
         _queueFolder = queueFolder;
     }
 
-    private string QueueFile(string connectionId) => Path.Combine(_queueFolder, connectionId + ".json");
+    private string QueueFile(string connectionId) => IsSafeId(connectionId)
+        ? Path.Combine(_queueFolder, connectionId + ".json")
+        : throw new ArgumentException("Ongeldig id voor een verbinding.", nameof(connectionId));
 
     public PluginLoadResult Plugins { get; }
 
@@ -94,17 +96,31 @@ public sealed class TaskSourceHost : IDisposable
             _config.Connections.RemoveAll(c => c.Id == connectionId);
             _store.Save(_config);
         }
-        _secretsFor(connectionId).Clear();
         Reset(connectionId);
+        if (!IsSafeId(connectionId)) return; // nooit een bestand bij een id dat een pad kan zijn
+        _secretsFor(connectionId).Clear();
         try
         {
             File.Delete(QueueFile(connectionId)); // wijzigingen die nog wachtten op een bron die je zelf verwijdert, vervallen
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Bestand in gebruik: het wordt nooit meer gelezen, want de verbinding bestaat niet meer.
         }
     }
+
+    /// <summary>
+    /// Begint opnieuw met de bron van deze verbinding, zonder iets aan de instellingen te veranderen. Bijvoorbeeld na
+    /// een geslaagde test: een bron die na een geweigerd token was gestopt, probeert het dan weer.
+    /// </summary>
+    public void Restart(string connectionId) => Reset(connectionId);
+
+    /// <summary>
+    /// Ids komen uit <c>sources.json</c> en <c>layout.json</c>, die met de hand aan te passen zijn. Ze worden ook
+    /// bestandsnamen (wachtrij, geheimen), dus alleen veilige tekens: nooit een pad.
+    /// </summary>
+    internal static bool IsSafeId(string? id) =>
+        id is { Length: > 0 and <= 64 } && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
 
     private void Reset(string connectionId)
     {
@@ -130,6 +146,8 @@ public sealed class TaskSourceHost : IDisposable
             if (_failed.TryGetValue(connectionId, out error)) return null;
 
             var connection = _config.Connections.FirstOrDefault(c => c.Id == connectionId);
+            if (connection is not null && !IsSafeId(connection.Id))
+                return Fail(connectionId, $"De bron '{connection.Name}' heeft een ongeldig id in sources.json. Verwijder hem en voeg hem opnieuw toe.");
             if (connection is null)
             {
                 error = "De bron van dit pane bestaat niet meer. Voeg hem opnieuw toe bij Instellingen, Takenbronnen.";

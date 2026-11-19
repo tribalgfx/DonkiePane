@@ -31,6 +31,17 @@ SolidCompression=yes
 WizardStyle=modern
 ; DonkiePane heeft geen hoofdvenster; we sluiten het zelf netjes af (zie [Code]).
 CloseApplications=no
+; Niet twee installers tegelijk (bijv. een zelf gestarte en een via Bijwerken).
+SetupMutex=DonkiePane.Setup
+
+[InstallDelete]
+; Plug-ins en foutopsporingsbestanden van een vorige versie: een oude plug-in-DLL zou anders blijven staan en geladen worden.
+Type: filesandordirs; Name: "{app}\plugins"
+Type: files; Name: "{app}\*.pdb"
+
+[UninstallDelete]
+; Wat de update-functie heeft gedownload.
+Type: filesandordirs; Name: "{%TEMP}\DonkiePane-update"
 
 [Languages]
 Name: "nl"; MessagesFile: "compiler:Languages\Dutch.isl"

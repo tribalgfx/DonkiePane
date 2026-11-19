@@ -120,6 +120,17 @@ public sealed class DpapiSecretStoreTests : TempData
         Assert.Single(Directory.GetFiles(SecretsDir)); // geen achtergebleven tijdelijke bestanden
     }
 
+    [Theory]
+    [InlineData("c1", true)]
+    [InlineData("a-b_C9", true)]
+    [InlineData("..\\x", false)]
+    [InlineData("../x", false)]
+    [InlineData("c1\n", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void Only_safe_connection_ids_become_file_names(string? id, bool safe) =>
+        Assert.Equal(safe, TaskSourceHost.IsSafeId(id));
+
     [Fact]
     public void An_id_with_a_trailing_line_break_is_refused() =>
         Assert.Throws<ArgumentException>(() => new DpapiSecretStore("c1\n", SecretsDir));

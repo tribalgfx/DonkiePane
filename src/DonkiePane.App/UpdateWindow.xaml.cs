@@ -54,6 +54,7 @@ public partial class UpdateWindow : Window
                 ShowStatus($"Downloaden… {p:P0}");
             });
             var path = await _download(_release, progress, _busy.Token);
+            _busy.Token.ThrowIfCancellationRequested(); // intussen op Later geklikt of DonkiePane sluit af: niet starten
             ShowStatus("Gecontroleerd. De installer start; DonkiePane sluit zo even af.");
             _launch(path);
             LaterButton.Content = "Sluiten";

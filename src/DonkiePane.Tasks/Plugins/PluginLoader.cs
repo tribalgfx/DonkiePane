@@ -32,10 +32,21 @@ public static class PluginLoader
         var result = new PluginLoadResult();
         foreach (var folder in folders)
         {
-            if (!Directory.Exists(folder)) continue;
-            foreach (var pluginDir in Directory.EnumerateDirectories(folder))
-            foreach (var dll in Directory.EnumerateFiles(pluginDir, FilePrefix + "*.dll"))
-                LoadAssembly(dll, result);
+            List<string> dlls;
+            try
+            {
+                if (!Directory.Exists(folder)) continue;
+                // Vaste volgorde: welke plug-in voorgaat als twee hetzelfde soort bron leveren, hangt niet van het bestandssysteem af.
+                dlls = Directory.EnumerateDirectories(folder).Order(StringComparer.OrdinalIgnoreCase)
+                    .SelectMany(dir => Directory.EnumerateFiles(dir, FilePrefix + "*.dll").Order(StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                result.Errors.Add(new PluginLoadError(folder, ex.Message)); // een onleesbare map: de rest gaat gewoon door
+                continue;
+            }
+            foreach (var dll in dlls) LoadAssembly(dll, result);
         }
         return result;
     }
@@ -57,6 +68,8 @@ public static class PluginLoader
                 }
 
                 var plugin = (ITaskSourcePlugin)Activator.CreateInstance(type)!;
+                // Alles wat de app later van de plug-in leest, nu één keer: een fout daarin komt dan hier en niet in het instellingenvenster.
+                _ = (plugin.DisplayName, plugin.Description, plugin.Fields.Count, plugin.Actions.Count);
                 if (string.IsNullOrWhiteSpace(plugin.TypeId))
                 {
                     result.Errors.Add(new PluginLoadError(dll, $"{type.Name} heeft geen TypeId."));
@@ -74,11 +87,11 @@ public static class PluginLoader
             if (found == 0 && result.Errors.All(e => e.Path != dll))
                 result.Errors.Add(new PluginLoadError(dll, "Geen plug-in gevonden in dit bestand."));
         }
-        catch (Exception ex) when (ex is BadImageFormatException or FileLoadException or FileNotFoundException
-                                       or ReflectionTypeLoadException or TypeLoadException or MissingMethodException
-                                       or InvalidCastException or TargetInvocationException)
+#pragma warning disable CA1031 // een plug-in is code van buiten: wat hij ook gooit (ook uit een getter of statische constructor), de app start
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+#pragma warning restore CA1031
         {
-            result.Errors.Add(new PluginLoadError(dll, ex.Message));
+            result.Errors.Add(new PluginLoadError(dll, (ex as TargetInvocationException)?.InnerException?.Message ?? ex.Message));
         }
     }
 

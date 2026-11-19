@@ -52,7 +52,13 @@ public sealed class ReleaseFeed(HttpClient http, string repository = ReleaseFeed
         if (Bool(root, "draft") || Bool(root, "prerelease")) return null;
         if (AppVersion.TryParse(Text(root, "tag_name")) is not { } version) return null;
 
-        var page = HttpsUri(Text(root, "html_url")) ?? fallbackPage;
+        // Alleen een pagina op GitHub zelf; die wordt in de browser geopend.
+        var page = HttpsUri(Text(root, "html_url")) is { } html && html.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+            ? html : fallbackPage;
+        // Downloads alleen uit de releases van deze repo, en alleen de installer van precies deze versie: anders zou
+        // een release v0.3.0 met een oude installer erbij die oude versie installeren (en daarna steeds opnieuw melden).
+        var downloadPrefix = fallbackPage.AbsolutePath.TrimEnd('/') + "/download/";
+        var expectedName = InstallerPrefix + AppVersion.Format(version) + ".exe";
         var notes = Text(root, "body") ?? "";
 
         ReleaseAsset? installer = null;
@@ -61,8 +67,9 @@ public sealed class ReleaseFeed(HttpClient http, string repository = ReleaseFeed
             foreach (var asset in assets.EnumerateArray())
             {
                 var name = Text(asset, "name");
-                if (name is null || !IsInstallerName(name)) continue;
-                if (HttpsUri(Text(asset, "browser_download_url")) is not { } download) continue;
+                if (name is null || !IsInstallerName(name) || !name.Equals(expectedName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (HttpsUri(Text(asset, "browser_download_url")) is not { } download
+                    || !download.AbsolutePath.StartsWith(downloadPrefix, StringComparison.OrdinalIgnoreCase)) continue;
                 var size = asset.TryGetProperty("size", out var s) && s.ValueKind == JsonValueKind.Number && s.TryGetInt64(out var n) ? n : 0;
                 installer = new ReleaseAsset(name, download, size, Sha256From(Text(asset, "digest")));
                 break;

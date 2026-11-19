@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -20,6 +21,12 @@ internal sealed class UpdateService : IDisposable
     private readonly HttpClient _download;
     private readonly TimeProvider _time;
     private readonly SemaphoreSlim _checking = new(1, 1);
+    private readonly CancellationTokenSource _stop = new();
+    private readonly ConcurrentDictionary<string, string> _verified = new(StringComparer.OrdinalIgnoreCase); // pad → SHA-256
+    private int _downloading;
+
+    /// <summary>Langer dan dit mag een download niet duren, ook niet als de verbinding halverwege stil valt.</summary>
+    private static readonly TimeSpan DownloadTimeLimit = TimeSpan.FromMinutes(15);
 
     public UpdateService(Version current, HttpMessageHandler? handler = null, TimeProvider? time = null)
     {
@@ -29,7 +36,8 @@ internal sealed class UpdateService : IDisposable
         _api.Timeout = TimeSpan.FromSeconds(30);
         // Een installer is zo'n 50 MB; op een trage verbinding duurt dat even.
         _download = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
-        _download.Timeout = TimeSpan.FromMinutes(15);
+        _download.Timeout = DownloadTimeLimit;
+        _download.DefaultRequestHeaders.UserAgent.ParseAdd("DonkiePane-Update"); // net als de controle; niets over de gebruiker
         _feed = new ReleaseFeed(_api);
     }
 
@@ -58,6 +66,8 @@ internal sealed class UpdateService : IDisposable
 
     public async Task<UpdateCheckOutcome> CheckAsync(CancellationToken ct = default)
     {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _stop.Token); // afsluiten stopt een lopende controle
+        ct = linked.Token;
         await _checking.WaitAsync(ct); // de knop in Instellingen en de klok tegelijk: één verzoek tegelijk
         try
         {
@@ -97,17 +107,28 @@ internal sealed class UpdateService : IDisposable
     {
         if (release.Installer is not { } installer)
             throw new UpdateException("Bij deze versie staat geen installer. Kijk op de releasepagina.");
+        if (Interlocked.Exchange(ref _downloading, 1) == 1)
+            throw new UpdateException("Er loopt al een download. Wacht tot die klaar is.");
+        // De time-out van HttpClient geldt maar tot de eerste bytes binnen zijn; deze ook voor het downloaden zelf.
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, _stop.Token);
+        limit.CancelAfter(DownloadTimeLimit);
         try
         {
-            return await InstallerDownload.DownloadAsync(_download, installer, DownloadFolder, progress, ct);
+            var path = await InstallerDownload.DownloadAsync(_download, installer, DownloadFolder, progress, limit.Token);
+            _verified[path] = installer.Sha256!;
+            return path;
         }
         catch (HttpRequestException ex)
         {
             throw new UpdateException("Het downloaden is mislukt: " + ex.Message, ex);
         }
-        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
         {
             throw new UpdateException("Het downloaden duurde te lang. Probeer het later opnieuw.", ex);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _downloading, 0);
         }
     }
 
@@ -117,13 +138,19 @@ internal sealed class UpdateService : IDisposable
     /// </summary>
     internal const string InstallerArguments = "/SILENT /NORESTART /STARTAFTER=1";
 
-    public static void LaunchInstaller(string path) =>
-        Process.Start(new ProcessStartInfo(path, InstallerArguments) { UseShellExecute = true });
+    /// <summary>Start een installer die <see cref="DownloadAsync"/> heeft gecontroleerd, als hij sindsdien niet is veranderd.</summary>
+    /// <exception cref="UpdateException">Niet door DonkiePane gedownload, of intussen veranderd.</exception>
+    public void LaunchInstaller(string path)
+    {
+        if (!_verified.TryGetValue(path, out var sha256) || !InstallerDownload.IsUnchanged(path, sha256))
+            throw new UpdateException("De installer is na het controleren veranderd en wordt niet gestart. Probeer het opnieuw.");
+        Process.Start(new ProcessStartInfo(path, InstallerArguments) { UseShellExecute = true })?.Dispose();
+    }
 
     public void Dispose()
     {
+        _stop.Cancel(); // een lopende controle of download stopt; de semafoor blijft, zodat Release daarna niet faalt
         _api.Dispose();
         _download.Dispose();
-        _checking.Dispose();
     }
 }

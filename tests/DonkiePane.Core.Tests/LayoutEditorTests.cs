@@ -33,6 +33,33 @@ public sealed class LayoutEditorTests
     }
 
     [Fact]
+    public void Repair_makes_a_damaged_layout_usable()
+    {
+        var tasks = new Pane { Kind = PaneKind.Tasks, IsInbox = true, Width = -50, Height = double.NaN, Items = null! };
+        var layout = new Layout { Panes = [tasks, null!] };
+
+        Assert.True(LayoutEditor.Repair(layout));
+
+        var pane = Assert.Single(layout.Panes);
+        Assert.False(pane.IsInbox); // een takenpane toont geen bureaubladitems
+        Assert.Equal(LayoutEditor.MinPaneWidth, pane.Width);
+        Assert.Equal(220, pane.Height);
+        Assert.Empty(pane.Items);
+        Assert.False(LayoutEditor.Repair(layout)); // daarna is er niets meer te herstellen
+    }
+
+    [Fact]
+    public void A_tasks_pane_marked_as_inbox_is_never_merged_away()
+    {
+        var tasks = new Pane { Kind = PaneKind.Tasks, IsInbox = true };
+        var layout = LayoutWith(new Pane { IsInbox = true }, tasks);
+
+        LayoutEditor.Sync(layout, ["user/a.txt"]);
+
+        Assert.Contains(tasks, layout.Panes);
+    }
+
+    [Fact]
     public void Sync_keeps_the_items_of_a_desktop_folder_that_is_briefly_unreachable()
     {
         // Bijv. een OneDrive- of netwerkbureaublad dat bij het inloggen nog niet verbonden is.
