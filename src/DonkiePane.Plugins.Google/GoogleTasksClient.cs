@@ -26,8 +26,8 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
         {
             var url = "users/@me/lists?maxResults=1000" + PageToken(pageToken);
             var page = Parse<ListsPage>(await SendAsync(HttpMethod.Get, url, null, ct));
-            result.AddRange((page?.Items ?? []).Select(l => new GoogleTaskList(l.Id, l.Title ?? "")));
-            pageToken = page?.NextPageToken;
+            result.AddRange((page?.Items ?? []).Where(l => !string.IsNullOrEmpty(l?.Id)).Select(l => new GoogleTaskList(l.Id, l.Title ?? "")));
+            pageToken = NextPage(pageToken, page?.NextPageToken);
         } while (pageToken is not null);
         return result;
     }
@@ -44,8 +44,8 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
         {
             var url = $"lists/{Uri.EscapeDataString(listId)}/tasks?showCompleted=true&showHidden=true&maxResults=100" + PageToken(pageToken);
             var page = Parse<TasksPage>(await SendAsync(HttpMethod.Get, url, null, ct));
-            result.AddRange((page?.Items ?? []).Where(t => t.Deleted != true));
-            pageToken = page?.NextPageToken;
+            result.AddRange((page?.Items ?? []).Where(t => t is not null && t.Deleted != true && !string.IsNullOrEmpty(t.Id)));
+            pageToken = NextPage(pageToken, page?.NextPageToken);
         } while (pageToken is not null);
         return result;
     }
@@ -55,7 +55,7 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
         var body = new JsonObject { ["title"] = title };
         if (due is { } d) body["due"] = DueString(d);
         var json = await SendAsync(HttpMethod.Post, $"lists/{Uri.EscapeDataString(listId)}/tasks", body, ct);
-        return Parse<GoogleTaskDto>(json) ?? throw new TaskProviderException("Google Taken gaf een leeg antwoord.");
+        return Parse<GoogleTaskDto>(json) is { Id.Length: > 0 } task ? task : throw new TaskProviderException("Google Taken gaf een leeg antwoord.");
     }
 
     public Task PatchAsync(string listId, string taskId, JsonObject patch, CancellationToken ct = default) =>
@@ -78,15 +78,30 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
     }
 
     /// <summary>Google bewaart bij <c>due</c> alleen de datum; het tijdstip wordt genegeerd.</summary>
-    public static string DueString(DateOnly date) => date.ToString("yyyy-MM-dd") + "T00:00:00.000Z";
+    public static string DueString(DateOnly date) => date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + "T00:00:00.000Z";
 
     private static string TaskUrl(string listId, string taskId) =>
         $"lists/{Uri.EscapeDataString(listId)}/tasks/{Uri.EscapeDataString(taskId)}";
 
     private static string PageToken(string? token) => token is null ? "" : "&pageToken=" + Uri.EscapeDataString(token);
 
-    private static T? Parse<T>(string json) where T : class =>
-        string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<T>(json);
+    /// <summary>Dezelfde pagina nog eens vragen zou eindeloos doorgaan; dan stoppen we.</summary>
+    private static string? NextPage(string? current, string? next) =>
+        string.IsNullOrEmpty(next) || next == current ? null : next;
+
+    /// <summary>Een antwoord dat geen JSON van de verwachte vorm is, is een haperende bron, geen crash.</summary>
+    private static T? Parse<T>(string json) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json);
+        }
+        catch (JsonException ex)
+        {
+            throw new SourceUnavailableException(SourceUnavailableException.UnreadableMessage, ex);
+        }
+    }
 
     /// <summary>Verstuurt een verzoek; bij een 401 één keer opnieuw met een vers toegangstoken.</summary>
     private async Task<string> SendAsync(HttpMethod method, string relativeUrl, JsonNode? body, CancellationToken ct)
@@ -106,6 +121,9 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
 
                 if (response.StatusCode == HttpStatusCode.Unauthorized && attempt == 0) continue;
                 if (response.IsSuccessStatusCode) return text;
+                // Te veel verzoeken of een storing bij Google: later opnieuw, offline wijzigingen blijven bewaard.
+                if (response.StatusCode is HttpStatusCode.TooManyRequests or >= HttpStatusCode.InternalServerError)
+                    throw new SourceUnavailableException(ErrorMessage(response.StatusCode, text));
                 throw new TaskProviderException(ErrorMessage(response.StatusCode, text));
             }
             catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested))
@@ -123,7 +141,7 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
             using var doc = JsonDocument.Parse(body);
             detail = doc.RootElement.GetProperty("error").GetProperty("message").GetString();
         }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or ArgumentException)
         {
             // Geen leesbare foutmelding; de statuscode is dan genoeg.
         }

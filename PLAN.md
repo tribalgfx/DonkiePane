@@ -11,7 +11,7 @@ Aanpasbare vakken ("panes", naar de ruitjes van een theedoek) op het Windows-bur
   - Een **Inbox-pane** vangt nieuwe bestanden op die op het bureaublad verschijnen, zodat niets onzichtbaar wordt.
   - Bij afsluiten of verwijderen van DonkiePane komt de Windows-iconenweergave terug.
 - **Taken zijn lokaal of gekoppeld** aan een bron die de gebruiker zelf toevoegt (Google Taken, of elk dashboard dat het protocol Tasks REST v1 spreekt), per pane te kiezen. Er is geen bron ingebouwd.
-- **Eigen repo op GitHub,** sinds 18 november 2026 publiek, zodat de update-controle de releases zonder token kan lezen.
+- **Eigen repo op GitHub,** sinds 15 november 2026 publiek, zodat de update-controle de releases zonder token kan lezen.
 
 ## Eigen draai
 
@@ -72,7 +72,7 @@ Zie [docs/Bronnen.md](docs/Bronnen.md) voor het gebruik. Samengevat:
 - **Meegeleverd:** Taken via REST (Tasks REST v1, met optionele vastgepinde certificaat-vingerafdruk), Google Taken (de gebruiker maakt zelf een OAuth-client; er wordt geen client-ID meegeleverd) en Home Assistant (to-do lijsten; http alleen na een uitdrukkelijke keuze).
 - **Synchronisatie:** instelbaar interval (standaard 60 s, 15 s tot 5 min) en een verversknop. Een wachtrij om elke gekoppelde bron bewaart wat je offline doet, in een bestand per verbinding, en verstuurt het in volgorde zodra het kan.
 - **Gedrag naar de bron toe:** na een 401 stopt DonkiePane met verzoeken (een bron kan na een paar mislukte pogingen alles blokkeren), bij 429 wacht het de opgegeven tijd, elke minuut volstaat één vraag met de revisie (304).
-- **Microsoft To Do: vervallen.** Een persoonlijk hotmail-account heeft geen Entra-tenant en kan dus geen app registreren.
+- **Microsoft To Do: vervallen.** Een persoonlijk Microsoft-account heeft geen Entra-tenant en kan dus geen app registreren.
 
 Bekende beperkingen: taken verplaatsen wordt niet offline bewaard; een taak die offline wordt aangemaakt en meteen afgevinkt komt open aan (met een melding); bij Home Assistant kan een toevoeging die precies tijdens een netwerkfout gebeurt dubbel aankomen; of Home Assistant een deadline wist met `due_date: null` staat niet in de documentatie en is niet met een echte Home Assistant geprobeerd.
 

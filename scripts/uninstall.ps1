@@ -31,18 +31,27 @@ if ($running) {
 }
 
 # 2. Windows-iconen terugzetten (dezelfde opdracht als rechtsklik -> Beeld -> Bureaubladpictogrammen weergeven).
-Add-Type -Name Desktop -Namespace DonkiePaneUninstall -MemberDefinition @'
-[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string c, string n);
-[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr p, IntPtr a, string c, string n);
+# De vensternaam is een IntPtr: PowerShell maakt van $null bij een string-parameter een lege tekst, en dan vindt
+# FindWindow niets ("Program Manager" en "FolderView" hebben een naam).
+Add-Type -Name Desktop2 -Namespace DonkiePaneUninstall -MemberDefinition @'
+[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr p, IntPtr a, string c, IntPtr n);
 [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
 '@ -ErrorAction SilentlyContinue
-$progman = [DonkiePaneUninstall.Desktop]::FindWindow('Progman', $null)
-$defView = [DonkiePaneUninstall.Desktop]::FindWindowEx($progman, [IntPtr]::Zero, 'SHELLDLL_DefView', $null)
-if ($defView -ne [IntPtr]::Zero) {
-    $list = [DonkiePaneUninstall.Desktop]::FindWindowEx($defView, [IntPtr]::Zero, 'SysListView32', $null)
-    if ($list -ne [IntPtr]::Zero -and -not [DonkiePaneUninstall.Desktop]::IsWindowVisible($list)) {
-        [void][DonkiePaneUninstall.Desktop]::SendMessage($defView, 0x0111, [IntPtr]0x7402, [IntPtr]::Zero)
+$none = [IntPtr]::Zero
+$desktop = [DonkiePaneUninstall.Desktop2]
+# Meestal onder Progman, soms onder een WorkerW.
+$defView = $desktop::FindWindowEx($none, $none, 'Progman', $none) | ForEach-Object { $desktop::FindWindowEx($_, $none, 'SHELLDLL_DefView', $none) }
+$worker = $none
+while ($defView -eq $none) {
+    $worker = $desktop::FindWindowEx($none, $worker, 'WorkerW', $none)
+    if ($worker -eq $none) { break }
+    $defView = $desktop::FindWindowEx($worker, $none, 'SHELLDLL_DefView', $none)
+}
+if ($defView -ne $none) {
+    $list = $desktop::FindWindowEx($defView, $none, 'SysListView32', $none)
+    if ($list -ne $none -and -not $desktop::IsWindowVisible($list)) {
+        [void]$desktop::SendMessage($defView, 0x0111, [IntPtr]0x7402, $none)
         Write-Host 'Windows-bureaubladiconen teruggezet.'
     }
 }

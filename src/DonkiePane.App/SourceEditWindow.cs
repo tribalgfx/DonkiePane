@@ -195,9 +195,9 @@ public sealed class SourceEditWindow : Window
             {
                 Show(await source.RunActionAsync(actionId), ok: true);
             }
-            catch (TaskProviderException ex)
+            catch (Exception ex) when (TaskErrors.IsHandled(ex))
             {
-                Show(ex.Message, ok: false);
+                Show(TaskErrors.Message(ex), ok: false);
             }
         });
     }
@@ -209,6 +209,11 @@ public sealed class SourceEditWindow : Window
         try
         {
             await work();
+        }
+        catch (Exception ex) when (TaskErrors.IsHandled(ex))
+        {
+            // De knoppen zijn async void: een fout uit een plug-in mag het venster (en de app) niet laten crashen.
+            Show(TaskErrors.Message(ex), ok: false);
         }
         finally
         {

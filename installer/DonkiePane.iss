@@ -53,6 +53,40 @@ const
   ApprovedKey = 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run';
   SingleInstanceMutex = 'Local\DonkiePane.SingleInstance';
 
+function FindWindowEx(Parent, ChildAfter: HWND; ClassName: String; WindowName: Longint): HWND;
+  external 'FindWindowExW@user32.dll stdcall';
+function IsWindowVisible(Wnd: HWND): Boolean;
+  external 'IsWindowVisible@user32.dll stdcall';
+
+{ Het venster met de iconenweergave van het bureaublad: meestal onder Progman, soms onder een WorkerW. }
+function FindDesktopDefView: HWND;
+var
+  Host: HWND;
+begin
+  Result := FindWindowEx(FindWindowByClassName('Progman'), 0, 'SHELLDLL_DefView', 0);
+  Host := 0;
+  while Result = 0 do
+  begin
+    Host := FindWindowEx(0, Host, 'WorkerW', 0);
+    if Host = 0 then exit;
+    Result := FindWindowEx(Host, 0, 'SHELLDLL_DefView', 0);
+  end;
+end;
+
+{ Zet de Windows-bureaubladiconen terug als ze verborgen zijn. Ook als DonkiePane niet draait: na een harde stop
+  of crash staan ze nog uit, en zonder dit blijft het bureaublad na het verwijderen leeg. Dezelfde opdracht als
+  rechtsklik -> Beeld -> Bureaubladpictogrammen weergeven; zonder iconenweergave doen we niets. }
+procedure RestoreDesktopIcons;
+var
+  DefView, List: HWND;
+begin
+  DefView := FindDesktopDefView;
+  if DefView = 0 then exit;
+  List := FindWindowEx(DefView, 0, 'SysListView32', 0);
+  if (List <> 0) and not IsWindowVisible(List) then
+    SendMessage(DefView, $0111 { WM_COMMAND }, $7402, 0);
+end;
+
 function StartAfterUpdate: Boolean;
 begin
   Result := WizardSilent and (ExpandConstant('{param:STARTAFTER|0}') = '1');
@@ -103,6 +137,8 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep <> usPostUninstall then exit;
+
+  RestoreDesktopIcons;
 
   { "Starten met Windows" weghalen. }
   RegDeleteValue(HKEY_CURRENT_USER, RunKey, 'DonkiePane');

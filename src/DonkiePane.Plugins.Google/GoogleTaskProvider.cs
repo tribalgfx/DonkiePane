@@ -217,7 +217,7 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : IRefreshableT
                 IsCompleted = completed,
                 CompletedAt = completed ? ParseTime(d.Completed) ?? updated : null,
                 DueDate = ParseDate(d.Due),
-                SortOrder = completed ? 0 : order[d.Id],
+                SortOrder = completed ? 0 : order.TryGetValue(d.Id, out var position) ? position : next++, // bijv. een subtaak van een subtaak
                 CreatedAt = updated, // Google geeft geen aanmaakdatum
                 UpdatedAt = updated,
                 ExternalId = d.Id,
@@ -237,7 +237,8 @@ public sealed class GoogleTaskProvider(GoogleTasksClient client) : IRefreshableT
     private static IReadOnlyList<TaskItem> Clones(List<TaskItem> tasks) => tasks.Select(t => t.Clone()).ToList();
 
     /// <summary>Bij een gewone fout (bijv. 403) is er wel verbinding; alleen "geen verbinding" telt als offline.</summary>
-    private static bool IsOnline(TaskProviderException ex) => ex.InnerException is not HttpRequestException and not TaskCanceledException;
+    private static bool IsOnline(TaskProviderException ex) =>
+        ex is not SourceUnavailableException && ex.InnerException is not HttpRequestException and not TaskCanceledException;
 
     private void Publish(string listId, bool online, string? message) =>
         StatusChanged?.Invoke(this, new TaskProviderStatus(listId, online, message));

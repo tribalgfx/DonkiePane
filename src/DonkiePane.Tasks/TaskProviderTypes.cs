@@ -28,3 +28,31 @@ public sealed class SourceRateLimitedException(TimeSpan retryAfter)
     public TimeSpan RetryAfter { get; } = retryAfter;
 }
 
+/// <summary>
+/// Het laatste vangnet voor fouten uit een bron of plug-in. Een gewone <see cref="TaskProviderException"/> is al
+/// een melding voor de gebruiker; elke andere fout (een fout in een plug-in, een vol of vergrendeld bestand) mag de
+/// app niet laten crashen, maar wordt ook een melding.
+/// </summary>
+public static class TaskErrors
+{
+    /// <summary>Annuleren (afsluiten, venster dicht) is geen fout en wordt nooit gevangen.</summary>
+    public static bool IsHandled(Exception ex) => ex is not OperationCanceledException;
+
+    public static string Message(Exception ex) =>
+        ex is TaskProviderException ? ex.Message : $"Er ging iets mis: {ex.Message}";
+}
+
+/// <summary>
+/// De bron hapert even: een serverfout (5xx) of een antwoord dat DonkiePane niet kan lezen, zoals de inlogpagina van
+/// een proxy. Later opnieuw proberen helpt; offline wijzigingen blijven daarom bewaard.
+/// </summary>
+public class SourceUnavailableException(string message, Exception? inner = null) : TaskProviderException(message, inner)
+{
+    public const string UnreadableMessage = "De bron gaf een antwoord dat DonkiePane niet kan lezen. Staat het adres goed, en zit er geen inlogpagina tussen?";
+
+    /// <summary>Een fout bij het lezen van een antwoord (JSON van de verkeerde vorm, onmogelijke waarden).</summary>
+    public static bool IsUnreadable(Exception ex) =>
+        ex is System.Text.Json.JsonException or InvalidOperationException or FormatException
+            or ArgumentException or KeyNotFoundException or NullReferenceException;
+}
+

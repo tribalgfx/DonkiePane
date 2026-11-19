@@ -5,7 +5,7 @@ namespace DonkiePane.Tasks.Offline;
 /// het weer kan. Wat je offline doet (toevoegen, aanpassen, afvinken, verwijderen) blijft direct zichtbaar,
 /// en gaat in dezelfde volgorde naar de bron. De wachtrij staat in een bestand, dus een herstart verliest niets.
 ///
-/// Alleen echt tijdelijke storingen worden bewaard: geen verbinding of een bron die om wachten vraagt. Een
+/// Alleen echt tijdelijke storingen worden bewaard: geen verbinding, een bron die om wachten vraagt of even hapert. Een
 /// weigering (ongeldig token, ongeldige gegevens) komt gewoon als fout terug, want opnieuw proberen helpt niet.
 /// Verplaatsen wordt niet bewaard: een positie zegt niets meer als de lijst intussen is veranderd.
 /// </summary>
@@ -94,6 +94,8 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
             try
             {
                 await _inner.UpdateAsync([task], ct);
+                // Wat nog van eerder wachtte is ouder dan wat net aankwam; later versturen zou het terugdraaien.
+                DropPendingUpdates(task.Id);
             }
             catch (TaskProviderException ex) when (IsTransient(ex))
             {
@@ -124,6 +126,7 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
         try
         {
             await _inner.DeleteAsync(listId, taskId, ct);
+            DropPendingUpdates(taskId); // een wijziging aan een taak die weg is, zou alleen nog een fout geven
         }
         catch (TaskProviderException ex) when (IsTransient(ex))
         {
@@ -174,6 +177,13 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
                 {
                     lock (_lock) _notices[op.ListId] = $"Een wijziging is niet verstuurd en weggelaten: {ex.Message}";
                 }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Geen melding van de bron maar een onverwachte fout (bijv. in een plug-in): niets weggooien,
+                    // later opnieuw proberen. Lezen gaat gewoon door.
+                    lock (_lock) _notices[op.ListId] = $"Wijzigingen wachten nog: {ex.Message}";
+                    break;
+                }
 
                 lock (_lock) _operations.Remove(op);
                 Save();
@@ -187,13 +197,20 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
         }
     }
 
-    private Task Send(PendingOperation op, CancellationToken ct) => op.Kind switch
+    private Task Send(PendingOperation op, CancellationToken ct) => op switch
     {
-        PendingOperation.Add => _inner.AddAsync(op.ListId, op.Task!, ct),
-        PendingOperation.Update => _inner.UpdateAsync([op.Task!], ct),
-        PendingOperation.Delete => _inner.DeleteAsync(op.ListId, op.TaskId, ct),
-        _ => Task.CompletedTask, // onbekend soort in een bestand: weggooien
+        { Kind: PendingOperation.Add, Task: { } task } => _inner.AddAsync(op.ListId, task, ct),
+        { Kind: PendingOperation.Update, Task: { } task } => _inner.UpdateAsync([task], ct),
+        { Kind: PendingOperation.Delete } => _inner.DeleteAsync(op.ListId, op.TaskId, ct),
+        _ => Task.CompletedTask, // onbekend soort of beschadigde regel in het bestand: weggooien
     };
+
+    private void DropPendingUpdates(string taskId)
+    {
+        bool removed;
+        lock (_lock) removed = _operations.RemoveAll(o => o.Kind == PendingOperation.Update && o.TaskId == taskId) > 0;
+        if (removed) Save();
+    }
 
     // ---------- Zicht op de lijst ----------
 
@@ -249,9 +266,12 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
 
     // ---------- Hulpjes ----------
 
-    /// <summary>Alleen "geen verbinding" en "even wachten" zijn tijdelijk; al het andere moet de gebruiker zien.</summary>
+    /// <summary>
+    /// Alleen "geen verbinding", "even wachten" en "bron hapert" (5xx, onleesbaar antwoord) zijn tijdelijk; een
+    /// weigering moet de gebruiker zien.
+    /// </summary>
     private static bool IsTransient(TaskProviderException ex) =>
-        ex is SourceRateLimitedException || ex.InnerException is HttpRequestException or TaskCanceledException;
+        ex is SourceRateLimitedException or SourceUnavailableException || ex.InnerException is HttpRequestException or TaskCanceledException;
 
     private void Enqueue(PendingOperation op)
     {

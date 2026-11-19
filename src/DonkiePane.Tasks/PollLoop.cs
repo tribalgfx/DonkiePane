@@ -23,7 +23,15 @@ public static class PollLoop
                     await Task.Delay(Slice, time, ct);
                     waited += Slice;
                 }
-                await poll(ct);
+                try
+                {
+                    await poll(ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    // Eén vreemd antwoord of een fout in een plug-in mag het verversen niet voorgoed stilzetten:
+                    // de bron meldt zelf zijn fouten, dus hier gewoon de volgende ronde afwachten.
+                }
             }
         }
         catch (OperationCanceledException)

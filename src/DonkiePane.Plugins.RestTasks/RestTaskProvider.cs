@@ -290,7 +290,7 @@ public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time 
 
     /// <summary>Bij een gewone fout (bijv. 403) is er wel verbinding; alleen "geen verbinding" telt als offline.</summary>
     private static bool IsReachable(TaskProviderException ex) =>
-        ex.InnerException is not HttpRequestException and not TaskCanceledException;
+        ex is not SourceUnavailableException && ex.InnerException is not HttpRequestException and not TaskCanceledException;
 
     private void Publish(bool online, string? message) =>
         StatusChanged?.Invoke(this, new TaskProviderStatus(ListId, online, message));

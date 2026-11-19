@@ -42,5 +42,5 @@ public sealed class SourceGate(TimeProvider? time = null)
 
     /// <summary>Bij een gewone fout (bijv. 403) is er wel verbinding; alleen "geen verbinding" telt als offline.</summary>
     public static bool IsReachable(TaskProviderException ex) =>
-        ex.InnerException is not HttpRequestException and not TaskCanceledException;
+        ex is not SourceUnavailableException && ex.InnerException is not HttpRequestException and not TaskCanceledException;
 }

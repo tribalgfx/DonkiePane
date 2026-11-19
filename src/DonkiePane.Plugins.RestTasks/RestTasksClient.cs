@@ -46,7 +46,9 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
         if (status == HttpStatusCode.NotModified) return null;
 
         var doc = Parse<TasksResponse>(text) ?? throw new TaskProviderException("De bron gaf een onverwacht antwoord.");
-        return new RestTaskList(doc.Revision ?? "", doc.Tasks ?? []);
+        // Een taak zonder id kan DonkiePane niet aanpassen; null-waarden uit de bron worden lege tekst.
+        var tasks = (doc.Tasks ?? []).Where(t => !string.IsNullOrEmpty(t?.Id)).Select(Clean).ToList();
+        return new RestTaskList(doc.Revision ?? "", tasks);
     }
 
     /// <summary>
@@ -58,14 +60,14 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
         var body = new JsonObject { ["id"] = id, ["text"] = text };
         if (due is { } d) body["dueDate"] = DueString(d);
         var (_, response) = await SendAsync(HttpMethod.Post, "api/v1/tasks", body, null, ct);
-        return Parse<TaskResponse>(response)?.Task ?? throw new TaskProviderException("De bron gaf een onverwacht antwoord.");
+        return SingleTask(response);
     }
 
     /// <summary>Wijzigt <c>text</c>, <c>done</c> en/of <c>dueDate</c> (<c>null</c> wist de deadline).</summary>
     public async Task<RestTask> PatchAsync(string id, JsonObject patch, CancellationToken ct = default)
     {
         var (_, response) = await SendAsync(HttpMethod.Patch, "api/v1/tasks/" + Uri.EscapeDataString(id), patch, null, ct);
-        return Parse<TaskResponse>(response)?.Task ?? throw new TaskProviderException("De bron gaf een onverwacht antwoord.");
+        return SingleTask(response);
     }
 
     public async Task DeleteAsync(string id, CancellationToken ct = default) =>
@@ -73,8 +75,34 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
 
     public static string DueString(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    private static T? Parse<T>(string json) where T : class =>
-        string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<T>(json);
+    private static RestTask SingleTask(string response) =>
+        Parse<TaskResponse>(response)?.Task is { Id.Length: > 0 } task
+            ? Clean(task)
+            : throw new TaskProviderException("De bron gaf een onverwacht antwoord.");
+
+    /// <summary>Een antwoord dat geen JSON van de verwachte vorm is (bijv. HTML) is een haperende bron, geen crash.</summary>
+    private static T? Parse<T>(string json) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json);
+        }
+        catch (JsonException ex)
+        {
+            throw new SourceUnavailableException(SourceUnavailableException.UnreadableMessage, ex);
+        }
+    }
+
+    // Grenzen van DateTimeOffset.FromUnixTimeMilliseconds.
+    private const long MinUnixMs = -62_135_596_800_000, MaxUnixMs = 253_402_300_799_999;
+
+    private static RestTask Clean(RestTask task)
+    {
+        task.Text ??= "";
+        task.CreatedAt = Math.Clamp(task.CreatedAt, MinUnixMs, MaxUnixMs);
+        return task;
+    }
 
     private async Task<(HttpStatusCode Status, string Body)> SendAsync(
         HttpMethod method, string relative, JsonNode? body, string? ifNoneMatchRevision, CancellationToken ct)
@@ -135,17 +163,25 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
                 return new TaskProviderException("De bron eist HTTPS. Gebruik een adres dat met https:// begint.");
             case HttpStatusCode.BadRequest:
                 return new TaskProviderException("De bron weigerde de wijziging (ongeldige gegevens, bijvoorbeeld een te lange tekst).");
+            case >= HttpStatusCode.InternalServerError:
+                // Bijv. een proxy die 502 geeft terwijl de dienst herstart: later opnieuw, niets weggooien.
+                return new SourceUnavailableException($"De bron hapert even ({(int)response.StatusCode}). DonkiePane probeert het later opnieuw.");
             default:
                 return new TaskProviderException($"De bron gaf een fout ({(int)response.StatusCode}).");
         }
     }
+
+    /// <summary>Langer wachten dan dit vraagt geen bron redelijkerwijs; zo staat een bron nooit dagen stil.</summary>
+    internal static readonly TimeSpan MaxRetryAfter = TimeSpan.FromHours(1);
 
     private static string? ErrorCode(string json)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("error", out var e) ? e.GetString() : null;
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                   && doc.RootElement.TryGetProperty("error", out var e) && e.ValueKind == JsonValueKind.String
+                ? e.GetString() : null;
         }
         catch (JsonException)
         {
@@ -156,18 +192,22 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
     /// <summary>De wachttijd uit de header <c>Retry-After</c> (seconden), anders uit <c>retryAfter</c> in de body, anders een minuut.</summary>
     private static TimeSpan RetryAfter(HttpResponseMessage response, string json)
     {
-        if (response.Headers.RetryAfter?.Delta is { } delta && delta > TimeSpan.Zero) return delta;
+        if (response.Headers.RetryAfter?.Delta is { } delta && delta > TimeSpan.Zero) return Min(delta, MaxRetryAfter);
         try
         {
             using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("retryAfter", out var r) && r.TryGetInt32(out var seconds) && seconds > 0)
-                return TimeSpan.FromSeconds(seconds);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("retryAfter", out var r) && r.ValueKind == JsonValueKind.Number
+                && r.TryGetInt32(out var seconds) && seconds > 0)
+                return Min(TimeSpan.FromSeconds(seconds), MaxRetryAfter);
         }
         catch (JsonException)
         {
         }
         return TimeSpan.FromMinutes(1);
     }
+
+    private static TimeSpan Min(TimeSpan a, TimeSpan b) => a < b ? a : b;
 
     private sealed class TasksResponse
     {

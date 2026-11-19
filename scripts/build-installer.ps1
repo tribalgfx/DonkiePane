@@ -31,7 +31,7 @@ if (Test-Path $publish) { Remove-Item $publish -Recurse -Force }
 
 Write-Host 'Programma publiceren (zelfstandig, win-x64) ...'
 & $dotnet publish (Join-Path $repo 'src\DonkiePane.App\DonkiePane.App.csproj') `
-    -c Release -r win-x64 --self-contained true -p:SatelliteResourceLanguages=en -o $publish --nologo -v quiet
+    -c Release -r win-x64 --self-contained true -p:SatelliteResourceLanguages=en -p:DebugType=none -o $publish --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw 'Publiceren is mislukt.' }
 
 $plugins = [ordered]@{ google = 'DonkiePane.Plugins.Google'; rest = 'DonkiePane.Plugins.RestTasks'; homeassistant = 'DonkiePane.Plugins.HomeAssistant' }
@@ -39,7 +39,7 @@ foreach ($name in $plugins.Keys) {
     $project = $plugins[$name]
     $dest = Join-Path $publish "plugins\$name"
     Write-Host "Plug-in $name publiceren ..."
-    & $dotnet publish (Join-Path $repo "src\$project\$project.csproj") -c Release -o $dest --nologo -v quiet
+    & $dotnet publish (Join-Path $repo "src\$project\$project.csproj") -c Release -p:DebugType=none -o $dest --nologo -v quiet
     if ($LASTEXITCODE -ne 0) { throw "Publiceren van plug-in $name is mislukt." }
     # De gedeelde onderdelen komen van het programma zelf; een eigen kopie zou het contract breken.
     Remove-Item (Join-Path $dest 'DonkiePane.Core.*'), (Join-Path $dest 'DonkiePane.Tasks.*') -ErrorAction SilentlyContinue

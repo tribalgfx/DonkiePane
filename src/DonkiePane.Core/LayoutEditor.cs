@@ -38,8 +38,12 @@ public static class LayoutEditor
     /// Brengt de layout in lijn met wat er werkelijk op het bureaublad staat:
     /// verdwenen items eruit, dubbele vermeldingen weg, nieuwe items naar de Inbox.
     /// </summary>
+    /// <param name="unavailableLocations">
+    /// Bureaubladmappen die nu niet te lezen zijn (bijv. een netwerk- of OneDrive-map die nog niet verbonden is).
+    /// Hun items blijven staan waar ze staan: een map die even weg is, mag de indeling niet wissen.
+    /// </param>
     /// <returns><c>true</c> als er iets veranderd is.</returns>
-    public static bool Sync(Layout layout, IEnumerable<string> currentItems)
+    public static bool Sync(Layout layout, IEnumerable<string> currentItems, IReadOnlyCollection<string>? unavailableLocations = null)
     {
         var current = new HashSet<string>(currentItems, StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -48,9 +52,12 @@ public static class LayoutEditor
         var inbox = EnsureInbox(layout);
         changed |= inboxCountBefore != 1;
 
+        bool Unavailable(string id) =>
+            unavailableLocations is { Count: > 0 } && id.IndexOf('/') is > 0 and var slash && unavailableLocations.Contains(id[..slash]);
+
         foreach (var pane in layout.Panes)
         {
-            var removed = pane.Items.RemoveAll(id => !current.Contains(id) || !seen.Add(id));
+            var removed = pane.Items.RemoveAll(id => (!current.Contains(id) && !Unavailable(id)) || !seen.Add(id));
             changed |= removed > 0;
         }
 

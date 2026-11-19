@@ -167,11 +167,12 @@ public sealed class GoogleAuth(HttpClient http, ITokenStore store, Func<GoogleCl
             }
 
             return new TokenResponse(
-                root.GetProperty("access_token").GetString()!,
+                root.GetProperty("access_token").GetString() ?? throw new KeyNotFoundException("access_token"),
                 root.TryGetProperty("expires_in", out var exp) ? exp.GetInt32() : 3600,
                 root.TryGetProperty("refresh_token", out var rt) ? rt.GetString() : null);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or KeyNotFoundException
+                                       or InvalidOperationException or FormatException // een antwoord van een andere vorm
                                    || (ex is TaskCanceledException && !ct.IsCancellationRequested))
         {
             throw new TaskProviderException("Geen verbinding met Google.", ex);

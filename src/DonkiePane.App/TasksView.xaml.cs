@@ -66,9 +66,10 @@ public partial class TasksView : UserControl
         {
             _tasks = (await _provider.GetTasksAsync(_listId)).ToList();
         }
-        catch (TaskProviderException ex)
+        catch (Exception ex) when (TaskErrors.IsHandled(ex))
         {
-            ShowStatus(ex.Message);
+            // Ook een fout die geen melding van de bron is (een plug-in, een vergrendeld bestand): tonen, niet crashen.
+            ShowStatus(TaskErrors.Message(ex));
             return;
         }
 
@@ -92,9 +93,9 @@ public partial class TasksView : UserControl
         {
             await refreshable.RefreshAsync();
         }
-        catch (TaskProviderException ex)
+        catch (Exception ex) when (TaskErrors.IsHandled(ex))
         {
-            ShowStatus(ex.Message);
+            ShowStatus(TaskErrors.Message(ex));
         }
         finally
         {
@@ -116,12 +117,12 @@ public partial class TasksView : UserControl
         {
             await action();
         }
-        catch (TaskProviderException ex)
+        catch (Exception ex) when (TaskErrors.IsHandled(ex))
         {
             // Eerst de lijst herladen (die meldt bij succes "alles goed" en wist de melding),
             // dan pas de foutmelding tonen, anders ziet de gebruiker hem nooit.
             await ReloadAsync();
-            ShowStatus(ex.Message);
+            ShowStatus(TaskErrors.Message(ex));
         }
     }
 
