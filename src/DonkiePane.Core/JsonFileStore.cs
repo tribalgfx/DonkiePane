@@ -70,16 +70,25 @@ public class JsonFileStore<T>(string filePath) where T : class, new()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         var json = JsonSerializer.Serialize(value, Options);
-        var tempPath = FilePath + ".tmp";
-        Retry(() =>
+        // Een eigen tijdelijk bestand per keer: twee schrijvers op hetzelfde bestand (bijv. een oude en een nieuwe
+        // wachtrij vlak na een herstart van een bron) zitten elkaar dan niet in de weg.
+        var tempPath = $"{FilePath}.{Guid.NewGuid():N}.tmp";
+        try
         {
-            File.WriteAllText(tempPath, json);
-            if (File.Exists(FilePath))
-                File.Replace(tempPath, FilePath, FilePath + ".bak");
-            else
-                File.Move(tempPath, FilePath);
-            return true;
-        });
+            Retry(() =>
+            {
+                File.WriteAllText(tempPath, json);
+                if (File.Exists(FilePath))
+                    File.Replace(tempPath, FilePath, FilePath + ".bak");
+                else
+                    File.Move(tempPath, FilePath);
+                return true;
+            });
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch (IOException) { } catch (UnauthorizedAccessException) { } // alleen na een fout
+        }
     }
 
     /// <summary>

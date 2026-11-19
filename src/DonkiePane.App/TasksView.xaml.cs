@@ -22,6 +22,7 @@ public partial class TasksView : UserControl
     private List<TaskItem> _tasks = [];
     private List<TaskRow> _openRows = [];
     private Point _dragStart;
+    private int _reloadRound; // alleen op de UI-thread
 
     public TasksView(ITaskProvider provider, string listId)
     {
@@ -62,16 +63,22 @@ public partial class TasksView : UserControl
 
     private async Task ReloadAsync()
     {
+        // Meldingen kunnen kort na elkaar komen; een trager antwoord op een eerdere vraag mag de nieuwste lijst dan
+        // niet overschrijven. Alleen de laatst gestarte ronde werkt het scherm bij.
+        var round = ++_reloadRound;
+        List<TaskItem> tasks;
         try
         {
-            _tasks = (await _provider.GetTasksAsync(_listId)).ToList();
+            tasks = (await _provider.GetTasksAsync(_listId)).ToList();
         }
         catch (Exception ex) when (TaskErrors.IsHandled(ex))
         {
             // Ook een fout die geen melding van de bron is (een plug-in, een vergrendeld bestand): tonen, niet crashen.
-            ShowStatus(TaskErrors.Message(ex));
+            if (round == _reloadRound) ShowStatus(TaskErrors.Message(ex));
             return;
         }
+        if (round != _reloadRound) return;
+        _tasks = tasks;
 
         var showStar = _provider.Capabilities.Importance;
         _openRows = TaskOrdering.Ordered(_tasks).Select(t => new TaskRow(t, showStar)).ToList();

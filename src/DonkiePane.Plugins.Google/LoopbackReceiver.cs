@@ -72,9 +72,21 @@ public sealed class LoopbackReceiver : IDisposable
         perConnection.CancelAfter(TimeSpan.FromSeconds(5));
         try
         {
-            using var reader = new StreamReader(client.GetStream(), Encoding.ASCII, false, 1024, leaveOpen: true);
-            var line = await reader.ReadLineAsync(perConnection.Token);
-            var parts = line?.Split(' ');
+            // Hooguit 8 kB: de eerste regel van een echte terugkeer van Google is veel korter, en een ander programma
+            // op deze pc kan zo het geheugen niet vullen.
+            var buffer = new byte[8192];
+            var count = 0;
+            var stream = client.GetStream();
+            while (count < buffer.Length)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(count), perConnection.Token);
+                if (read == 0) break;
+                var newline = Array.IndexOf(buffer, (byte)'\n', count, read);
+                count += read;
+                if (newline >= 0) { count = newline; break; }
+            }
+            var line = Encoding.ASCII.GetString(buffer, 0, count).TrimEnd('\r');
+            var parts = line.Split(' ');
             return parts is { Length: >= 2 } && parts[0] == "GET" ? parts[1] : "";
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)

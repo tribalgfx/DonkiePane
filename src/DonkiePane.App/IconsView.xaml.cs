@@ -117,7 +117,7 @@ public partial class IconsView : UserControl
     {
         try
         {
-            Process.Start(info);
+            Process.Start(info)?.Dispose(); // het proces zelf hoeven we niet te volgen
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {

@@ -31,7 +31,7 @@ public sealed class HomeAssistantPlugin : ITaskSourcePlugin
         new(AllowHttpKey, "Onversleutelde verbinding (http) toestaan", SettingKind.Bool, Required: false,
             Help: "Alleen voor Home Assistant op je eigen netwerk zonder https. Het token gaat dan onversleuteld over het netwerk; zet dit niet aan voor een adres buiten je huis."),
         new(FingerprintKey, "Vingerafdruk certificaat (SHA-256)", SettingKind.Fingerprint, Required: false,
-            Help: "Alleen bij https met een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows."),
+            Help: "Alleen bij https met een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows. Krijgt Home Assistant een nieuw certificaat, vul dan de nieuwe afdruk in."),
     ];
 
     public IReadOnlyList<PluginAction> Actions { get; } = [];
@@ -57,7 +57,11 @@ public sealed class HomeAssistantSource : ITaskSource
             var token = context.Secrets.Get(HomeAssistantPlugin.TokenKey);
             if (string.IsNullOrWhiteSpace(token)) throw new FormatException("Vul het toegangstoken in.");
 
-            _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin)) { Timeout = TimeSpan.FromSeconds(30) };
+            _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin))
+            {
+                Timeout = TimeSpan.FromSeconds(30),
+                MaxResponseContentBufferSize = PinnedHttp.MaxResponseBytes,
+            };
             _client = new HomeAssistantClient(_http, baseUri, () => context.Secrets.Get(HomeAssistantPlugin.TokenKey)!.Trim());
             _provider = new HomeAssistantTaskProvider(_client) { PollInterval = context.PollInterval };
         }

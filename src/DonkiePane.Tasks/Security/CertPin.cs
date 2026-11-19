@@ -49,9 +49,14 @@ public static class CertPin
 /// <summary>De HTTP-verbinding die bronnen gebruiken: met een pin alleen dat ene certificaat, zonder pin de gewone controle.</summary>
 public static class PinnedHttp
 {
+    /// <summary>Groter dan dit is geen antwoord met taken; zo kan een bron het geheugen niet vullen.</summary>
+    public const long MaxResponseBytes = 16 * 1024 * 1024;
+
     public static SocketsHttpHandler CreateHandler(string? pin) => new()
     {
         ConnectTimeout = TimeSpan.FromSeconds(10),
+        // Geen doorverwijzingen volgen: het token hoort bij dit adres, en een loginpagina elders is geen taak.
+        AllowAutoRedirect = false,
         PooledConnectionLifetime = TimeSpan.FromMinutes(5),
         SslOptions = new SslClientAuthenticationOptions
         {

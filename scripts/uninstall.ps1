@@ -22,12 +22,20 @@ $ErrorActionPreference = 'Stop'
 $target = Join-Path $env:LOCALAPPDATA 'Programs\DonkiePane'
 $data = Join-Path $env:APPDATA 'DonkiePane'
 
-# 1. Stoppen. Een harde stop laat de Windows-iconen verborgen, dus daarna zelf herstellen.
-$running = Get-Process DonkiePane -ErrorAction SilentlyContinue
-if ($running) {
+# 1. Stoppen: eerst netjes met --quit (dan zet DonkiePane de Windows-iconen zelf terug), alleen als dat niet lukt
+#    een harde stop. Stap 2 zet de iconen in elk geval terug.
+$exe = Join-Path $target 'DonkiePane.exe'
+if (Get-Process DonkiePane -ErrorAction SilentlyContinue) {
     Write-Host 'DonkiePane stoppen...'
-    $running | Stop-Process -Force
-    Start-Sleep -Seconds 1
+    if (Test-Path $exe) {
+        Start-Process -FilePath $exe -ArgumentList '--quit' -Wait
+        for ($i = 0; $i -lt 40 -and (Get-Process DonkiePane -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 250 }
+    }
+    $left = Get-Process DonkiePane -ErrorAction SilentlyContinue
+    if ($left) {
+        $left | Stop-Process -Force
+        Start-Sleep -Seconds 1
+    }
 }
 
 # 2. Windows-iconen terugzetten (dezelfde opdracht als rechtsklik -> Beeld -> Bureaubladpictogrammen weergeven).
@@ -69,6 +77,10 @@ if (Test-Path $target) {
     Remove-Item -Path $target -Recurse -Force
     Write-Host "Verwijderd: $target"
 }
+# Was DonkiePane met de installer geinstalleerd, dan ook de vermelding in Apps en functies weghalen
+# (anders blijft er een vermelding staan die naar een verwijderde map wijst).
+Remove-Item -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{CC5D6995-47D1-4015-B1E6-D25463DEB7F2}_is1' -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path (Join-Path $env:TEMP 'DonkiePane-update') -Recurse -Force -ErrorAction SilentlyContinue
 
 # 5. Gegevens alleen op verzoek.
 if ($RemoveData -and (Test-Path $data)) {

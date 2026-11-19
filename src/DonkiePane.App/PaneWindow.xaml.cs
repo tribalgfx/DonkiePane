@@ -211,8 +211,29 @@ public partial class PaneWindow : Window
             return;
         }
 
-        DragMove(); // blokkeert tot de muis wordt losgelaten
+        // DragMove gooit als de knop al los is (komt voor bij aanraken en een pen).
+        if (e.LeftButton != MouseButtonState.Pressed) return;
+        try
+        {
+            DragMove(); // blokkeert tot de muis wordt losgelaten
+        }
+        catch (InvalidOperationException)
+        {
+            return;
+        }
         PaneChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Gesloten, bijvoorbeeld door Windows bij een herstart van Verkenner (het bureaublad waar het aan hing, is weg).
+    /// Een gesloten venster kan niet meer getoond of verborgen worden.
+    /// </summary>
+    public bool IsClosed { get; private set; }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        IsClosed = true;
+        base.OnClosed(e);
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)

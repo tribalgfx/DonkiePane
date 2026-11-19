@@ -163,6 +163,8 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
                 return new TaskProviderException("De bron eist HTTPS. Gebruik een adres dat met https:// begint.");
             case HttpStatusCode.BadRequest:
                 return new TaskProviderException("De bron weigerde de wijziging (ongeldige gegevens, bijvoorbeeld een te lange tekst).");
+            case >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest:
+                return new TaskProviderException(Redirected(response));
             case >= HttpStatusCode.InternalServerError:
                 // Bijv. een proxy die 502 geeft terwijl de dienst herstart: later opnieuw, niets weggooien.
                 return new SourceUnavailableException($"De bron hapert even ({(int)response.StatusCode}). DonkiePane probeert het later opnieuw.");
@@ -173,6 +175,12 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
 
     /// <summary>Langer wachten dan dit vraagt geen bron redelijkerwijs; zo staat een bron nooit dagen stil.</summary>
     internal static readonly TimeSpan MaxRetryAfter = TimeSpan.FromHours(1);
+
+    /// <summary>DonkiePane volgt geen doorverwijzingen (het token hoort bij het ingevulde adres); dit zegt waarheen.</summary>
+    internal static string Redirected(HttpResponseMessage response) =>
+        $"De bron verwijst door ({(int)response.StatusCode})" +
+        (response.Headers.Location is { } to ? $" naar {to}" : "") +
+        ". DonkiePane volgt dat niet; vul het juiste adres in bij Instellingen.";
 
     private static string? ErrorCode(string json)
     {

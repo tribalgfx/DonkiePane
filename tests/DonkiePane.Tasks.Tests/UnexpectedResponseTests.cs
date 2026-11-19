@@ -58,6 +58,33 @@ public sealed class UnexpectedResponseTests : IDisposable
     }
 
     [Fact]
+    public async Task Rest_a_redirect_is_not_followed_but_explained()
+    {
+        var ex = await Assert.ThrowsAsync<TaskProviderException>(() => Rest(_ =>
+        {
+            var response = Responses.Raw("", HttpStatusCode.Found);
+            response.Headers.Location = new Uri("https://login.voorbeeld.nl/");
+            return response;
+        }).GetAsync(null));
+
+        Assert.Contains("verwijst door", ex.Message);
+        Assert.Contains("login.voorbeeld.nl", ex.Message);
+    }
+
+    [Fact]
+    public async Task HomeAssistant_a_redirect_is_not_followed_but_explained()
+    {
+        var ex = await Assert.ThrowsAsync<TaskProviderException>(() =>
+            HomeAssistant(_ => Responses.Raw("", HttpStatusCode.MovedPermanently)).ListTodoListsAsync());
+
+        Assert.Contains("verwijst door", ex.Message);
+    }
+
+    [Fact]
+    public void The_connection_to_a_source_never_follows_redirects() =>
+        Assert.False(DonkiePane.Tasks.Security.PinnedHttp.CreateHandler(null).AllowAutoRedirect);
+
+    [Fact]
     public async Task Rest_a_server_error_is_temporary()
     {
         await Assert.ThrowsAsync<SourceUnavailableException>(() =>

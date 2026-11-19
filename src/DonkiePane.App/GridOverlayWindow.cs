@@ -36,8 +36,8 @@ public sealed class GridOverlayWindow : Window
         {
             // Muisklikken gaan dwars door het raster heen.
             var hwnd = new WindowInteropHelper(this).Handle;
-            var style = GetWindowLong(hwnd, GWL_EXSTYLE);
-            SetWindowLong(hwnd, GWL_EXSTYLE, style | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+            var style = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, (IntPtr)((long)style | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE));
         };
     }
 
@@ -82,9 +82,10 @@ public sealed class GridOverlayWindow : Window
         return brush;
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
-    private static extern int GetWindowLong(IntPtr hWnd, int index);
+    // De Ptr-varianten: op 64-bit is dat de juiste functie (net als in DonkiePane.Shell).
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int index);
 
-    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
-    private static extern int SetWindowLong(IntPtr hWnd, int index, int value);
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int index, IntPtr value);
 }

@@ -25,15 +25,19 @@ $exe = Join-Path $target 'DonkiePane.exe'
 . (Join-Path $PSScriptRoot 'prerequisites.ps1')
 $dotnet = Ensure-DotnetSdk $repo
 
-# Een draaiende versie stoppen (de bestanden zijn anders in gebruik). DonkiePane heeft geen
-# hoofdvenster, dus dit is een harde stop. De nieuwe versie neemt de bureaubladweergave
-# gewoon over zoals die nu is: stonden de Windows-iconen verborgen, dan blijven ze dat tot
-# je DonkiePane via het tray-menu afsluit.
-$running = Get-Process DonkiePane -ErrorAction SilentlyContinue
-if ($running) {
+# Een draaiende versie stoppen (de bestanden zijn anders in gebruik). Eerst netjes met --quit, net als de
+# installer: dan zet DonkiePane de Windows-iconen zelf terug. Alleen als dat niet lukt een harde stop.
+if (Get-Process DonkiePane -ErrorAction SilentlyContinue) {
     Write-Host 'DonkiePane stoppen...'
-    $running | Stop-Process -Force
-    Start-Sleep -Seconds 1
+    if (Test-Path $exe) {
+        Start-Process -FilePath $exe -ArgumentList '--quit' -Wait
+        for ($i = 0; $i -lt 40 -and (Get-Process DonkiePane -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 250 }
+    }
+    $left = Get-Process DonkiePane -ErrorAction SilentlyContinue
+    if ($left) {
+        $left | Stop-Process -Force
+        Start-Sleep -Seconds 1
+    }
 }
 
 Write-Host "Publiceren naar $target ..."

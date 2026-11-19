@@ -7,9 +7,50 @@ namespace DonkiePane.Core;
 /// </summary>
 public static class LayoutEditor
 {
+    /// <summary>Grenzen voor de afmetingen van een pane (de kleinste is die van het venster zelf).</summary>
+    public const double MinPaneWidth = 160, MinPaneHeight = 36, MaxPaneSize = 20_000;
+
+    /// <summary>
+    /// Maakt een layout uit een beschadigd of met de hand aangepast <c>layout.json</c> bruikbaar: geen lege lijsten
+    /// als <c>null</c>, geen afmetingen waar WPF op vastloopt, en alleen een iconenpane kan de Inbox zijn.
+    /// </summary>
+    /// <returns><c>true</c> als er iets hersteld is.</returns>
+    public static bool Repair(Layout layout)
+    {
+        var repaired = false;
+        if (layout.Panes is null) { layout.Panes = []; repaired = true; }
+        repaired |= layout.Panes.RemoveAll(p => p is null) > 0;
+
+        foreach (var pane in layout.Panes)
+        {
+            if (pane.Items is null) { pane.Items = []; repaired = true; }
+            repaired |= pane.Items.RemoveAll(string.IsNullOrEmpty) > 0;
+            if (pane.Title is null) { pane.Title = ""; repaired = true; }
+            if (pane.Theme is null) { pane.Theme = ""; repaired = true; }
+            if (pane.TaskSource is null) { pane.TaskSource = TaskSources.Local; repaired = true; }
+            if (pane.IsInbox && pane.Kind != PaneKind.Icons) { pane.IsInbox = false; repaired = true; } // toont geen bureaubladitems
+
+            repaired |= Fix(pane.Width, 320, MinPaneWidth, MaxPaneSize, v => pane.Width = v);
+            repaired |= Fix(pane.Height, 220, MinPaneHeight, MaxPaneSize, v => pane.Height = v);
+            repaired |= Fix(pane.Left, 100, -MaxPaneSize, MaxPaneSize, v => pane.Left = v);
+            repaired |= Fix(pane.Top, 100, -MaxPaneSize, MaxPaneSize, v => pane.Top = v);
+        }
+        return repaired;
+
+        static bool Fix(double value, double fallback, double min, double max, Action<double> set)
+        {
+            var fixedValue = double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
+            if (fixedValue.Equals(value)) return false;
+            set(fixedValue);
+            return true;
+        }
+    }
+
     public static Pane EnsureInbox(Layout layout)
     {
-        var inboxes = layout.Panes.Where(p => p.IsInbox).ToList();
+        // Alleen een iconenpane: een takenpane als Inbox zou nieuwe bureaubladitems onzichtbaar maken (en bij het
+        // samenvoegen hieronder verdwijnen).
+        var inboxes = layout.Panes.Where(p => p.IsInbox && p.Kind == PaneKind.Icons).ToList();
         if (inboxes.Count > 0)
         {
             // Mocht er door een fout meer dan één zijn: samenvoegen.

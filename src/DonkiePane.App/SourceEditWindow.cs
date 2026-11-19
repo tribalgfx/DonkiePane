@@ -195,6 +195,8 @@ public sealed class SourceEditWindow : Window
             if (source is null) { Show(error ?? "De bron is niet beschikbaar.", ok: false); return; }
             var check = await source.TestAsync();
             Show(check.Message, check.Ok);
+            // De verbinding werkt: een bron die eerder na een geweigerd token stopte, mag het weer proberen.
+            if (check.Ok) _host.Restart(_connection.Id);
         });
     }
 

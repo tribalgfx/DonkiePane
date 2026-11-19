@@ -23,6 +23,7 @@ public partial class App : Application
     private DispatcherTimer? _watchTimer;
     private bool _balloonIsUpdate;   // waar een klik op de melding bij het icoon heen gaat
     private bool _saveFailureShown;  // één melding per reeks mislukte keren opslaan
+    private bool _exited;            // OnExit is geweest (kan al tijdens het welkomstscherm)
     private Forms.NotifyIcon? _trayIcon;
     private ShellRestartWatcher? _shellWatcher;
     private RecycleBinWatcher? _recycleBinWatcher;
@@ -53,7 +54,8 @@ public partial class App : Application
         RepairAutoStart();
         WaitForDesktop();
 
-        var firstRun = !File.Exists(LayoutStore.DefaultPath);
+        // Ontbreekt alleen het hoofdbestand maar is er een back-up, dan kent deze gebruiker DonkiePane al.
+        var firstRun = !File.Exists(LayoutStore.DefaultPath) && !File.Exists(LayoutStore.DefaultPath + ".bak");
         try
         {
             _layout = _store.Load();
@@ -68,6 +70,7 @@ public partial class App : Application
             return;
         }
         if (firstRun) _layout.WelcomeShown = false; // oude layouts hebben deze waarde niet: die gebruikers kennen DonkiePane al
+        LayoutEditor.Repair(_layout); // een kapot of met de hand aangepast bestand mag het starten niet laten mislukken
         _sources = CreateSourceHost();
         _sources.SetPollInterval(_layout.SyncInterval);
         if (LegacyGoogleMigration.Run(_sources, _layout)) SaveLayout();
@@ -80,6 +83,9 @@ public partial class App : Application
             ShowPane(pane);
         RefreshItems();
         var openSettingsAfterWelcome = ShowWelcomeIfFirstRun(); // vóór het verbergen van de Windows-iconen
+        // Kwam er tijdens het welkomstscherm een --quit binnen (bijv. van de installer), dan is OnExit al geweest:
+        // nu nog iconen verbergen of een tray-icoon maken zou blijven hangen zonder dat DonkiePane draait.
+        if (_exited) return;
         ApplyDesktopIconsSetting();
         EnsurePanesVisible();
         WatchDisplays();
@@ -103,8 +109,7 @@ public partial class App : Application
         _watchTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _watchTimer.Tick += (_, _) => { if (_desktop.StartWatching()) ScheduleResync(); };
         _watchTimer.Start();
-        _recycleBinWatcher = new RecycleBinWatcher();
-        _recycleBinWatcher.Changed += (_, _) => RefreshVirtualItems();
+        StartRecycleBinWatcher();
 
         _trayIcon = CreateTrayIcon();
         StartUpdateChecks();
@@ -299,11 +304,20 @@ public partial class App : Application
             _gridOverlay = null;
             foreach (var pane in _layout.Panes)
                 ShowPane(pane);
+            StartRecycleBinWatcher(); // de aanmelding bij de oude Verkenner geldt niet meer
             RefreshItems();
             ApplyDesktopIconsSetting();
             EnsurePanesVisible();
         };
         timer.Start();
+    }
+
+    /// <summary>Volgt of de Prullenbak vol of leeg is (voor het icoon); na een herstart van Verkenner opnieuw.</summary>
+    private void StartRecycleBinWatcher()
+    {
+        _recycleBinWatcher?.Dispose();
+        _recycleBinWatcher = new RecycleBinWatcher();
+        _recycleBinWatcher.Changed += (_, _) => RefreshVirtualItems();
     }
 
     /// <summary>
@@ -347,8 +361,37 @@ public partial class App : Application
     /// <summary>Bij een crash de Windows-iconen altijd terugzetten.</summary>
     private void InstallCrashSafety()
     {
-        AppDomain.CurrentDomain.UnhandledException += (_, _) => RestoreDesktopIcons();
-        DispatcherUnhandledException += (_, _) => RestoreDesktopIcons();
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            RestoreDesktopIcons();
+            WriteCrashLog(e.ExceptionObject as Exception);
+        };
+        DispatcherUnhandledException += (_, e) =>
+        {
+            RestoreDesktopIcons();
+            WriteCrashLog(e.Exception);
+            if (_trayIcon is not null) _trayIcon.Visible = false; // geen spookicoon bij de klok
+        };
+    }
+
+    /// <summary>
+    /// Schrijft wat er misging naar <c>%APPDATA%\DonkiePane\crash.log</c>, zodat een crash achteraf te onderzoeken
+    /// is. Het bestand blijft op deze pc; er wordt niets verstuurd. Het wordt nooit groter dan zo'n 256 kB.
+    /// </summary>
+    private static void WriteCrashLog(Exception? ex)
+    {
+        try
+        {
+            var path = Path.Combine(Path.GetDirectoryName(LayoutStore.DefaultPath)!, "crash.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (File.Exists(path) && new FileInfo(path).Length > 256 * 1024) File.Delete(path);
+            File.AppendAllText(path, $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}  DonkiePane {UpdateService.RunningVersion()}{Environment.NewLine}" +
+                $"{ex?.ToString() ?? "(onbekende fout)"}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (Exception logError) when (logError is IOException or UnauthorizedAccessException)
+        {
+            // Een crashlog mag zelf nooit een tweede fout geven.
+        }
     }
 
     // ---------- Tray ----------
@@ -383,6 +426,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _exited = true;
+
         // Een tweede instantie heeft niets opgezet en mag dus ook niets
         // terugdraaien (anders komen de Windows-iconen terug terwijl de
         // eerste instantie ze verbergt).

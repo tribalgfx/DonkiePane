@@ -40,7 +40,7 @@ public sealed class GoogleSourcePlugin : ITaskSourcePlugin
 internal sealed class GoogleTaskSource : ITaskSource
 {
     private readonly SourceContext _context;
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30), MaxResponseContentBufferSize = DonkiePane.Tasks.Security.PinnedHttp.MaxResponseBytes };
     private readonly GoogleAuth _auth;
     private readonly GoogleTasksClient _client;
     private readonly GoogleTaskProvider _provider;

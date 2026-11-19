@@ -111,6 +111,27 @@ public sealed class ReleaseFeedTests
         Assert.Equal(Fallback, release.Page);
     }
 
+    [Theory]
+    [InlineData("DonkiePane-Setup-0.1.0.exe", "github.com")] // een oude installer bij een nieuwe tag
+    public void Only_the_installer_of_exactly_this_version_counts(string assetName, string host) =>
+        Assert.Null(ReleaseFeed.Parse(ReleaseJson(assetName: assetName, downloadHost: host), Fallback)!.Installer);
+
+    [Fact]
+    public void An_installer_from_another_repository_does_not_count()
+    {
+        var json = ReleaseJson().Replace("/tribalgfx/DonkiePane/releases/download/", "/iemand/anders/releases/download/");
+
+        Assert.Null(ReleaseFeed.Parse(json, Fallback)!.Installer);
+    }
+
+    [Fact]
+    public void A_release_page_outside_github_is_replaced_by_the_releases_page()
+    {
+        var json = ReleaseJson().Replace("https://github.com/tribalgfx/DonkiePane/releases/tag/v0.2.0", "https://example.com/phish");
+
+        Assert.Equal(Fallback, ReleaseFeed.Parse(json, Fallback)!.Page);
+    }
+
     [Fact]
     public void A_preliminary_release_is_ignored() =>
         Assert.Null(ReleaseFeed.Parse(ReleaseJson(prerelease: true), Fallback));
@@ -187,10 +208,23 @@ public sealed class InstallerDownloadTests : IDisposable
 
         var path = await InstallerDownload.DownloadAsync(Serving(Installer), Asset(), _dir, progress);
 
-        Assert.Equal(Path.Combine(_dir, "DonkiePane-Setup-0.2.0.exe"), path);
+        Assert.Equal("DonkiePane-Setup-0.2.0.exe", Path.GetFileName(path));
+        Assert.Equal(_dir, Path.GetDirectoryName(Path.GetDirectoryName(path))); // in een eigen map per download
         Assert.Equal(Installer, File.ReadAllBytes(path));
         Assert.Equal(1.0, reported.Last());
-        Assert.Empty(Directory.GetFiles(_dir, "*.part"));
+        Assert.Empty(Directory.GetFiles(_dir, "*.part", SearchOption.AllDirectories));
+        Assert.True(InstallerDownload.IsUnchanged(path, InstallerSha));
+    }
+
+    [Fact]
+    public async Task Two_downloads_get_different_places()
+    {
+        var first = await InstallerDownload.DownloadAsync(Serving(Installer), Asset(), _dir);
+        var firstFolder = Path.GetDirectoryName(first);
+
+        var second = await InstallerDownload.DownloadAsync(Serving(Installer), Asset(), _dir);
+
+        Assert.NotEqual(firstFolder, Path.GetDirectoryName(second));
     }
 
     [Fact]
@@ -200,7 +234,54 @@ public sealed class InstallerDownloadTests : IDisposable
 
         await Assert.ThrowsAsync<UpdateException>(() => InstallerDownload.DownloadAsync(Serving(tampered), Asset(), _dir));
 
-        Assert.Empty(Directory.GetFiles(_dir));
+        Assert.Empty(Directory.GetFileSystemEntries(_dir));
+    }
+
+    [Fact]
+    public async Task A_download_of_another_size_than_announced_is_refused()
+    {
+        var bigger = Installer.Concat(new byte[1000]).ToArray(); // Content-Length past niet bij de grootte van GitHub
+
+        await Assert.ThrowsAsync<UpdateException>(() => InstallerDownload.DownloadAsync(Serving(bigger), Asset(), _dir));
+
+        Assert.Empty(Directory.GetFileSystemEntries(_dir));
+    }
+
+    [Fact]
+    public async Task A_stream_that_keeps_going_is_cut_off_at_the_announced_size()
+    {
+        var endless = new FakeGitHub(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new EndlessStream()), // zonder Content-Length
+        });
+
+        await Assert.ThrowsAsync<UpdateException>(() => InstallerDownload.DownloadAsync(new HttpClient(endless), Asset(), _dir));
+
+        Assert.Empty(Directory.GetFileSystemEntries(_dir));
+    }
+
+    [Fact]
+    public async Task A_changed_installer_no_longer_counts_as_checked()
+    {
+        var path = await InstallerDownload.DownloadAsync(Serving(Installer), Asset(), _dir);
+
+        File.AppendAllText(path, "erbij");
+
+        Assert.False(InstallerDownload.IsUnchanged(path, InstallerSha));
+    }
+
+    private sealed class EndlessStream : Stream
+    {
+        public override int Read(byte[] buffer, int offset, int count) => count;
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     [Fact]
@@ -226,12 +307,13 @@ public sealed class InstallerDownloadTests : IDisposable
     [Fact]
     public async Task Installers_from_earlier_updates_are_cleaned_up()
     {
-        Directory.CreateDirectory(_dir);
+        Directory.CreateDirectory(Path.Combine(_dir, "eerder"));
         File.WriteAllText(Path.Combine(_dir, "DonkiePane-Setup-0.1.5.exe"), "oud");
+        File.WriteAllText(Path.Combine(_dir, "eerder", "DonkiePane-Setup-0.2.1.exe"), "oud");
 
         await InstallerDownload.DownloadAsync(Serving(Installer), Asset(), _dir);
 
-        Assert.Equal(["DonkiePane-Setup-0.2.0.exe"], Directory.GetFiles(_dir).Select(Path.GetFileName));
+        Assert.Equal(["DonkiePane-Setup-0.2.0.exe"], Directory.GetFiles(_dir, "*", SearchOption.AllDirectories).Select(Path.GetFileName));
     }
 
     /// <summary><see cref="Progress{T}"/> meldt via de threadpool; deze direct, zodat de test kan tellen.</summary>

@@ -166,7 +166,10 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
             // Een proxy die Home Assistant (even) niet bereikt: later opnieuw, niets weggooien.
             HttpStatusCode.BadGateway or HttpStatusCode.GatewayTimeout =>
                 new SourceUnavailableException($"Home Assistant is even niet bereikbaar ({(int)status}). DonkiePane probeert het later opnieuw."),
-            _ => new TaskProviderException($"Home Assistant gaf een fout ({(int)status})." + detail),
+            // DonkiePane volgt geen doorverwijzingen: het token hoort bij het ingevulde adres.
+            >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest => new TaskProviderException(
+                $"Home Assistant verwijst door ({(int)status}). DonkiePane volgt dat niet; controleer het adres bij Instellingen."),
+            _ =>new TaskProviderException($"Home Assistant gaf een fout ({(int)status})." + detail),
         };
     }
 

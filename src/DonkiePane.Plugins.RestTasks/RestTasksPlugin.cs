@@ -30,7 +30,7 @@ public sealed class RestTasksPlugin : ITaskSourcePlugin
         new(BaseUrlKey, "Adres", SettingKind.Url, Required: true, Help: "Bijvoorbeeld https://dashboard.thuis:4173 (zonder /api/…)"),
         new(TokenKey, "Token", SettingKind.Secret, Required: true, Help: "Het persoonlijke API-token uit je dashboard."),
         new(FingerprintKey, "Vingerafdruk certificaat (SHA-256)", SettingKind.Fingerprint, Required: false,
-            Help: "AA:BB:CC:… Alleen nodig bij een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows."),
+            Help: "AA:BB:CC:… Alleen nodig bij een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows. Krijgt de server een nieuw certificaat, vul dan de nieuwe afdruk in."),
     ];
 
     public IReadOnlyList<PluginAction> Actions { get; } = [];
@@ -56,7 +56,11 @@ public sealed class RestTaskSource : ITaskSource
             var token = context.Secrets.Get(RestTasksPlugin.TokenKey);
             if (string.IsNullOrWhiteSpace(token)) throw new FormatException("Vul het token in.");
 
-            _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin)) { Timeout = TimeSpan.FromSeconds(30) };
+            _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin))
+            {
+                Timeout = TimeSpan.FromSeconds(30),
+                MaxResponseContentBufferSize = PinnedHttp.MaxResponseBytes,
+            };
             _client = new RestTasksClient(_http, baseUri, () => context.Secrets.Get(RestTasksPlugin.TokenKey)!.Trim());
             _provider = new RestTaskProvider(_client) { PollInterval = context.PollInterval };
         }
