@@ -95,6 +95,36 @@ public sealed class DpapiSecretStoreTests : TempData
     }
 
     [Fact]
+    public void A_file_that_stays_locked_is_never_overwritten_with_only_the_new_secret()
+    {
+        var store = new DpapiSecretStore("c1", SecretsDir);
+        store.Set("ClientSecret", "s3cr3t");
+
+        using (new FileStream(Path.Combine(SecretsDir, "c1.dat"), FileMode.Open, FileAccess.Read, FileShare.None)) // bijv. een virusscanner
+        {
+            Assert.ThrowsAny<IOException>(() => store.Set("RefreshToken", "nieuw"));
+            Assert.Null(store.Get("ClientSecret")); // even niet te lezen, maar geen crash
+        }
+
+        Assert.Equal("s3cr3t", store.Get("ClientSecret")); // niets kwijt
+    }
+
+    [Fact]
+    public void Two_instances_for_the_same_connection_writing_at_once_lose_nothing()
+    {
+        // De host maakt per aanroep een nieuwe instantie; de poll-thread en het instellingenvenster schrijven soms tegelijk.
+        Parallel.For(0, 20, i => new DpapiSecretStore("c1", SecretsDir).Set("Key" + i, "waarde" + i));
+
+        var store = new DpapiSecretStore("c1", SecretsDir);
+        Assert.All(Enumerable.Range(0, 20), i => Assert.Equal("waarde" + i, store.Get("Key" + i)));
+        Assert.Single(Directory.GetFiles(SecretsDir)); // geen achtergebleven tijdelijke bestanden
+    }
+
+    [Fact]
+    public void An_id_with_a_trailing_line_break_is_refused() =>
+        Assert.Throws<ArgumentException>(() => new DpapiSecretStore("c1\n", SecretsDir));
+
+    [Fact]
     public void The_file_on_disk_does_not_contain_the_secret_in_readable_form()
     {
         new DpapiSecretStore("c1", SecretsDir).Set("Token", "dd_geheim-123");

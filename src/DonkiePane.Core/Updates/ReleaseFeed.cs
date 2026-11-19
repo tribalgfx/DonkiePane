@@ -47,6 +47,8 @@ public sealed class ReleaseFeed(HttpClient http, string repository = ReleaseFeed
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
+        // Bijv. null of [] (een proxy, een storing): een mislukte controle, geen crash.
+        if (root.ValueKind != JsonValueKind.Object) throw new JsonException("Het antwoord van GitHub is geen release.");
         if (Bool(root, "draft") || Bool(root, "prerelease")) return null;
         if (AppVersion.TryParse(Text(root, "tag_name")) is not { } version) return null;
 
@@ -61,7 +63,7 @@ public sealed class ReleaseFeed(HttpClient http, string repository = ReleaseFeed
                 var name = Text(asset, "name");
                 if (name is null || !IsInstallerName(name)) continue;
                 if (HttpsUri(Text(asset, "browser_download_url")) is not { } download) continue;
-                var size = asset.TryGetProperty("size", out var s) && s.TryGetInt64(out var n) ? n : 0;
+                var size = asset.TryGetProperty("size", out var s) && s.ValueKind == JsonValueKind.Number && s.TryGetInt64(out var n) ? n : 0;
                 installer = new ReleaseAsset(name, download, size, Sha256From(Text(asset, "digest")));
                 break;
             }
@@ -88,9 +90,11 @@ public sealed class ReleaseFeed(HttpClient http, string repository = ReleaseFeed
     private static Uri? HttpsUri(string? text) =>
         Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
 
+    // Alleen op objecten: TryGetProperty gooit bij een ander soort waarde (bijv. een getal in de lijst met bestanden).
     private static string? Text(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() : null;
 
     private static bool Bool(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.True;
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.True;
 }

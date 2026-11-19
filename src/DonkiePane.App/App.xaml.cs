@@ -21,6 +21,8 @@ public partial class App : Application
     private DesktopFolders? _desktop;
     private DispatcherTimer? _resyncTimer;
     private DispatcherTimer? _watchTimer;
+    private bool _balloonIsUpdate;   // waar een klik op de melding bij het icoon heen gaat
+    private bool _saveFailureShown;  // één melding per reeks mislukte keren opslaan
     private Forms.NotifyIcon? _trayIcon;
     private ShellRestartWatcher? _shellWatcher;
     private RecycleBinWatcher? _recycleBinWatcher;
@@ -52,7 +54,19 @@ public partial class App : Application
         WaitForDesktop();
 
         var firstRun = !File.Exists(LayoutStore.DefaultPath);
-        _layout = _store.Load();
+        try
+        {
+            _layout = _store.Load();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Leeg beginnen zou de indeling bij de eerste keer opslaan overschrijven. Niets veranderd aan het bureaublad.
+            MessageBox.Show($"DonkiePane kan je indeling niet lezen en start daarom niet.\n\n{ex.Message}\n\n" +
+                "Probeer het over een momentje opnieuw.", "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _isDuplicate = true; // niets opgezet, dus bij afsluiten ook niets terugdraaien
+            Shutdown();
+            return;
+        }
         if (firstRun) _layout.WelcomeShown = false; // oude layouts hebben deze waarde niet: die gebruikers kennen DonkiePane al
         _sources = CreateSourceHost();
         _sources.SetPollInterval(_layout.SyncInterval);
@@ -115,7 +129,7 @@ public partial class App : Application
     private static void WaitForDesktop()
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (DesktopIcons.AreVisible() is null && DateTime.UtcNow < deadline)
+        while (!DesktopIcons.IsDesktopReady() && DateTime.UtcNow < deadline)
             Thread.Sleep(250);
     }
 
@@ -292,7 +306,26 @@ public partial class App : Application
         timer.Start();
     }
 
-    private void SaveLayout() => _store.Save(_layout);
+    /// <summary>
+    /// Bewaart de indeling. Lukt dat niet (schijf vol, bestand vergrendeld), dan blijft alles in het geheugen staan
+    /// en probeert de volgende keer opslaan het opnieuw; de gebruiker krijgt één melding in plaats van een crash.
+    /// </summary>
+    private void SaveLayout()
+    {
+        try
+        {
+            _store.Save(_layout);
+            _saveFailureShown = false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            if (_saveFailureShown || _trayIcon is null) return;
+            _saveFailureShown = true;
+            _balloonIsUpdate = false;
+            _trayIcon.ShowBalloonTip(10_000, "DonkiePane kon je indeling niet opslaan",
+                $"{ex.Message} DonkiePane probeert het bij de volgende wijziging opnieuw.", Forms.ToolTipIcon.Warning);
+        }
+    }
 
     // ---------- Windows-iconen ----------
 
@@ -344,7 +377,7 @@ public partial class App : Application
             Visible = true,
         };
         icon.DoubleClick += (_, _) => ShowSettings();
-        icon.BalloonTipClicked += (_, _) => ShowUpdateWindow(); // de enige melding is die over een nieuwe versie
+        icon.BalloonTipClicked += (_, _) => { if (_balloonIsUpdate) ShowUpdateWindow(); };
         return icon;
     }
 
@@ -359,8 +392,8 @@ public partial class App : Application
             return;
         }
 
+        RestoreDesktopIcons(); // eerst: wat er verder ook misgaat, het bureaublad moet terug
         SaveLayout();
-        RestoreDesktopIcons();
         StopUpdateChecks();
         StopWatchingDisplays();
         _watchTimer?.Stop();
@@ -369,7 +402,10 @@ public partial class App : Application
         _desktop?.Dispose();
         _shellWatcher?.Dispose();
         _recycleBinWatcher?.Dispose();
-        _singleInstance?.Dispose();
+        // De mutex bewust níet loslaten: de installer wacht tot hij weg is en vervangt dan de bestanden. Hier is het
+        // proces nog niet klaar (DonkiePane.exe en de DLL's zijn nog in gebruik); Windows laat hem los als het proces
+        // echt stopt.
+        GC.KeepAlive(_singleInstance);
         if (_trayIcon is not null)
         {
             _trayIcon.Visible = false;

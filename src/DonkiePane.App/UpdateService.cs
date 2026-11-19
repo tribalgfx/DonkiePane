@@ -70,7 +70,8 @@ internal sealed class UpdateService : IDisposable
                 outcome = latest is null ? UpdateCheckOutcome.NoReleases
                     : Available is not null ? UpdateCheckOutcome.Available : UpdateCheckOutcome.UpToDate;
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
+                                           or InvalidOperationException or FormatException) // een antwoord van een andere vorm
             {
                 // Geen internet of GitHub hapert: de vorige uitkomst blijft staan, volgende keer opnieuw.
                 LastError = ex is TaskCanceledException && !ct.IsCancellationRequested
