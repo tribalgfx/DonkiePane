@@ -66,6 +66,7 @@ public partial class App
         if (version is null || _layout.NotifiedUpdateVersion == version) return;
         _layout.NotifiedUpdateVersion = version;
         SaveLayout();
+        _balloonIsUpdate = true;
         _trayIcon.ShowBalloonTip(10_000, "Nieuwe versie van DonkiePane",
             $"Versie {version} is beschikbaar. Klik hier om bij te werken.", Forms.ToolTipIcon.Info);
     }

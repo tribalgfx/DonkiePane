@@ -36,6 +36,43 @@ public sealed class LayoutStoreTests : IDisposable
     }
 
     [Fact]
+    public void A_file_that_stays_locked_gives_an_error_instead_of_an_empty_layout()
+    {
+        var store = new LayoutStore(FilePath);
+        store.Save(new Layout { Panes = [new Pane { Title = "Werk" }] });
+
+        using (new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.None)) // bijv. een virusscanner
+            Assert.ThrowsAny<IOException>(() => store.Load());
+
+        Assert.Equal("Werk", Assert.Single(store.Load().Panes).Title); // daarna gewoon leesbaar, niets overschreven
+    }
+
+    [Fact]
+    public void Saving_waits_for_a_file_that_is_locked_only_briefly()
+    {
+        var store = new LayoutStore(FilePath);
+        store.Save(new Layout());
+        var locked = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using var release = new Timer(_ => locked.Dispose(), null, 150, Timeout.Infinite);
+
+        store.Save(new Layout { Panes = [new Pane { Title = "Nieuw" }] });
+
+        Assert.Equal("Nieuw", Assert.Single(store.Load().Panes).Title);
+    }
+
+    [Fact]
+    public void An_unreadable_file_without_backup_is_kept_aside_before_starting_empty()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "{ kapot");
+
+        var layout = new LayoutStore(FilePath).Load();
+
+        Assert.Empty(layout.Panes);
+        Assert.Equal("{ kapot", File.ReadAllText(FilePath + ".corrupt"));
+    }
+
+    [Fact]
     public void Corrupt_file_falls_back_to_previous_version()
     {
         var store = new LayoutStore(FilePath);

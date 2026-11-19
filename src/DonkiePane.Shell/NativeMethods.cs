@@ -69,6 +69,12 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
     public static partial IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
+    public const int SMTO_ABORTIFHUNG = 0x0002;
+
+    /// <summary>Als <see cref="SendMessage"/>, maar wacht niet eindeloos op een venster dat niet reageert.</summary>
+    [LibraryImport("user32.dll", EntryPoint = "SendMessageTimeoutW")]
+    public static partial IntPtr SendMessageTimeout(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, int flags, int timeoutMs, out IntPtr result);
+
     [LibraryImport("user32.dll", EntryPoint = "RegisterWindowMessageW", StringMarshalling = StringMarshalling.Utf16)]
     public static partial uint RegisterWindowMessage(string message);
 }

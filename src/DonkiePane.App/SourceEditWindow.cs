@@ -118,7 +118,21 @@ public sealed class SourceEditWindow : Window
     /// Controleert de invoer en bewaart hem. Alleen als er echt iets veranderd is, begint de bron opnieuw
     /// (een nieuwe bron begint weer met vragen aan de server).
     /// </summary>
+    /// <summary>Slaat op wat er is ingevuld; een bestand dat niet te schrijven is, wordt een melding in plaats van een crash.</summary>
     private bool Apply()
+    {
+        try
+        {
+            return ApplyCore();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            Show($"Opslaan is niet gelukt: {ex.Message} Probeer het zo opnieuw.", ok: false);
+            return false;
+        }
+    }
+
+    private bool ApplyCore()
     {
         foreach (var field in _plugin.Fields.Where(f => f.Required))
         {

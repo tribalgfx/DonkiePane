@@ -75,8 +75,17 @@ public partial class UpdateWindow : Window
         }
     }
 
-    private void Page_Click(object sender, RoutedEventArgs e) =>
-        Process.Start(new ProcessStartInfo(_release.Page.AbsoluteUri) { UseShellExecute = true });
+    private void Page_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(_release.Page.AbsoluteUri) { UseShellExecute = true })?.Dispose();
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            ShowStatus("Kon de browser niet openen. De pagina is " + _release.Page.AbsoluteUri);
+        }
+    }
 
     private void Later_Click(object sender, RoutedEventArgs e) => Close();
 

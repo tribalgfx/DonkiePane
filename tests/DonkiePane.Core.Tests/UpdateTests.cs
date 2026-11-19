@@ -88,6 +88,29 @@ public sealed class ReleaseFeedTests
         Assert.Equal(Digest, release.Installer.Sha256);
     }
 
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("\"tekst\"")]
+    public void An_answer_that_is_no_release_is_a_failed_check_not_a_crash(string json) =>
+        Assert.Throws<System.Text.Json.JsonException>(() => ReleaseFeed.Parse(json, Fallback));
+
+    [Fact]
+    public void Odd_values_in_the_list_of_files_are_skipped()
+    {
+        var json = """
+            { "tag_name": "v0.3.0", "assets": [ 7, "x", null,
+              { "name": "DonkiePane-Setup-0.3.0.exe", "size": "groot",
+                "browser_download_url": "https://github.com/tribalgfx/DonkiePane/releases/download/v0.3.0/DonkiePane-Setup-0.3.0.exe" } ] }
+            """;
+
+        var release = ReleaseFeed.Parse(json, Fallback)!;
+
+        Assert.Equal("DonkiePane-Setup-0.3.0.exe", release.Installer!.Name);
+        Assert.Equal(0, release.Installer.Size);
+        Assert.Equal(Fallback, release.Page);
+    }
+
     [Fact]
     public void A_preliminary_release_is_ignored() =>
         Assert.Null(ReleaseFeed.Parse(ReleaseJson(prerelease: true), Fallback));
