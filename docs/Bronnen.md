@@ -1,5 +1,7 @@
 # Takenbronnen en plug-ins
 
+[English](Sources.md) · **Nederlands**
+
 DonkiePane is één algemene app. Een takenpane haalt zijn taken uit een **bron**. Lokale taken zijn altijd
 beschikbaar en staan alleen op deze pc. Alle andere bronnen voeg je zelf toe in **Instellingen → Takenbronnen**.
 Er is geen enkele bron ingebouwd en er staat geen enkel adres of voorbeeld van iemands eigen dashboard in de app.
@@ -113,7 +115,8 @@ Bronnen zijn plug-ins: aparte assemblies die de app laadt uit
 Elke plug-in staat in een eigen submap en heet `DonkiePane.Plugins.<Naam>.dll`. Een plug-in implementeert
 `ITaskSourcePlugin` (uit `DonkiePane.Tasks`): welke velden de gebruiker invult, hoe een verbinding wordt aangemaakt,
 en een `ITaskProvider` met de taken. De app tekent het instellingenformulier zelf en bewaart geheimen veilig,
-dus een plug-in heeft geen eigen schermen of opslag nodig.
+dus een plug-in heeft geen eigen schermen of opslag nodig. Teksten voor de gebruiker gaan via `Loc.T("…")`; zet de
+vertaling erbij in `src/DonkiePane.Core/Localization/en.json`.
 
 **Veiligheid:** een plug-in is gewone code en draait met jouw rechten. Zet er alleen in wat je vertrouwt. DonkiePane
 laadt nooit iets van internet en nooit uit een andere map. Een kapotte of ontbrekende plug-in wordt gemeld in

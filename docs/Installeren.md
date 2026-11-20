@@ -1,14 +1,19 @@
 # DonkiePane installeren, bijwerken en verwijderen
 
+[English](Installing.md) · **Nederlands**
+
 ## Voor wie DonkiePane gebruikt
 
 1. Dubbelklik op `DonkiePane-Setup-<versie>.exe`.
    - Er is geen beheerder en geen .NET nodig. DonkiePane komt in `%LOCALAPPDATA%\Programs\DonkiePane`.
    - Windows kan een SmartScreen-waarschuwing tonen, omdat de installer niet digitaal is ondertekend. Kies **Meer info** en dan **Toch uitvoeren**.
+   - De installer is Nederlands of Engels, net als de taal van Windows.
 2. Laat DonkiePane aan het eind starten. Bij de allereerste start komt een welkomstscherm met twee keuzes:
    - **Windows-bureaubladiconen verbergen.** DonkiePane zet je iconen in een pane met de naam Inbox. Je bestanden blijven precies waar ze staan; er wordt niets verplaatst of verwijderd. Zet je dit uit, dan zie je de iconen dubbel.
    - **Starten met Windows.**
 3. Takenbronnen (Google Taken, Home Assistant, een eigen dienst) voeg je zelf toe in Instellingen, onder Takenbronnen. Zie [Bronnen.md](Bronnen.md).
+
+DonkiePane volgt de taal van Windows (Nederlands bij een Nederlandse Windows, anders Engels). Een andere taal kies je in **Instellingen → Taal**; die geldt na opnieuw starten, en daar staat een knop **Nu opnieuw starten** voor.
 
 ### Bijwerken
 
@@ -60,3 +65,5 @@ Het icoon komt uit `scripts\make-icon.ps1` (schrijft `src\DonkiePane.App\Assets\
 ### Netjes afsluiten: `--quit`
 
 `DonkiePane.exe --quit` vraagt een draaiende DonkiePane af te sluiten, op dezelfde manier als Afsluiten in het tray-menu (de Windows-bureaubladiconen worden dan teruggezet). Draait er niets, dan gebeurt er niets. Het setup- en verwijderprogramma gebruiken dit.
+
+`DonkiePane.exe --restart-after <proces-id>` wacht tot dat proces weg is en start dan; DonkiePane gebruikt dit om zichzelf opnieuw te starten na het wisselen van taal.
