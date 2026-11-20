@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
     <Company>DonkiePane</Company>
     <Product>DonkiePane</Product>
-    <Version>0.2.3</Version>
+    <Version>0.2.4</Version>
   </PropertyGroup>
 
   <!--
