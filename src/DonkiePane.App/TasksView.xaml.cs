@@ -61,7 +61,7 @@ public partial class TasksView : UserControl
         StatusBar.Visibility = string.IsNullOrEmpty(message) ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private async Task ReloadAsync()
+    internal async Task ReloadAsync()
     {
         // Meldingen kunnen kort na elkaar komen; een trager antwoord op een eerdere vraag mag de nieuwste lijst dan
         // niet overschrijven. Alleen de laatst gestarte ronde werkt het scherm bij.

@@ -4,16 +4,38 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        ResizeMode="CanResizeWithGrip"
+        ResizeMode="CanResize"
         ShowInTaskbar="False"
+        FontFamily="{DynamicResource UiFont}"
+        TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True"
         MinWidth="160" MinHeight="36">
-    <Border Background="{DynamicResource PaneBackground}"
+    <Border x:Name="Frame"
+            Background="{DynamicResource PaneBackground}"
             BorderBrush="{DynamicResource PaneBorder}"
             BorderThickness="1"
-            CornerRadius="6">
-        <Grid>
+            CornerRadius="10">
+        <Border.Triggers>
+            <!-- De knoppen in de kop verschijnen pas als je met de muis boven het pane komt. -->
+            <EventTrigger RoutedEvent="MouseEnter">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="HeaderButtons" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+            <EventTrigger RoutedEvent="MouseLeave">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="HeaderButtons" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Border.Triggers>
+
+        <Grid x:Name="Chrome">
             <Grid.RowDefinitions>
-                <RowDefinition Height="32" />
+                <RowDefinition Height="34" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -21,7 +43,6 @@
             <Border x:Name="TitleBar"
                     Grid.Row="0"
                     Background="{DynamicResource PaneTitleBackground}"
-                    CornerRadius="5,5,0,0"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Border.ContextMenu>
                     <ContextMenu>
@@ -38,20 +59,46 @@
                         <MenuItem x:Name="DeleteMenuItem" Header="Pane verwijderen" Click="Delete_Click" />
                     </ContextMenu>
                 </Border.ContextMenu>
-                <Grid Margin="10,0">
-                    <TextBlock x:Name="TitleText"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource PaneTitleText}"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" />
+                <Grid Margin="12,0,4,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="TitleText"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PaneTitleText}"
+                                   FontFamily="{DynamicResource UiDisplayFont}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <!-- Aantal iconen, gedempt naast de titel (alleen bij iconenpanes). -->
+                        <TextBlock x:Name="CountText"
+                                   Margin="8,1,0,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="11.5"
+                                   Foreground="{DynamicResource PaneTitleText}"
+                                   Opacity="0.55"
+                                   Visibility="Collapsed" />
+                    </StackPanel>
                     <TextBox x:Name="TitleEditor"
                              Visibility="Collapsed"
                              VerticalAlignment="Center"
+                             Margin="-5,0,6,0"
                              FontWeight="SemiBold"
+                             Style="{DynamicResource PaneTextBox}"
                              KeyDown="TitleEditor_KeyDown"
                              LostKeyboardFocus="TitleEditor_LostKeyboardFocus" />
+
+                    <StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Opacity="0" VerticalAlignment="Center">
+                        <Button x:Name="RollButton" Style="{DynamicResource GlyphButton}" Click="Roll_Click"
+                                Foreground="{DynamicResource PaneTitleText}" ToolTip="Oprollen" Content="&#xE70E;" FontSize="10" />
+                        <Button x:Name="MenuButton" Style="{DynamicResource GlyphButton}" Click="Menu_Click"
+                                Foreground="{DynamicResource PaneTitleText}" ToolTip="Opties" Content="&#xE712;" />
+                    </StackPanel>
                 </Grid>
             </Border>
+            <Border x:Name="Divider" Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{DynamicResource PaneDivider}" />
 
             <!-- Inhoud: iconen of taken. -->
             <ContentControl x:Name="Body" Grid.Row="1" Focusable="False" />

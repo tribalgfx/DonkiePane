@@ -9,7 +9,7 @@ Vakken (panes) op je Windows-bureaublad voor je snelkoppelingen en je taken. Met
 ## Wat het doet
 
 - **Panes op het bureaublad.** Ze staan achter je vensters en blijven staan bij Win+D.
-- **Je bureaubladiconen in panes.** Je bestanden blijven waar ze staan; DonkiePane verplaatst of verwijdert niets. Nieuwe bestanden komen vanzelf in de Inbox-pane.
+- **Je bureaubladiconen in panes.** Wat je op het bureaublad met een bestand of snelkoppeling doet, kan in een pane ook: openen, selecteren (Ctrl, Shift, een kader trekken), slepen naar Verkenner, een app, een map of de Prullenbak, bestanden in een pane slepen, Delete, F2, Ctrl+C/X/V, Ctrl+Shift+N, Alt+Enter en het menu van Verkenner (rechts klikken op een lege plek geeft Plakken en Nieuw). Laat je iconen los op een lege plek van het bureaublad, dan komt daar een nieuw pane mee. Windows voert het uit, dus meldingen en Prullenbak zijn zoals altijd; uit zichzelf verplaatst of verwijdert DonkiePane niets. Nieuwe bestanden komen in de Inbox-pane, of in het pane waarin je ze plakte of neerzette.
 - **Takenpanes.** Taken toevoegen, afvinken, ordenen en met een ster markeren. Lokaal, of gesynchroniseerd met een bron die je zelf toevoegt:
   - Google Taken
   - Home Assistant (to-do lijsten)

@@ -1,0 +1,396 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        De vormgeving van DonkiePane, in de stijl van Windows 11: Segoe UI Variable, afgeronde hoeken, rustige
+        doorschijnende vlakken en de iconen van Segoe Fluent Icons. Kleuren die per pane verschillen (achtergrond,
+        titelbalk, selectie) zet PaneThemes per venster; hieronder staan de standaardwaarden.
+    -->
+    <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="UiDisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+    <SolidColorBrush x:Key="PaneBackground" Color="#B31B1C1E" />
+    <SolidColorBrush x:Key="PaneTitleBackground" Color="#334A4F57" />
+    <SolidColorBrush x:Key="PaneBorder" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="PaneDivider" Color="#17FFFFFF" />
+    <SolidColorBrush x:Key="PaneText" Color="#FFF5F3EF" />
+    <SolidColorBrush x:Key="PaneTitleText" Color="#FFF5F3EF" />
+    <SolidColorBrush x:Key="PaneMutedText" Color="#A6F5F3EF" />
+    <SolidColorBrush x:Key="PaneInputBackground" Color="#1AFFFFFF" />
+    <SolidColorBrush x:Key="PaneInputBorder" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="PaneAccent" Color="#FFF2C14E" />
+    <SolidColorBrush x:Key="PaneOverdue" Color="#FFFF9A8A" />
+    <SolidColorBrush x:Key="PaneHover" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="PaneHoverBorder" Color="#1AFFFFFF" />
+    <SolidColorBrush x:Key="PaneSelection" Color="#4D4CC2FF" />
+    <SolidColorBrush x:Key="PaneSelectionBorder" Color="#B399DCFF" />
+    <SolidColorBrush x:Key="PaneSelectionInactiveBorder" Color="#38FFFFFF" />
+    <SolidColorBrush x:Key="PaneAccentLine" Color="#FF99DCFF" />
+    <SolidColorBrush x:Key="PaneCheck" Color="#FF4CC2FF" />
+
+    <SolidColorBrush x:Key="MenuBackground" Color="#F2272A2F" />
+    <SolidColorBrush x:Key="MenuBorder" Color="#29FFFFFF" />
+    <SolidColorBrush x:Key="MenuText" Color="#FFF3F3F3" />
+    <SolidColorBrush x:Key="MenuHighlight" Color="#1AFFFFFF" />
+
+    <!-- Vinkje: een rondje, zoals in Microsoft To Do; aangevinkt krijgt het de themakleur. -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Grid VerticalAlignment="Top" Width="18" Height="18">
+                            <Border x:Name="Box" CornerRadius="9" BorderThickness="1.5" BorderBrush="#8CF5F3EF" Background="Transparent" />
+                            <TextBlock x:Name="Mark" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="#FFFFFFFF" Opacity="0" />
+                        </Grid>
+                        <!-- Label (alleen als er inhoud is; de taakregels hebben geen label). -->
+                        <ContentPresenter x:Name="Label" Visibility="Collapsed" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="HasContent" Value="True">
+                            <Setter TargetName="Label" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="#FFF5F3EF" />
+                            <Setter TargetName="Mark" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource PaneCheck}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource PaneCheck}" />
+                            <Setter TargetName="Mark" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Dunne scrollbalk die pas verschijnt als je met de muis boven de lijst komt. -->
+    <Style x:Key="ScrollPageButton" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Track x:Name="PART_Track" IsDirectionReversed="True">
+                        <Track.DecreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource ScrollPageButton}" Command="ScrollBar.PageUpCommand" />
+                        </Track.DecreaseRepeatButton>
+                        <Track.IncreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource ScrollPageButton}" Command="ScrollBar.PageDownCommand" />
+                        </Track.IncreaseRepeatButton>
+                        <Track.Thumb>
+                            <Thumb>
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Border Background="Transparent">
+                                            <Border x:Name="Bar" Width="4" HorizontalAlignment="Center" Margin="0,4"
+                                                    CornerRadius="2" Background="#59F5F3EF" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bar" Property="Width" Value="6" />
+                                                <Setter TargetName="Bar" Property="CornerRadius" Value="3" />
+                                                <Setter TargetName="Bar" Property="Background" Value="#A6F5F3EF" />
+                                            </Trigger>
+                                            <Trigger Property="IsDragging" Value="True">
+                                                <Setter TargetName="Bar" Property="Width" Value="6" />
+                                                <Setter TargetName="Bar" Property="Background" Value="#CCF5F3EF" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Track.Thumb>
+                    </Track>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.4" BeginTime="0:0:0.6" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- "Voltooid"-kop: een draaiend pijltje en tekst, zonder de witte cirkel van Windows. -->
+    <Style TargetType="Expander">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <StackPanel>
+                        <ToggleButton Content="{TemplateBinding Header}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                      Focusable="False" Cursor="Hand">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="5" Padding="4,4,8,4"
+                                            HorizontalAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock x:Name="Arrow" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                                       Width="16" VerticalAlignment="Center" TextAlignment="Center"
+                                                       RenderTransformOrigin="0.5,0.5" Foreground="{TemplateBinding Foreground}">
+                                                <TextBlock.RenderTransform>
+                                                    <RotateTransform x:Name="ArrowRotation" Angle="0" />
+                                                </TextBlock.RenderTransform>
+                                            </TextBlock>
+                                            <ContentPresenter VerticalAlignment="Center" Margin="4,0,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PaneHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Arrow" Property="RenderTransform">
+                                                <Setter.Value>
+                                                    <RotateTransform Angle="90" />
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter x:Name="Body" Visibility="Collapsed" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Knop in de instellingenvensters. -->
+    <Style x:Key="ActionButton" TargetType="Button">
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="Foreground" Value="#FFF5F3EF" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Box" Background="#1FFFFFFF" BorderBrush="#17FFFFFF" BorderThickness="1"
+                            CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="#33FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="#14FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Box" Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Kleine ronde knop met een icoon (titelbalk, ster, verversen). -->
+    <Style x:Key="GlyphButton" TargetType="Button">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Foreground" Value="{DynamicResource PaneMutedText}" />
+        <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="5">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#1FFFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#12FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Invoerveld in een pane: afgerond, met een lichtere rand zodra je typt. -->
+    <Style x:Key="PaneTextBox" TargetType="TextBox">
+        <Setter Property="Background" Value="{DynamicResource PaneInputBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PaneInputBorder}" />
+        <Setter Property="Foreground" Value="{DynamicResource PaneText}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource PaneText}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource PaneCheck}" />
+        <Setter Property="SelectionOpacity" Value="0.55" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="4,3" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Bd" CornerRadius="5"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#E61C1D20" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PaneAccentLine}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Menu's (titelbalk, taken): donker en afgerond, zoals de menu's van Windows 11. -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{StaticResource MenuText}" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Margin="0,0,10,12" Padding="0,4" CornerRadius="8" MinWidth="180"
+                            Background="{StaticResource MenuBackground}" BorderBrush="{StaticResource MenuBorder}" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="14" ShadowDepth="4" Direction="270" Opacity="0.35" />
+                        </Border.Effect>
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1" Margin="0,4" Background="#1FFFFFFF" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource MenuText}" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Margin="4,1" Padding="8,0,10,0" MinHeight="30" CornerRadius="5" Background="Transparent">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12"
+                                       VerticalAlignment="Center" Visibility="Hidden" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True"
+                                              VerticalAlignment="Center" Margin="0,5" />
+                            <TextBlock x:Name="Arrow" Grid.Column="2" Text="&#xE76C;" FontFamily="{StaticResource IconFont}"
+                                       FontSize="10" Margin="18,0,0,0" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="0" VerticalOffset="-6"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                <Border Margin="0,0,10,12" Padding="0,4" CornerRadius="8" MinWidth="160"
+                                        Background="{StaticResource MenuBackground}" BorderBrush="{StaticResource MenuBorder}" BorderThickness="1">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="14" ShadowDepth="4" Direction="270" Opacity="0.35" />
+                                    </Border.Effect>
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource MenuHighlight}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ToolTip">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource MenuText}" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Margin="0,0,8,10" Padding="9,5" CornerRadius="5" MaxWidth="320"
+                            Background="{StaticResource MenuBackground}" BorderBrush="{StaticResource MenuBorder}" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="3" Direction="270" Opacity="0.3" />
+                        </Border.Effect>
+                        <ContentPresenter>
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextWrapping" Value="Wrap" />
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
