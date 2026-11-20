@@ -18,20 +18,19 @@ public sealed class HomeAssistantPlugin : ITaskSourcePlugin
 
     public string TypeId => "home-assistant-todo";
 
-    public string DisplayName => "Home Assistant (to-do lijsten)";
+    public string DisplayName => Loc.T("Home Assistant (to-do lijsten)");
 
     public string Description =>
-        "De to-do lijsten uit je Home Assistant. Maak in Home Assistant een lang-levend toegangstoken (je profiel, tabblad Beveiliging) en vul dat hier in. " +
-        "Een pane toont één lijst. Home Assistant kent geen volgorde en geen \"belangrijk\"; een deadline kan alleen een datum zijn, het tijdstip valt weg.";
+        Loc.T("De to-do lijsten uit je Home Assistant. Maak in Home Assistant een lang-levend toegangstoken (je profiel, tabblad Beveiliging) en vul dat hier in. Een pane toont één lijst. Home Assistant kent geen volgorde en geen \"belangrijk\"; een deadline kan alleen een datum zijn, het tijdstip valt weg.");
 
     public IReadOnlyList<SettingField> Fields { get; } =
     [
-        new(BaseUrlKey, "Adres", SettingKind.Url, Required: true, Help: "Bijvoorbeeld https://ha.voorbeeld.nl of http://homeassistant.local:8123"),
-        new(TokenKey, "Toegangstoken", SettingKind.Secret, Required: true, Help: "Het lang-levende token uit je Home Assistant-profiel."),
-        new(AllowHttpKey, "Onversleutelde verbinding (http) toestaan", SettingKind.Bool, Required: false,
-            Help: "Alleen voor Home Assistant op je eigen netwerk zonder https. Het token gaat dan onversleuteld over het netwerk; zet dit niet aan voor een adres buiten je huis."),
-        new(FingerprintKey, "Vingerafdruk certificaat (SHA-256)", SettingKind.Fingerprint, Required: false,
-            Help: "Alleen bij https met een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows. Krijgt Home Assistant een nieuw certificaat, vul dan de nieuwe afdruk in."),
+        new(BaseUrlKey, Loc.T("Adres"), SettingKind.Url, Required: true, Help: Loc.T("Bijvoorbeeld https://ha.voorbeeld.nl of http://homeassistant.local:8123")),
+        new(TokenKey, Loc.T("Toegangstoken"), SettingKind.Secret, Required: true, Help: Loc.T("Het lang-levende token uit je Home Assistant-profiel.")),
+        new(AllowHttpKey, Loc.T("Onversleutelde verbinding (http) toestaan"), SettingKind.Bool, Required: false,
+            Help: Loc.T("Alleen voor Home Assistant op je eigen netwerk zonder https. Het token gaat dan onversleuteld over het netwerk; zet dit niet aan voor een adres buiten je huis.")),
+        new(FingerprintKey, Loc.T("Vingerafdruk certificaat (SHA-256)"), SettingKind.Fingerprint, Required: false,
+            Help: Loc.T("Alleen bij https met een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows. Krijgt Home Assistant een nieuw certificaat, vul dan de nieuwe afdruk in.")),
     ];
 
     public IReadOnlyList<PluginAction> Actions { get; } = [];
@@ -55,7 +54,7 @@ public sealed class HomeAssistantSource : ITaskSource
             var baseUri = ParseBaseUri(context.Value(HomeAssistantPlugin.BaseUrlKey), context.Flag(HomeAssistantPlugin.AllowHttpKey));
             var pin = CertPin.Normalize(context.Value(HomeAssistantPlugin.FingerprintKey));
             var token = context.Secrets.Get(HomeAssistantPlugin.TokenKey);
-            if (string.IsNullOrWhiteSpace(token)) throw new FormatException("Vul het toegangstoken in.");
+            if (string.IsNullOrWhiteSpace(token)) throw new FormatException(Loc.T("Vul het toegangstoken in."));
 
             _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin))
             {
@@ -85,8 +84,8 @@ public sealed class HomeAssistantSource : ITaskSource
         {
             var lists = await Client().ListTodoListsAsync(ct);
             return lists.Count == 0
-                ? new SourceCheck(false, "Verbonden, maar Home Assistant heeft geen to-do lijsten. Voeg er een toe via de integratie 'To-do list' of 'Shopping list'.")
-                : new SourceCheck(true, $"Verbonden. {lists.Count} {(lists.Count == 1 ? "lijst" : "lijsten")} gevonden.");
+                ? new SourceCheck(false, Loc.T("Verbonden, maar Home Assistant heeft geen to-do lijsten. Voeg er een toe via de integratie 'To-do list' of 'Shopping list'."))
+                : new SourceCheck(true, lists.Count == 1 ? Loc.T("Verbonden. 1 lijst gevonden.") : Loc.F("Verbonden. {0} lijsten gevonden.", lists.Count));
         }
         catch (TaskProviderException ex)
         {
@@ -95,7 +94,7 @@ public sealed class HomeAssistantSource : ITaskSource
     }
 
     public Task<string> RunActionAsync(string actionId, CancellationToken ct = default) =>
-        throw new TaskProviderException($"Onbekende actie: {actionId}");
+        throw new TaskProviderException(Loc.F("Onbekende actie: {0}", actionId));
 
     public void Dispose()
     {
@@ -104,7 +103,7 @@ public sealed class HomeAssistantSource : ITaskSource
     }
 
     private HomeAssistantClient Client() =>
-        _client ?? throw new TaskProviderException(_configError ?? "Deze bron is niet ingesteld.");
+        _client ?? throw new TaskProviderException(_configError ?? Loc.T("Deze bron is niet ingesteld."));
 
     /// <summary>
     /// Een https-adres, of een http-adres als dat uitdrukkelijk is toegestaan. Zonder die keuze geldt: een token gaat
@@ -112,13 +111,13 @@ public sealed class HomeAssistantSource : ITaskSource
     /// </summary>
     public static Uri ParseBaseUri(string text, bool allowHttp)
     {
-        if (text.Length == 0) throw new FormatException("Vul het adres van Home Assistant in.");
+        if (text.Length == 0) throw new FormatException(Loc.T("Vul het adres van Home Assistant in."));
         if (!Uri.TryCreate(text.EndsWith('/') ? text : text + "/", UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttps && !(allowHttp && uri.Scheme == Uri.UriSchemeHttp)))
         {
             throw new FormatException(allowHttp
-                ? "Het adres moet met https:// of http:// beginnen."
-                : "Het adres moet met https:// beginnen. Draait je Home Assistant zonder https op je eigen netwerk, zet dan 'Onversleutelde verbinding (http) toestaan' aan.");
+                ? Loc.T("Het adres moet met https:// of http:// beginnen.")
+                : Loc.T("Het adres moet met https:// beginnen. Draait je Home Assistant zonder https op je eigen netwerk, zet dan 'Onversleutelde verbinding (http) toestaan' aan."));
         }
         return uri;
     }

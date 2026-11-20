@@ -46,7 +46,7 @@ public sealed class GoogleAuth(HttpClient http, ITokenStore store, Func<GoogleCl
 
         var token = await PostTokenAsync(form, ct);
         if (token.RefreshToken is null)
-            throw new TaskProviderException("Google gaf geen blijvend inlogtoken terug. Probeer het opnieuw te koppelen.");
+            throw new TaskProviderException(Loc.T("Google gaf geen blijvend inlogtoken terug. Probeer het opnieuw te koppelen."));
 
         store.Save(token.RefreshToken);
         CacheAccessToken(token);
@@ -145,7 +145,7 @@ public sealed class GoogleAuth(HttpClient http, ITokenStore store, Func<GoogleCl
     {
         var cfg = config();
         if (cfg is not { IsValid: true })
-            throw new TaskProviderException("Vul eerst het Google client-ID in via Instellingen.");
+            throw new TaskProviderException(Loc.T("Vul eerst het Google client-ID in via Instellingen."));
         return cfg;
     }
 
@@ -163,7 +163,7 @@ public sealed class GoogleAuth(HttpClient http, ITokenStore store, Func<GoogleCl
                 var error = root.TryGetProperty("error", out var e) ? e.GetString() : null;
                 if (error == "invalid_grant") throw new InvalidGrantException();
                 var description = root.TryGetProperty("error_description", out var d) ? d.GetString() : error;
-                throw new TaskProviderException($"Inloggen bij Google is mislukt: {description ?? response.StatusCode.ToString()}");
+                throw new TaskProviderException(Loc.F("Inloggen bij Google is mislukt: {0}", description ?? response.StatusCode.ToString()));
             }
 
             return new TokenResponse(
@@ -175,7 +175,7 @@ public sealed class GoogleAuth(HttpClient http, ITokenStore store, Func<GoogleCl
                                        or InvalidOperationException or FormatException // een antwoord van een andere vorm
                                    || (ex is TaskCanceledException && !ct.IsCancellationRequested))
         {
-            throw new TaskProviderException("Geen verbinding met Google.", ex);
+            throw new TaskProviderException(Loc.T("Geen verbinding met Google."), ex);
         }
     }
 

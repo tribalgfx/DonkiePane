@@ -87,7 +87,7 @@ public partial class TasksView : UserControl
         OpenList.ItemsSource = _openRows;
         CompletedList.ItemsSource = completed;
         EmptyHint.Visibility = _openRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        CompletedExpander.Header = $"Voltooid ({completed.Count})";
+        CompletedExpander.Header = Loc.F("Voltooid ({0})", completed.Count);
         CompletedExpander.Visibility = completed.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 

@@ -48,7 +48,7 @@ public sealed class ReleaseFeed(HttpClient http, string repository = ReleaseFeed
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         // Bijv. null of [] (een proxy, een storing): een mislukte controle, geen crash.
-        if (root.ValueKind != JsonValueKind.Object) throw new JsonException("Het antwoord van GitHub is geen release.");
+        if (root.ValueKind != JsonValueKind.Object) throw new JsonException(Loc.T("Het antwoord van GitHub is geen release."));
         if (Bool(root, "draft") || Bool(root, "prerelease")) return null;
         if (AppVersion.TryParse(Text(root, "tag_name")) is not { } version) return null;
 

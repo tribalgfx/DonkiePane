@@ -21,7 +21,7 @@ public interface ITokenStore
     void Delete();
 }
 
-public sealed class NotSignedInException() : SourceUnauthorizedException("Niet ingelogd bij Google. Open Instellingen, kies deze bron en log in.");
+public sealed class NotSignedInException() : SourceUnauthorizedException(Loc.T("Niet ingelogd bij Google. Open Instellingen, kies deze bron en log in."));
 
 public sealed record GoogleTaskList(string Id, string Title);
 

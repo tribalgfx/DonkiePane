@@ -9,7 +9,6 @@ namespace DonkiePane.App;
 /// <param name="showStar">Of de bron "belangrijk" kent; Google Taken niet, dan is er geen ster.</param>
 public sealed class TaskRow(TaskItem task, bool showStar = true) : INotifyPropertyChanged
 {
-    private static readonly CultureInfo Dutch = CultureInfo.GetCultureInfo("nl-NL");
     private bool _isEditing;
 
     public TaskItem Task { get; } = task;
@@ -23,7 +22,7 @@ public sealed class TaskRow(TaskItem task, bool showStar = true) : INotifyProper
     public System.Windows.Thickness RowMargin => new(Task.ParentId is null ? 0 : 22, 1, 0, 1);
     public bool HasDueDate => Task.DueDate is not null;
 
-    public string DueText => Task.DueDate is { } due ? DueDates.Format(due, DueDates.Today, Dutch) : "";
+    public string DueText => Task.DueDate is { } due ? DueDates.Format(due, DueDates.Today, Loc.Culture) : "";
 
     public bool IsOverdue => !Task.IsCompleted && Task.DueDate is { } due && DueDates.IsOverdue(due, DueDates.Today);
 

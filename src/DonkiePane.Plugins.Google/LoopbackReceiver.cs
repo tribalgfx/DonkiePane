@@ -46,12 +46,12 @@ public sealed class LoopbackReceiver : IDisposable
 
                 if (stateOk && query.TryGetValue("error", out var error))
                 {
-                    await RespondAsync(client, 400, "Bad Request", Page("Inloggen is niet gelukt", "Je kunt dit venster sluiten en het in DonkiePane opnieuw proberen."), overall.Token);
-                    throw new TaskProviderException($"Inloggen bij Google is geweigerd of mislukt ({error}).");
+                    await RespondAsync(client, 400, "Bad Request", Page(Loc.T("Inloggen is niet gelukt"), Loc.T("Je kunt dit venster sluiten en het in DonkiePane opnieuw proberen.")), overall.Token);
+                    throw new TaskProviderException(Loc.F("Inloggen bij Google is geweigerd of mislukt ({0}).", error));
                 }
                 if (stateOk && query.TryGetValue("code", out var code) && code.Length > 0)
                 {
-                    await RespondAsync(client, 200, "OK", Page("Je bent ingelogd", "Je kunt dit venster sluiten en teruggaan naar DonkiePane."), overall.Token);
+                    await RespondAsync(client, 200, "OK", Page(Loc.T("Je bent ingelogd"), Loc.T("Je kunt dit venster sluiten en teruggaan naar DonkiePane.")), overall.Token);
                     return code;
                 }
 
@@ -60,7 +60,7 @@ public sealed class LoopbackReceiver : IDisposable
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            throw new TaskProviderException("Inloggen duurde te lang. Probeer het opnieuw.");
+            throw new TaskProviderException(Loc.T("Inloggen duurde te lang. Probeer het opnieuw."));
         }
     }
 
@@ -122,7 +122,7 @@ public sealed class LoopbackReceiver : IDisposable
     }
 
     private static string Page(string title, string text) =>
-        $"<!doctype html><html lang=\"nl\"><meta charset=\"utf-8\"><title>DonkiePane</title>" +
+        $"<!doctype html><html lang=\"{Loc.Language}\"><meta charset=\"utf-8\"><title>DonkiePane</title>" +
         "<body style=\"font-family:Segoe UI,sans-serif;background:#201a1a;color:#f5f0e8;display:grid;place-items:center;height:100vh;margin:0\">" +
         $"<div style=\"text-align:center\"><h1>{title}</h1><p>{text}</p></div></body></html>";
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using DonkiePane.Core;
 
 namespace DonkiePane.Tasks;
 
@@ -22,9 +23,9 @@ public static class DueDates
         var diff = due.DayNumber - today.DayNumber;
         switch (diff)
         {
-            case 0: return "Vandaag";
-            case 1: return "Morgen";
-            case -1: return "Gisteren";
+            case 0: return Loc.T("Vandaag");
+            case 1: return Loc.T("Morgen");
+            case -1: return Loc.T("Gisteren");
             case > 1 and < 7:
                 var day = culture.DateTimeFormat.GetDayName(due.DayOfWeek);
                 return culture.TextInfo.ToUpper(day[0]) + day[1..];

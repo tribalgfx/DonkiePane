@@ -20,7 +20,7 @@ public static class CertPin
         if (string.IsNullOrWhiteSpace(text)) return null;
         var hex = new string(text.Where(c => c is not (':' or ' ' or '-' or '\t' or '\r' or '\n')).ToArray()).ToUpperInvariant();
         if (hex.Length != 64 || !hex.All(Uri.IsHexDigit))
-            throw new FormatException("De vingerafdruk moet een SHA-256-afdruk zijn: 64 hexcijfers, bijvoorbeeld AA:BB:CC:…");
+            throw new FormatException(Loc.T("De vingerafdruk moet een SHA-256-afdruk zijn: 64 hexcijfers, bijvoorbeeld AA:BB:CC:…"));
         return hex;
     }
 

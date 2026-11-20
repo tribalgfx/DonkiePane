@@ -33,6 +33,8 @@ WizardStyle=modern
 CloseApplications=no
 ; Niet twee installers tegelijk (bijv. een zelf gestarte en een via Bijwerken).
 SetupMutex=DonkiePane.Setup
+; Nederlands of Engels, net als de taal van Windows; alleen bij twijfel vraagt de installer het.
+ShowLanguageDialog=auto
 
 [InstallDelete]
 ; Plug-ins en foutopsporingsbestanden van een vorige versie: een oude plug-in-DLL zou anders blijven staan en geladen worden.
@@ -44,7 +46,18 @@ Type: files; Name: "{app}\*.pdb"
 Type: filesandordirs; Name: "{%TEMP}\DonkiePane-update"
 
 [Languages]
+Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "nl"; MessagesFile: "compiler:Languages\Dutch.isl"
+
+[CustomMessages]
+en.StartNow=Start DonkiePane now
+nl.StartNow=DonkiePane nu starten
+en.StillRunning=DonkiePane is still running and won't stop. Close it with the icon next to the clock (Exit) and try again.
+nl.StillRunning=DonkiePane draait nog en wil niet stoppen. Sluit het af via het icoon bij de klok (Afsluiten) en probeer het opnieuw.
+en.StillRunningUninstall=DonkiePane is still running and won't stop. Close it with the icon next to the clock (Exit). Continuing may leave the Windows desktop icons hidden.%n%nContinue anyway?
+nl.StillRunningUninstall=DonkiePane draait nog en wil niet stoppen. Sluit het af via het icoon bij de klok (Afsluiten). Doorgaan kan de Windows-bureaubladiconen verborgen laten.%n%nToch doorgaan?
+en.DeleteData=Do you also want to delete your panes, tasks and settings?%nThat is the data in %1. Your desktop files always stay.
+nl.DeleteData=Wil je ook je panes, taken en instellingen verwijderen?%nDat zijn de gegevens in %1. Je bureaubladbestanden blijven altijd staan.
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -54,7 +67,7 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdi
 Name: "{autoprograms}\DonkiePane"; Filename: "{app}\DonkiePane.exe"
 
 [Run]
-Filename: "{app}\DonkiePane.exe"; Description: "DonkiePane nu starten"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\DonkiePane.exe"; Description: "{cm:StartNow}"; Flags: nowait postinstall skipifsilent
 ; Bijwerken vanuit DonkiePane zelf start de installer met /SILENT /STARTAFTER=1: daarna DonkiePane weer starten.
 Filename: "{app}\DonkiePane.exe"; Flags: nowait; Check: StartAfterUpdate
 
@@ -133,16 +146,14 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
   if not QuitRunningDonkiePane then
-    Result := 'DonkiePane draait nog en wil niet stoppen. Sluit het af via het icoon bij de klok (Afsluiten) en probeer het opnieuw.';
+    Result := CustomMessage('StillRunning');
 end;
 
 function InitializeUninstall: Boolean;
 begin
   Result := True;
   if not QuitRunningDonkiePane then
-    Result := SuppressibleMsgBox('DonkiePane draait nog en wil niet stoppen. Sluit het af via het icoon bij de klok (Afsluiten). ' +
-      'Doorgaan kan de Windows-bureaubladiconen verborgen laten.' + #13#10#13#10 + 'Toch doorgaan?',
-      mbConfirmation, MB_YESNO, IDNO) = IDYES;
+    Result := SuppressibleMsgBox(CustomMessage('StillRunningUninstall'), mbConfirmation, MB_YESNO, IDNO) = IDYES;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -156,8 +167,7 @@ begin
   RegDeleteValue(HKEY_CURRENT_USER, ApprovedKey, 'DonkiePane');
 
   { Panes, taken en instellingen blijven standaard staan (ook bij een stille verwijdering). }
-  if SuppressibleMsgBox('Wil je ook je panes, taken en instellingen verwijderen?' + #13#10 +
-      'Dat zijn de gegevens in ' + ExpandConstant('{userappdata}\DonkiePane') + '. Je bureaubladbestanden blijven altijd staan.',
+  if SuppressibleMsgBox(FmtMessage(CustomMessage('DeleteData'), [ExpandConstant('{userappdata}\DonkiePane')]),
       mbConfirmation, MB_YESNO, IDNO) = IDYES then
     DelTree(ExpandConstant('{userappdata}\DonkiePane'), True, True, True);
 end;

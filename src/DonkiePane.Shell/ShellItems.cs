@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
+using DonkiePane.Core;
 using static DonkiePane.Shell.ShellNative;
 using ComIDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 
@@ -196,7 +197,7 @@ public static class ShellItems
         {
             for (var i = 1; i < 1000; i++)
             {
-                var path = Path.Combine(folder, i == 1 ? "Nieuwe map" : $"Nieuwe map ({i})");
+                var path = Path.Combine(folder, i == 1 ? Loc.T("Nieuwe map") : Loc.F("Nieuwe map ({0})", i));
                 if (Directory.Exists(path) || File.Exists(path)) continue;
                 Directory.CreateDirectory(path);
                 return path;

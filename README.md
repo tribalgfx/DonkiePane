@@ -18,6 +18,7 @@ Vakken (panes) op je Windows-bureaublad voor je snelkoppelingen en je taken. Met
   Wat je offline doet wordt bewaard en later verstuurd. Zie [docs/Bronnen.md](docs/Bronnen.md).
 - **Rustig en aanpasbaar.** Effen thema's, een eigen kleur en transparantie per pane, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
 - **Dubbelklik op een leeg stuk bureaublad** verbergt alle panes; nog een keer haalt ze terug.
+- **Nederlands en Engels.** DonkiePane volgt de taal van Windows; kiezen kan in Instellingen → Taal. Vertalingen staan in `src/DonkiePane.Core/Localization`.
 - **Meerdere schermen.** Valt een scherm weg, dan komen de panes naar een ander scherm en gaan ze terug zodra het scherm terugkomt.
 
 ## Installeren

@@ -58,7 +58,7 @@ public sealed class SourceEditWindow : Window
         var panel = new StackPanel { Margin = new Thickness(24, 16, 24, 24) };
         panel.Children.Add(Label(_plugin.Description, muted: true, margin: new Thickness(0, 0, 0, 8)));
 
-        panel.Children.Add(Label("Naam"));
+        panel.Children.Add(Label(Loc.T("Naam")));
         _name.Text = _connection.Name;
         ApplyStyle(_name);
         panel.Children.Add(_name);
@@ -94,19 +94,19 @@ public sealed class SourceEditWindow : Window
 
             var hint = field.Help ?? "";
             if (field.Kind == SettingKind.Secret)
-                hint = (HasSecret(field.Key) ? "Er is al een waarde opgeslagen: laat dit veld leeg om die te houden. " : "") + hint;
+                hint = (HasSecret(field.Key) ? Loc.T("Er is al een waarde opgeslagen: laat dit veld leeg om die te houden.") + " " : "") + hint;
             if (hint.Trim().Length > 0) panel.Children.Add(Label(hint.Trim(), muted: true, margin: new Thickness(0, 3, 0, 0), size: 12));
         }
 
         var buttons = new WrapPanel { Margin = new Thickness(0, 18, 0, 0) };
-        buttons.Children.Add(AddButton("Opslaan", Save_Click));
-        buttons.Children.Add(AddButton("Verbinding testen", Test_Click));
+        buttons.Children.Add(AddButton(Loc.T("Opslaan"), Save_Click));
+        buttons.Children.Add(AddButton(Loc.T("Verbinding testen"), Test_Click));
         foreach (var action in _plugin.Actions)
         {
             var id = action.Id;
             buttons.Children.Add(AddButton(action.Label, async (_, _) => await RunAction(id)));
         }
-        buttons.Children.Add(AddButton("Sluiten", (_, _) => Close()));
+        buttons.Children.Add(AddButton(Loc.T("Sluiten"), (_, _) => Close()));
         panel.Children.Add(buttons);
         panel.Children.Add(_message);
         return panel;
@@ -127,7 +127,7 @@ public sealed class SourceEditWindow : Window
         }
         catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
         {
-            Show($"Opslaan is niet gelukt: {ex.Message} Probeer het zo opnieuw.", ok: false);
+            Show(Loc.F("Opslaan is niet gelukt: {0} Probeer het zo opnieuw.", ex.Message), ok: false);
             return false;
         }
     }
@@ -139,7 +139,7 @@ public sealed class SourceEditWindow : Window
             var typed = Typed(field);
             if (typed.Length == 0 && !(field.Kind == SettingKind.Secret && HasSecret(field.Key)))
             {
-                Show($"Vul '{field.Label}' in.", ok: false);
+                Show(Loc.F("Vul '{0}' in.", field.Label), ok: false);
                 return false;
             }
         }
@@ -183,16 +183,16 @@ public sealed class SourceEditWindow : Window
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!Apply()) return;
-        Show("Opgeslagen.", ok: true);
+        Show(Loc.T("Opgeslagen."), ok: true);
     }
 
     private async void Test_Click(object sender, RoutedEventArgs e)
     {
         if (!Apply()) return;
-        await Busy("Bezig met testen…", async () =>
+        await Busy(Loc.T("Bezig met testen…"), async () =>
         {
             var source = _host.GetSource(_connection.Id, out var error);
-            if (source is null) { Show(error ?? "De bron is niet beschikbaar.", ok: false); return; }
+            if (source is null) { Show(error ?? Loc.T("De bron is niet beschikbaar."), ok: false); return; }
             var check = await source.TestAsync();
             Show(check.Message, check.Ok);
             // De verbinding werkt: een bron die eerder na een geweigerd token stopte, mag het weer proberen.
@@ -203,10 +203,10 @@ public sealed class SourceEditWindow : Window
     private async Task RunAction(string actionId)
     {
         if (!Apply()) return;
-        await Busy("Bezig…", async () =>
+        await Busy(Loc.T("Bezig…"), async () =>
         {
             var source = _host.GetSource(_connection.Id, out var error);
-            if (source is null) { Show(error ?? "De bron is niet beschikbaar.", ok: false); return; }
+            if (source is null) { Show(error ?? Loc.T("De bron is niet beschikbaar."), ok: false); return; }
             try
             {
                 Show(await source.RunActionAsync(actionId), ok: true);

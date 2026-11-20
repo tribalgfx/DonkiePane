@@ -18,13 +18,14 @@ public partial class SettingsWindow : Window
     private readonly TaskSourceHost _sources;
     private readonly UpdateService? _updates;
     private readonly Action? _showUpdate;
+    private readonly Action? _restart;
     private bool _loading = true;
 
     /// <summary>Een regel in de lijst met bronnen.</summary>
     private sealed record SourceRow(SourceConnection Connection, string Label);
 
     internal SettingsWindow(Layout layout, Action save, Action bringPanes, TaskSourceHost sources,
-        UpdateService? updates = null, Action? showUpdate = null)
+        UpdateService? updates = null, Action? showUpdate = null, Action? restart = null)
     {
         InitializeComponent();
         // Nooit hoger dan het scherm; wat er niet in past, scrolt.
@@ -35,7 +36,16 @@ public partial class SettingsWindow : Window
         _sources = sources;
         _updates = updates;
         _showUpdate = showUpdate;
+        _restart = restart;
         UpdatesBox.IsChecked = layout.CheckForUpdates;
+
+        // Taal: de namen van de talen staan altijd in hun eigen taal.
+        LanguageDutch.Content = Loc.Languages.First(l => l.Code == Loc.Dutch).Name;
+        LanguageDutch.Tag = Loc.Dutch;
+        LanguageEnglish.Content = Loc.Languages.First(l => l.Code == Loc.English).Name;
+        LanguageEnglish.Tag = Loc.English;
+        LanguageAuto.Tag = "";
+        (layout.Language switch { Loc.Dutch => LanguageDutch, Loc.English => LanguageEnglish, _ => LanguageAuto }).IsChecked = true;
         RefreshUpdateStatus();
 
         HideIconsBox.IsChecked = layout.HideDesktopIcons;
@@ -54,13 +64,26 @@ public partial class SettingsWindow : Window
         _loading = false;
     }
 
+    private void Language_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string code }) return;
+        _layout.Language = code.Length == 0 ? null : code;
+        _save();
+        // De taal geldt vanaf de volgende start; alleen als die echt anders wordt, is opnieuw starten nodig.
+        var changes = Loc.Resolve(_layout.Language) != Loc.Language;
+        LanguageHint.Visibility = changes ? Visibility.Visible : Visibility.Collapsed;
+        RestartPanel.Visibility = changes && _restart is not null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void Restart_Click(object sender, RoutedEventArgs e) => _restart?.Invoke();
+
     private void RefreshAutoStart()
     {
         var enabled = AutoStart.IsEnabled();
         AutoStartBox.IsChecked = enabled;
         AutoStartHint.Text = AutoStart.RegisteredPath() is { } path
-            ? enabled ? $"Start met: {path}" : "Uitgezet in Taakbeheer onder Opstarten. Vink aan om het weer aan te zetten."
-            : "Je kunt dit ook in Taakbeheer onder Opstarten aan- of uitzetten.";
+            ? enabled ? Loc.F("Start met: {0}", path) : Loc.T("Uitgezet in Taakbeheer onder Opstarten. Vink aan om het weer aan te zetten.")
+            : Loc.T("Je kunt dit ook in Taakbeheer onder Opstarten aan- of uitzetten.");
     }
 
     private void HideIcons_Click(object sender, RoutedEventArgs e)
@@ -130,9 +153,9 @@ public partial class SettingsWindow : Window
         EditSourceButton.IsEnabled = RemoveSourceButton.IsEnabled = false;
 
         var loaded = _sources.Plugins.Plugins.Select(p => p.Plugin.DisplayName).ToList();
-        PluginsInfo.Text = (loaded.Count == 0 ? "Er zijn geen plug-ins geladen." : "Geladen plug-ins: " + string.Join(", ", loaded) + ".")
-            + (_sources.Plugins.Errors.Count == 0 ? "" : "\nProblemen: " + string.Join("; ",
-                _sources.Plugins.Errors.Select(e => $"{Path.GetFileName(e.Path)}: {e.Message}")));
+        PluginsInfo.Text = (loaded.Count == 0 ? Loc.T("Er zijn geen plug-ins geladen.") : Loc.F("Geladen plug-ins: {0}.", string.Join(", ", loaded)))
+            + (_sources.Plugins.Errors.Count == 0 ? "" : "\n" + Loc.F("Problemen: {0}", string.Join("; ",
+                _sources.Plugins.Errors.Select(e => $"{Path.GetFileName(e.Path)}: {e.Message}"))));
     }
 
     private SourceConnection? SelectedSource => (SourcesList.SelectedItem as SourceRow)?.Connection;
@@ -145,12 +168,12 @@ public partial class SettingsWindow : Window
         var plugins = _sources.Plugins.Plugins.Select(p => p.Plugin).ToList();
         if (plugins.Count == 0)
         {
-            MessageBox.Show(this, "Er zijn geen plug-ins geladen, dus er is geen soort bron om toe te voegen. " +
-                "Zet plug-ins in de map plugins naast DonkiePane.exe.", "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, Loc.T("Er zijn geen plug-ins geladen, dus er is geen soort bron om toe te voegen. Zet plug-ins in de map plugins naast DonkiePane.exe."),
+                "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var picker = new ListPickerWindow("Soort bron kiezen", "Welk soort bron wil je toevoegen?",
+        var picker = new ListPickerWindow(Loc.T("Soort bron kiezen"), Loc.T("Welk soort bron wil je toevoegen?"),
             plugins.Select(p => new TaskListInfo(p.TypeId, p.DisplayName)).ToList()) { Owner = this };
         if (picker.ShowDialog() != true || picker.Selected is not { } chosen) return;
 
@@ -163,7 +186,7 @@ public partial class SettingsWindow : Window
         if (SelectedSource is not { } connection) return;
         if (_sources.PluginFor(connection.TypeId) is not { } plugin)
         {
-            MessageBox.Show(this, $"De plug-in voor '{connection.TypeId}' is niet geladen, dus deze bron kan nu niet bewerkt worden.",
+            MessageBox.Show(this, Loc.F("De plug-in voor '{0}' is niet geladen, dus deze bron kan nu niet bewerkt worden.", connection.TypeId),
                 "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -180,8 +203,7 @@ public partial class SettingsWindow : Window
     {
         if (SelectedSource is not { } connection) return;
         var answer = MessageBox.Show(this,
-            $"Bron \"{connection.Name}\" verwijderen? Je taken bij de bron zelf blijven staan. Panes die deze bron gebruiken laten daarna een melding zien, " +
-            "en de opgeslagen tokens op deze pc worden gewist.",
+            Loc.F("Bron \"{0}\" verwijderen? Je taken bij de bron zelf blijven staan. Panes die deze bron gebruiken laten daarna een melding zien, en de opgeslagen tokens op deze pc worden gewist.", connection.Name),
             "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
 
@@ -201,7 +223,7 @@ public partial class SettingsWindow : Window
     {
         if (_updates is null) return;
         CheckNowButton.IsEnabled = false;
-        UpdateStatus.Text = "Bezig met controleren…";
+        UpdateStatus.Text = Loc.T("Bezig met controleren…");
         var outcome = await _updates.CheckAsync();
         CheckNowButton.IsEnabled = true;
         RefreshUpdateStatus(outcome);
@@ -221,10 +243,10 @@ public partial class SettingsWindow : Window
     {
         if (updates is null) return "";
         if (updates.Available is { } release)
-            return $"Versie {DonkiePane.Core.Updates.AppVersion.Format(release.Version)} is beschikbaar.";
-        if (updates.LastError is { } error) return "Controleren lukte niet: " + error;
-        if (outcome == UpdateCheckOutcome.NoReleases) return "Er zijn nog geen versies gepubliceerd.";
-        return updates.LastChecked is { } at ? $"Je hebt de nieuwste versie (gecontroleerd om {at:HH:mm})." : "";
+            return Loc.F("Versie {0} is beschikbaar.", DonkiePane.Core.Updates.AppVersion.Format(release.Version));
+        if (updates.LastError is { } error) return Loc.F("Controleren lukte niet: {0}", error);
+        if (outcome == UpdateCheckOutcome.NoReleases) return Loc.T("Er zijn nog geen versies gepubliceerd.");
+        return updates.LastChecked is { } at ? Loc.F("Je hebt de nieuwste versie (gecontroleerd om {0:HH:mm}).", at) : "";
     }
 
     private void BringPanes_Click(object sender, RoutedEventArgs e) => _bringPanes();

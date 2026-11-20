@@ -26,7 +26,7 @@ public static class LegacyGoogleMigration
             .ToList();
         if (string.IsNullOrWhiteSpace(clientId) && legacyPanes.Count == 0) return false;
 
-        var connection = host.NewConnection(GoogleTypeId, "Google Taken");
+        var connection = host.NewConnection(GoogleTypeId, Loc.T("Google Taken"));
         connection.Values["ClientId"] = clientId ?? "";
         var secrets = host.SecretsFor(connection.Id);
         if (!string.IsNullOrWhiteSpace(secret)) secrets.Set("ClientSecret", secret);

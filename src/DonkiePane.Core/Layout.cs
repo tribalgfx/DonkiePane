@@ -30,6 +30,9 @@ public sealed class Layout
     /// <summary>Bij het starten en daarna eens per dag op GitHub kijken of er een nieuwe versie is.</summary>
     public bool CheckForUpdates { get; set; } = true;
 
+    /// <summary>De taal ("nl" of "en"); leeg = de taal van Windows (zie <see cref="Loc.Resolve"/>).</summary>
+    public string? Language { get; set; }
+
     /// <summary>De nieuwste versie waarover al een melding is getoond; die melding komt niet bij elke start terug.</summary>
     public string? NotifiedUpdateVersion { get; set; }
 

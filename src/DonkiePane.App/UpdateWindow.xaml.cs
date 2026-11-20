@@ -25,17 +25,16 @@ public partial class UpdateWindow : Window
         _download = download;
         _launch = launch;
 
-        Headline.Text = $"DonkiePane {AppVersion.Format(release.Version)} is er";
-        Subline.Text = $"Je hebt nu versie {AppVersion.Format(current)}. Bijwerken duurt even: DonkiePane sluit af, " +
-            "de nieuwe versie wordt geïnstalleerd en start daarna vanzelf. Je panes, taken en instellingen blijven staan.";
-        Notes.Text = PlainNotes(release.Notes) is { Length: > 0 } notes ? notes : "Bij deze versie staan geen opmerkingen.";
+        Headline.Text = Loc.F("DonkiePane {0} is er", AppVersion.Format(release.Version));
+        Subline.Text = Loc.F("Je hebt nu versie {0}. Bijwerken duurt even: DonkiePane sluit af, de nieuwe versie wordt geïnstalleerd en start daarna vanzelf. Je panes, taken en instellingen blijven staan.", AppVersion.Format(current));
+        Notes.Text = PlainNotes(release.Notes) is { Length: > 0 } notes ? notes : Loc.T("Bij deze versie staan geen opmerkingen.");
 
         if (release.Installer?.Sha256 is null)
         {
             InstallButton.IsEnabled = false;
             ShowStatus(release.Installer is null
-                ? "Bij deze versie staat geen installer. Kijk op de releasepagina."
-                : "Bij deze installer staat geen controlegetal, dus DonkiePane installeert hem niet zelf. Download hem via de releasepagina.");
+                ? Loc.T("Bij deze versie staat geen installer. Kijk op de releasepagina.")
+                : Loc.T("Bij deze installer staat geen controlegetal, dus DonkiePane installeert hem niet zelf. Download hem via de releasepagina."));
         }
     }
 
@@ -44,7 +43,7 @@ public partial class UpdateWindow : Window
         InstallButton.IsEnabled = false;
         Progress.Value = 0;
         Progress.Visibility = Visibility.Visible;
-        ShowStatus("Downloaden…");
+        ShowStatus(Loc.T("Downloaden…"));
         _busy = new CancellationTokenSource();
         try
         {
@@ -55,9 +54,9 @@ public partial class UpdateWindow : Window
             });
             var path = await _download(_release, progress, _busy.Token);
             _busy.Token.ThrowIfCancellationRequested(); // intussen op Later geklikt of DonkiePane sluit af: niet starten
-            ShowStatus("Gecontroleerd. De installer start; DonkiePane sluit zo even af.");
+            ShowStatus(Loc.T("Gecontroleerd. De installer start; DonkiePane sluit zo even af."));
             _launch(path);
-            LaterButton.Content = "Sluiten";
+            LaterButton.Content = Loc.T("Sluiten");
         }
         catch (OperationCanceledException)
         {
@@ -66,7 +65,7 @@ public partial class UpdateWindow : Window
         catch (Exception ex) when (ex is UpdateException or Win32Exception or System.IO.IOException or UnauthorizedAccessException)
         {
             Progress.Visibility = Visibility.Collapsed;
-            ShowStatus(ex is Win32Exception ? "De installer kon niet starten: " + ex.Message : ex.Message);
+            ShowStatus(ex is Win32Exception ? Loc.F("De installer kon niet starten: {0}", ex.Message) : ex.Message);
             InstallButton.IsEnabled = _release.Installer?.Sha256 is not null;
         }
         finally
@@ -84,7 +83,7 @@ public partial class UpdateWindow : Window
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            ShowStatus("Kon de browser niet openen. De pagina is " + _release.Page.AbsoluteUri);
+            ShowStatus(Loc.F("Kon de browser niet openen. De pagina is {0}", _release.Page.AbsoluteUri));
         }
     }
 

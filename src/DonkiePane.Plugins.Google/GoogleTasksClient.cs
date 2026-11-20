@@ -55,7 +55,7 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
         var body = new JsonObject { ["title"] = title };
         if (due is { } d) body["due"] = DueString(d);
         var json = await SendAsync(HttpMethod.Post, $"lists/{Uri.EscapeDataString(listId)}/tasks", body, ct);
-        return Parse<GoogleTaskDto>(json) is { Id.Length: > 0 } task ? task : throw new TaskProviderException("Google Taken gaf een leeg antwoord.");
+        return Parse<GoogleTaskDto>(json) is { Id.Length: > 0 } task ? task : throw new TaskProviderException(Loc.T("Google Taken gaf een leeg antwoord."));
     }
 
     public Task PatchAsync(string listId, string taskId, JsonObject patch, CancellationToken ct = default) =>
@@ -128,7 +128,7 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
             }
             catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested))
             {
-                throw new TaskProviderException("Geen verbinding met Google Taken.", ex);
+                throw new TaskProviderException(Loc.T("Geen verbinding met Google Taken."), ex);
             }
         }
     }
@@ -148,10 +148,10 @@ public sealed class GoogleTasksClient(HttpClient http, Func<bool, CancellationTo
 
         return status switch
         {
-            HttpStatusCode.Forbidden => "Google Taken weigert de toegang (403). Is de koppeling door de beheerder toegestaan? " + detail,
-            HttpStatusCode.NotFound => "Deze taak of lijst bestaat niet meer bij Google Taken.",
-            HttpStatusCode.TooManyRequests => "Google Taken krijgt te veel verzoeken; probeer het zo opnieuw.",
-            _ => $"Google Taken gaf een fout ({(int)status}). {detail}".Trim(),
+            HttpStatusCode.Forbidden => Loc.F("Google Taken weigert de toegang (403). Is de koppeling door de beheerder toegestaan? {0}", detail).Trim(),
+            HttpStatusCode.NotFound => Loc.T("Deze taak of lijst bestaat niet meer bij Google Taken."),
+            HttpStatusCode.TooManyRequests => Loc.T("Google Taken krijgt te veel verzoeken; probeer het zo opnieuw."),
+            _ => Loc.F("Google Taken gaf een fout ({0}). {1}", (int)status, detail).Trim(),
         };
     }
 

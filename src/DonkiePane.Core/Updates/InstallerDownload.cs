@@ -22,11 +22,11 @@ public static class InstallerDownload
         IProgress<double>? progress = null, CancellationToken ct = default)
     {
         if (asset.Sha256 is null)
-            throw new UpdateException("Bij deze versie staat geen controlegetal, dus DonkiePane installeert hem niet zelf. Download hem via de releasepagina.");
+            throw new UpdateException(Loc.T("Bij deze versie staat geen controlegetal, dus DonkiePane installeert hem niet zelf. Download hem via de releasepagina."));
         if (asset.Download.Scheme != Uri.UriSchemeHttps || !asset.Download.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase))
-            throw new UpdateException("De installer staat niet op GitHub, dus DonkiePane downloadt hem niet.");
+            throw new UpdateException(Loc.T("De installer staat niet op GitHub, dus DonkiePane downloadt hem niet."));
         if (!ReleaseFeed.IsInstallerName(asset.Name))
-            throw new UpdateException("De installer heeft een onverwachte naam, dus DonkiePane downloadt hem niet.");
+            throw new UpdateException(Loc.T("De installer heeft een onverwachte naam, dus DonkiePane downloadt hem niet."));
 
         Directory.CreateDirectory(folder);
         RemoveEarlierDownloads(folder);
@@ -44,7 +44,7 @@ public static class InstallerDownload
             response.EnsureSuccessStatusCode();
             var length = response.Content.Headers.ContentLength;
             if (length > MaxInstallerBytes || (length is { } announced && asset.Size > 0 && announced != asset.Size))
-                throw new UpdateException("De installer heeft een andere grootte dan GitHub opgeeft, dus DonkiePane installeert hem niet.");
+                throw new UpdateException(Loc.T("De installer heeft een andere grootte dan GitHub opgeeft, dus DonkiePane installeert hem niet."));
             var limit = asset.Size > 0 ? asset.Size : MaxInstallerBytes;
             var total = length ?? (asset.Size > 0 ? asset.Size : (long?)null);
 
@@ -59,7 +59,7 @@ public static class InstallerDownload
                 {
                     received += read;
                     if (received > limit) // nooit meer op schijf zetten dan er hoort te komen
-                        throw new UpdateException("De installer is groter dan GitHub opgeeft, dus DonkiePane installeert hem niet.");
+                        throw new UpdateException(Loc.T("De installer is groter dan GitHub opgeeft, dus DonkiePane installeert hem niet."));
                     hash.AppendData(buffer, 0, read);
                     await file.WriteAsync(buffer.AsMemory(0, read), ct);
                     if (total is > 0) progress?.Report(Math.Min(1.0, (double)received / total.Value));
@@ -68,7 +68,7 @@ public static class InstallerDownload
 
             var actual = Convert.ToHexStringLower(hash.GetHashAndReset());
             if (actual != asset.Sha256)
-                throw new UpdateException("De gedownloade installer klopt niet met het controlegetal en is weggegooid. Probeer het later opnieuw.");
+                throw new UpdateException(Loc.T("De gedownloade installer klopt niet met het controlegetal en is weggegooid. Probeer het later opnieuw."));
 
             File.Move(partial, target, overwrite: true);
             finished = true;

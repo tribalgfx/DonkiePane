@@ -15,22 +15,21 @@ public sealed class GoogleSourcePlugin : ITaskSourcePlugin
 
     public string TypeId => "google-tasks";
 
-    public string DisplayName => "Google Taken";
+    public string DisplayName => Loc.T("Google Taken");
 
     public string Description =>
-        "Je taken uit Google Taken. Je maakt zelf een Google Cloud-project en een OAuth-client (type Desktop app) en vult hier het client-ID en het secret in. " +
-        "Je wachtwoord vul je alleen bij Google zelf in, in je browser. Werk je met een Workspace-account, dan kan de beheerder de koppeling blokkeren.";
+        Loc.T("Je taken uit Google Taken. Je maakt zelf een Google Cloud-project en een OAuth-client (type Desktop app) en vult hier het client-ID en het secret in. Je wachtwoord vul je alleen bij Google zelf in, in je browser. Werk je met een Workspace-account, dan kan de beheerder de koppeling blokkeren.");
 
     public IReadOnlyList<SettingField> Fields { get; } =
     [
-        new(ClientIdKey, "Client-ID", SettingKind.Text, Required: true, Help: "Eindigt op .apps.googleusercontent.com"),
-        new(ClientSecretKey, "Client-secret", SettingKind.Secret, Required: false, Help: "Voor een desktop-app is dit soms niet nodig."),
+        new(ClientIdKey, Loc.T("Client-ID"), SettingKind.Text, Required: true, Help: Loc.T("Eindigt op .apps.googleusercontent.com")),
+        new(ClientSecretKey, Loc.T("Client-secret"), SettingKind.Secret, Required: false, Help: Loc.T("Voor een desktop-app is dit soms niet nodig.")),
     ];
 
     public IReadOnlyList<PluginAction> Actions { get; } =
     [
-        new("signin", "Inloggen bij Google"),
-        new("signout", "Uitloggen"),
+        new("signin", Loc.T("Inloggen bij Google")),
+        new("signout", Loc.T("Uitloggen")),
     ];
 
     public ITaskSource Create(SourceContext context) => new GoogleTaskSource(context);
@@ -72,12 +71,14 @@ internal sealed class GoogleTaskSource : ITaskSource
 
     public async Task<SourceCheck> TestAsync(CancellationToken ct = default)
     {
-        if (ReadConfig() is null) return new SourceCheck(false, "Vul eerst het client-ID in.");
-        if (!_auth.IsSignedIn) return new SourceCheck(false, "Niet ingelogd bij Google. Kies 'Inloggen bij Google'.");
+        if (ReadConfig() is null) return new SourceCheck(false, Loc.T("Vul eerst het client-ID in."));
+        if (!_auth.IsSignedIn) return new SourceCheck(false, Loc.T("Niet ingelogd bij Google. Kies 'Inloggen bij Google'."));
         try
         {
             var lists = await _client.ListListsAsync(ct);
-            return new SourceCheck(true, $"Verbonden met Google Taken ({lists.Count} lijst{(lists.Count == 1 ? "" : "en")}).");
+            return new SourceCheck(true, lists.Count == 1
+                ? Loc.T("Verbonden met Google Taken (1 lijst).")
+                : Loc.F("Verbonden met Google Taken ({0} lijsten).", lists.Count));
         }
         catch (TaskProviderException ex)
         {
@@ -91,12 +92,12 @@ internal sealed class GoogleTaskSource : ITaskSource
         {
             case "signin":
                 await _auth.SignInAsync(_context.OpenBrowser, ct);
-                return "Ingelogd bij Google.";
+                return Loc.T("Ingelogd bij Google.");
             case "signout":
                 await _auth.SignOutAsync(ct);
-                return "Uitgelogd.";
+                return Loc.T("Uitgelogd.");
             default:
-                throw new TaskProviderException($"Onbekende actie: {actionId}");
+                throw new TaskProviderException(Loc.F("Onbekende actie: {0}", actionId));
         }
     }
 

@@ -113,7 +113,7 @@ public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time 
     }
 
     public Task MoveAsync(string listId, string taskId, int newIndex, CancellationToken ct = default) =>
-        throw new TaskProviderException("Deze bron ondersteunt het verplaatsen van taken niet.");
+        throw new TaskProviderException(Loc.T("Deze bron ondersteunt het verplaatsen van taken niet."));
 
     public async Task DeleteAsync(string listId, string taskId, CancellationToken ct = default)
     {
@@ -282,9 +282,9 @@ public sealed class RestTaskProvider(RestTasksClient client, TimeProvider? time 
     private static string ValidText(string title)
     {
         var text = title.Trim();
-        if (text.Length == 0) throw new TaskProviderException("Een taak heeft een tekst nodig.");
+        if (text.Length == 0) throw new TaskProviderException(Loc.T("Een taak heeft een tekst nodig."));
         if (text.Length > RestTasksClient.MaxTextLength)
-            throw new TaskProviderException($"De tekst is te lang voor deze bron (maximaal {RestTasksClient.MaxTextLength} tekens, nu {text.Length}).");
+            throw new TaskProviderException(Loc.F("De tekst is te lang voor deze bron (maximaal {0} tekens, nu {1}).", RestTasksClient.MaxTextLength, text.Length));
         return text;
     }
 

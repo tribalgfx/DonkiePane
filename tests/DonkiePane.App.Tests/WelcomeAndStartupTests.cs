@@ -39,6 +39,15 @@ public sealed class WelcomeAndStartupTests
         Assert.True(options.Quit);
     }
 
+    [Theory]
+    [InlineData(new[] { "--restart-after", "1234" }, 1234)] // opnieuw starten (andere taal): eerst wachten op dit proces
+    [InlineData(new[] { "--restart-after" }, null)]          // zonder nummer: niets
+    [InlineData(new[] { "--restart-after", "nee" }, null)]
+    [InlineData(new[] { "--restart-after", "-5" }, null)]
+    [InlineData(new string[0], null)]
+    public void Restarting_waits_for_the_previous_process(string[] args, int? expected) =>
+        Assert.Equal(expected, StartupOptions.Parse(args).RestartAfter);
+
     private static void OnStaThread(Action action)
     {
         Exception? error = null;

@@ -4,6 +4,27 @@ public partial class App
 {
     private SettingsWindow? _settingsWindow;
 
+    /// <summary>
+    /// DonkiePane opnieuw starten (bijv. voor een andere taal). Het nieuwe proces wacht tot dit proces weg is: er mag er
+    /// maar één tegelijk draaien.
+    /// </summary>
+    private void Restart()
+    {
+        if (Environment.ProcessPath is not { } exe) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, $"--restart-after {Environment.ProcessId}")
+            {
+                UseShellExecute = false,
+            })?.Dispose();
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return; // dan blijft deze gewoon draaien
+        }
+        Shutdown();
+    }
+
     private void ShowSettings()
     {
         // Eén instellingenvenster tegelijk: een tweede keer openen haalt het naar voren.
@@ -13,7 +34,7 @@ public partial class App
             return;
         }
 
-        _settingsWindow = new SettingsWindow(_layout, SaveLayout, BringAllPanesToPrimaryScreen, _sources, _updates, ShowUpdateWindow);
+        _settingsWindow = new SettingsWindow(_layout, SaveLayout, BringAllPanesToPrimaryScreen, _sources, _updates, ShowUpdateWindow, Restart);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
         _settingsWindow.Activate();

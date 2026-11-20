@@ -44,6 +44,8 @@ public partial class App : Application
         // Maar één DonkiePane tegelijk: twee zouden elkaars panes en de
         // Windows-iconen door elkaar halen.
         var options = StartupOptions.Parse(e.Args);
+        Loc.Use(Loc.Resolve(null)); // tot de indeling gelezen is: de taal van Windows
+        if (options.RestartAfter is { } previous) WaitForExit(previous);
         _singleInstance = new Mutex(initiallyOwned: true, @"Local\DonkiePane.SingleInstance", out var isFirst);
         if (!isFirst || options.Quit)
         {
@@ -69,12 +71,13 @@ public partial class App : Application
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Leeg beginnen zou de indeling bij de eerste keer opslaan overschrijven. Niets veranderd aan het bureaublad.
-            MessageBox.Show($"DonkiePane kan je indeling niet lezen en start daarom niet.\n\n{ex.Message}\n\n" +
-                "Probeer het over een momentje opnieuw.", "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(Loc.F("DonkiePane kan je indeling niet lezen en start daarom niet.\n\n{0}\n\nProbeer het over een momentje opnieuw.", ex.Message),
+                "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
             _isDuplicate = true; // niets opgezet, dus bij afsluiten ook niets terugdraaien
             Shutdown();
             return;
         }
+        Loc.Use(Loc.Resolve(_layout.Language)); // vóór er panes, menu's of bronnen zijn
         if (firstRun) _layout.WelcomeShown = false; // oude layouts hebben deze waarde niet: die gebruikers kennen DonkiePane al
         LayoutEditor.Repair(_layout); // een kapot of met de hand aangepast bestand mag het starten niet laten mislukken
         _sources = CreateSourceHost();
@@ -123,6 +126,20 @@ public partial class App : Application
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
+    }
+
+    /// <summary>Opnieuw starten: wachten tot de vorige DonkiePane weg is (hooguit 20 seconden).</summary>
+    private static void WaitForExit(int processId)
+    {
+        try
+        {
+            using var previous = System.Diagnostics.Process.GetProcessById(processId);
+            previous.WaitForExit(20_000);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Al weg.
+        }
     }
 
     /// <summary>Zet "starten met Windows" van een oudere versie recht (zie <see cref="AutoStart.RepairApproval"/>).</summary>
@@ -289,7 +306,7 @@ public partial class App : Application
     private void CreatePaneFromDrop(int x, int y)
     {
         if (IconsView.ActiveDrag is not { } drag) return;
-        var pane = new Pane { Title = "Nieuw pane", Width = DesktopDropWindow.GhostSize.Width, Height = DesktopDropWindow.GhostSize.Height };
+        var pane = new Pane { Title = Loc.T("Nieuw pane"), Width = DesktopDropWindow.GhostSize.Width, Height = DesktopDropWindow.GhostSize.Height };
         _layout.Panes.Add(pane);
         LayoutEditor.MoveItems(_layout, drag.Ids, pane.Id);
         ShowPane(pane);
@@ -319,7 +336,7 @@ public partial class App : Application
                     if (count > 0)
                     {
                         var answer = MessageBox.Show(
-                            $"Pane \"{pane.Title}\" verwijderen? De {count} taken erin worden ook verwijderd.",
+                            Loc.F("Pane \"{0}\" verwijderen? De {1} taken erin worden ook verwijderd.", pane.Title, count),
                             "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
                         if (answer != MessageBoxResult.Yes) return;
                     }
@@ -329,7 +346,7 @@ public partial class App : Application
             catch (Exception ex) when (TaskErrors.IsHandled(ex))
             {
                 // Aangeroepen vanuit een async void-handler: een fout hier mag de app niet laten crashen.
-                MessageBox.Show($"Pane \"{pane.Title}\" is niet verwijderd. {TaskErrors.Message(ex)}",
+                MessageBox.Show(Loc.F("Pane \"{0}\" is niet verwijderd. {1}", pane.Title, TaskErrors.Message(ex)),
                     "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -397,8 +414,8 @@ public partial class App : Application
             if (_saveFailureShown || _trayIcon is null) return;
             _saveFailureShown = true;
             _balloonIsUpdate = false;
-            _trayIcon.ShowBalloonTip(10_000, "DonkiePane kon je indeling niet opslaan",
-                $"{ex.Message} DonkiePane probeert het bij de volgende wijziging opnieuw.", Forms.ToolTipIcon.Warning);
+            _trayIcon.ShowBalloonTip(10_000, Loc.T("DonkiePane kon je indeling niet opslaan"),
+                Loc.F("{0} DonkiePane probeert het bij de volgende wijziging opnieuw.", ex.Message), Forms.ToolTipIcon.Warning);
         }
     }
 
@@ -461,17 +478,17 @@ public partial class App : Application
     {
         var menu = new Forms.ContextMenuStrip();
         AddUpdateMenuItem(menu);
-        menu.Items.Add("Nieuw iconenpane", null, (_, _) => AddPane(new Pane()));
-        var newTasks = new Forms.ToolStripMenuItem("Nieuw takenpane");
+        menu.Items.Add(Loc.T("Nieuw iconenpane"), null, (_, _) => AddPane(new Pane()));
+        var newTasks = new Forms.ToolStripMenuItem(Loc.T("Nieuw takenpane"));
         newTasks.DropDownOpening += (_, _) => FillNewTasksMenu(newTasks);
         FillNewTasksMenu(newTasks);
         menu.Items.Add(newTasks);
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Panes verbergen of tonen", null, (_, _) => TogglePanesHidden());
+        menu.Items.Add(Loc.T("Panes verbergen of tonen"), null, (_, _) => TogglePanesHidden());
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Instellingen…", null, (_, _) => ShowSettings());
+        menu.Items.Add(Loc.T("Instellingen…"), null, (_, _) => ShowSettings());
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Afsluiten", null, (_, _) => Shutdown());
+        menu.Items.Add(Loc.T("Afsluiten"), null, (_, _) => Shutdown());
 
         var icon = new Forms.NotifyIcon
         {

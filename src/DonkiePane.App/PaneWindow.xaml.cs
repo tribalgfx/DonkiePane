@@ -93,7 +93,7 @@ public partial class PaneWindow : Window
         var index = 0;
         foreach (var theme in PaneThemes.All)
         {
-            var item = new MenuItem { Header = theme.Name, IsCheckable = true, IsChecked = !hasCustom && theme.Id == current, Tag = theme.Id };
+            var item = new MenuItem { Header = Loc.T(theme.Name), IsCheckable = true, IsChecked = !hasCustom && theme.Id == current, Tag = theme.Id };
             item.Click += Theme_Click;
             ThemeMenu.Items.Insert(index++, item);
         }
@@ -104,7 +104,7 @@ public partial class PaneWindow : Window
         {
             var item = new MenuItem
             {
-                Header = percent == 0 ? "0% (massief)" : $"{percent}%",
+                Header = percent == 0 ? Loc.T("0% (massief)") : $"{percent}%",
                 IsCheckable = true,
                 IsChecked = Math.Abs(percent - currentPercent) < 5,
                 Tag = percent,
@@ -321,7 +321,7 @@ public partial class PaneWindow : Window
         ResizeMode = Pane.IsRolledUp ? ResizeMode.NoResize : ResizeMode.CanResize;
         Height = Pane.IsRolledUp ? TitleBarHeight : Pane.Height;
         RollButton.Content = Pane.IsRolledUp ? "" : ""; // pijltje omlaag/omhoog
-        RollButton.ToolTip = Pane.IsRolledUp ? "Uitrollen" : "Oprollen";
+        RollButton.ToolTip = Pane.IsRolledUp ? Loc.T("Uitrollen") : Loc.T("Oprollen");
     }
 
     private void Roll_Click(object sender, RoutedEventArgs e) => ToggleRolledUp();
