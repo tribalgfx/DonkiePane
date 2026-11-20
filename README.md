@@ -4,60 +4,62 @@
 
 # DonkiePane
 
-Vakken (panes) op je Windows-bureaublad voor je snelkoppelingen en je taken. Met een rustig uiterlijk en een knipoog naar de ruitjes van een theedoek.
+<p align="center"><b>English</b> · <a href="README.nl.md">Nederlands</a></p>
 
-## Wat het doet
+Panes on your Windows desktop for your shortcuts and your tasks. With a calm look and a nod to the checks of a tea towel.
 
-- **Panes op het bureaublad.** Ze staan achter je vensters en blijven staan bij Win+D.
-- **Je bureaubladiconen in panes.** Wat je op het bureaublad met een bestand of snelkoppeling doet, kan in een pane ook: openen, selecteren (Ctrl, Shift, een kader trekken), slepen naar Verkenner, een app, een map of de Prullenbak, bestanden in een pane slepen, Delete, F2, Ctrl+C/X/V, Ctrl+Shift+N, Alt+Enter en het menu van Verkenner (rechts klikken op een lege plek geeft Plakken en Nieuw). Laat je iconen los op een lege plek van het bureaublad, dan komt daar een nieuw pane mee. Windows voert het uit, dus meldingen en Prullenbak zijn zoals altijd; uit zichzelf verplaatst of verwijdert DonkiePane niets. Nieuwe bestanden komen in de Inbox-pane, of in het pane waarin je ze plakte of neerzette.
-- **Takenpanes.** Taken toevoegen, afvinken, ordenen en met een ster markeren. Lokaal, of gesynchroniseerd met een bron die je zelf toevoegt:
-  - Google Taken
-  - Home Assistant (to-do lijsten)
-  - een eigen dienst via het protocol Tasks REST v1
+## What it does
 
-  Wat je offline doet wordt bewaard en later verstuurd. Zie [docs/Bronnen.md](docs/Bronnen.md).
-- **Rustig en aanpasbaar.** Effen thema's, een eigen kleur en transparantie per pane, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
-- **Dubbelklik op een leeg stuk bureaublad** verbergt alle panes; nog een keer haalt ze terug.
-- **Nederlands en Engels.** DonkiePane volgt de taal van Windows; kiezen kan in Instellingen → Taal. Vertalingen staan in `src/DonkiePane.Core/Localization`.
-- **Meerdere schermen.** Valt een scherm weg, dan komen de panes naar een ander scherm en gaan ze terug zodra het scherm terugkomt.
+- **Panes on the desktop.** They sit behind your windows and stay put when you press Win+D.
+- **Your desktop icons in panes.** Whatever you do with a file or shortcut on the desktop, you can do in a pane too: open, select (Ctrl, Shift, drag a selection box), drag to File Explorer, an app, a folder or the Recycle Bin, drag files into a pane, Delete, F2, Ctrl+C/X/V, Ctrl+Shift+N, Alt+Enter and the File Explorer menu (right-clicking an empty spot gives Paste and New). Drop icons on an empty spot of the desktop and a new pane appears there with them. Windows carries it all out, so confirmations and the Recycle Bin work as always; DonkiePane never moves or deletes anything by itself. New files land in the Inbox pane, or in the pane you pasted or dropped them in.
+- **Task panes.** Add, check off, reorder and star tasks. Local, or synced with a source you add yourself:
+  - Google Tasks
+  - Home Assistant (to-do lists)
+  - a service of your own that speaks the Tasks REST v1 protocol
 
-## Installeren
+  What you do offline is kept and sent later. See [docs/Sources.md](docs/Sources.md).
+- **Calm and customizable.** Plain themes, your own color and transparency per pane, a grid to snap panes to, and an optional tea-towel check pattern.
+- **Double-click an empty spot on the desktop** to hide all panes; double-click again to bring them back.
+- **English and Dutch.** DonkiePane follows the language of Windows; you can choose in Settings → Language. Translations live in `src/DonkiePane.Core/Localization`.
+- **Multiple screens.** If a screen disappears, its panes move to another screen and go back as soon as the screen returns.
 
-Download `DonkiePane-Setup-<versie>.exe` en start hem. Er is geen .NET en geen beheerder nodig; het programma komt in `%LOCALAPPDATA%\Programs\DonkiePane`. Windows kan een SmartScreen-waarschuwing tonen omdat de installer niet is ondertekend: kies **Meer info** en dan **Toch uitvoeren**.
+## Installing
 
-Bij de eerste start legt een welkomstscherm uit wat er met je bureaublad gebeurt en kun je kiezen of de Windows-iconen verborgen worden. DonkiePane meldt zelf als er een nieuwe versie is en werkt op jouw klik bij (of draai een nieuwe installer eroverheen); verwijderen gaat via Apps en functies. Zie [docs/Installeren.md](docs/Installeren.md).
+Download `DonkiePane-Setup-<version>.exe` from the [releases](https://github.com/tribalgfx/DonkiePane/releases) and run it. No .NET and no administrator rights are needed; the program goes into `%LOCALAPPDATA%\Programs\DonkiePane`. Windows may show a SmartScreen warning because the installer isn't signed: choose **More info** and then **Run anyway**.
 
-## Zelf bouwen
+On first start, a welcome screen explains what happens to your desktop and lets you choose whether to hide the Windows icons. DonkiePane tells you when there is a new version and updates when you click (or run a new installer over it); uninstall through Installed apps. See [docs/Installing.md](docs/Installing.md).
 
-Nodig: Windows 10 of 11. De scripts controleren zelf of de .NET SDK (zie `global.json`) en, voor de installer, Inno Setup aanwezig zijn en installeren wat ontbreekt met winget. Windows kan daarbij om toestemming vragen.
+## Building it yourself
+
+You need Windows 10 or 11. The scripts check whether the .NET SDK (see `global.json`) and, for the installer, Inno Setup are present, and install what's missing with winget. Windows may ask for permission.
 
 ```powershell
-.\scripts\install.ps1            # bouwt en installeert naar %LOCALAPPDATA%\Programs\DonkiePane
-.\scripts\build-installer.ps1    # maakt artifacts\DonkiePane-Setup-<versie>.exe
-dotnet test                      # de tests (de .NET SDK moet dan al aanwezig zijn)
+.\scripts\install.ps1            # builds and installs to %LOCALAPPDATA%\Programs\DonkiePane
+.\scripts\build-installer.ps1    # creates artifacts\DonkiePane-Setup-<version>.exe
+dotnet test                      # the tests (the .NET SDK must already be installed)
 ```
 
-Wie alleen DonkiePane gebruikt, heeft dit niet nodig: de installer bevat alles, ook .NET.
+If you only use DonkiePane, you don't need any of this: the installer contains everything, .NET included.
 
-## Opbouw
+## Structure
 
-| Map | Inhoud |
+| Folder | Contents |
 |---|---|
-| `src/DonkiePane.App` | WPF: panes, tray-icoon, instellingen, thema's |
-| `src/DonkiePane.Core` | Model en logica: panes, items, raster, opslag |
-| `src/DonkiePane.Shell` | Win32: bureaubladlaag, iconen, verborgen iconen, muishaak |
-| `src/DonkiePane.Tasks` | Contract voor takenbronnen, plug-in-lader, lokale opslag, offline wachtrij |
-| `src/DonkiePane.Plugins.*` | De bronnen zelf: Google Taken, REST, Home Assistant |
-| `installer`, `scripts` | Installer en hulpscripts |
-| `tests` | Tests voor Core, Tasks en App |
+| `src/DonkiePane.App` | WPF: panes, tray icon, settings, themes |
+| `src/DonkiePane.Core` | Model and logic: panes, items, grid, storage, translations |
+| `src/DonkiePane.Shell` | Win32 and the Windows shell: desktop layer, icons, drag and drop, menus |
+| `src/DonkiePane.Tasks` | Contract for task sources, plug-in loader, local storage, offline queue |
+| `src/DonkiePane.Plugins.*` | The sources themselves: Google Tasks, REST, Home Assistant |
+| `installer`, `scripts` | Installer and helper scripts |
+| `tests` | Tests for Core, Tasks and App |
 
-Het ontwerp en de keuzes staan in [PLAN.md](PLAN.md).
+The design and the choices behind it are in [PLAN.md](PLAN.md) (in Dutch). Code comments are in Dutch as well; texts shown to users go through `Loc.T("…")` and have an English translation.
 
-## Gegevens en veiligheid
+## Data and security
 
-- Instellingen, panes en taken staan per gebruiker in `%APPDATA%\DonkiePane`. Geheimen (tokens, wachtwoorden van bronnen) staan daar versleuteld met Windows (DPAPI) en nooit in een gewoon bestand of in git.
-- Verbindingen met bronnen gaan alleen over HTTPS (Home Assistant over http alleen na een uitdrukkelijke keuze). Een bron kan met een certificaat-vingerafdruk worden vastgepind.
-- Plug-ins worden alleen geladen uit de map `plugins` naast het programma en uit `%APPDATA%\DonkiePane\plugins`, nooit van internet.
-- De update-controle vraagt alleen de nieuwste release op bij GitHub, zonder gegevens over jou. Een nieuwe versie wordt pas gedownload als je op Nu bijwerken klikt, en alleen geïnstalleerd als het SHA-256-controlegetal van GitHub klopt.
-- Crasht DonkiePane, dan komt de foutmelding in `%APPDATA%\DonkiePane\crash.log`. Dat bestand blijft op je pc; er wordt niets verstuurd.
-- Gaat er iets mis en blijven je Windows-iconen verborgen? Rechtsklik op het bureaublad → **Beeld** → **Bureaubladpictogrammen weergeven**.
+- Settings, panes and tasks are stored per user in `%APPDATA%\DonkiePane`. Secrets (tokens, passwords of sources) are stored there encrypted with Windows (DPAPI), never in a plain file or in git.
+- Connections to sources use HTTPS only (Home Assistant over http only after an explicit choice). A source can be pinned to a certificate fingerprint.
+- Plug-ins are only loaded from the `plugins` folder next to the program and from `%APPDATA%\DonkiePane\plugins`, never from the internet.
+- The update check only asks GitHub for the latest release, without any data about you. A new version is only downloaded when you click Update now, and only installed if GitHub's SHA-256 checksum matches.
+- If DonkiePane crashes, the error goes into `%APPDATA%\DonkiePane\crash.log`. That file stays on your PC; nothing is sent.
+- Something went wrong and your Windows icons stay hidden? Right-click the desktop → **View** → **Show desktop icons**.
