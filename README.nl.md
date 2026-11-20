@@ -63,3 +63,12 @@ Het ontwerp en de keuzes staan in [PLAN.md](PLAN.md).
 - De update-controle vraagt alleen de nieuwste release op bij GitHub, zonder gegevens over jou. Een nieuwe versie wordt pas gedownload als je op Nu bijwerken klikt, en alleen geïnstalleerd als het SHA-256-controlegetal van GitHub klopt.
 - Crasht DonkiePane, dan komt de foutmelding in `%APPDATA%\DonkiePane\crash.log`. Dat bestand blijft op je pc; er wordt niets verstuurd.
 - Gaat er iets mis en blijven je Windows-iconen verborgen? Rechtsklik op het bureaublad → **Beeld** → **Bureaubladpictogrammen weergeven**.
+
+## Licentie
+
+Copyright (C) 2026 tribalgfx
+
+DonkiePane is vrije software onder de [GNU General Public License](LICENSE), versie 3 of (naar keuze) een latere
+versie. Kort gezegd: je mag het gebruiken, aanpassen en delen, ook commercieel, zolang wat je verspreidt open blijft
+onder dezelfde licentie, met de broncode erbij. DonkiePane komt zonder enige garantie. De licentietekst zelf is
+Engels; alleen die geldt.

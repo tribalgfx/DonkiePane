@@ -5,6 +5,7 @@
     <LangVersion>latest</LangVersion>
     <Company>DonkiePane</Company>
     <Product>DonkiePane</Product>
+    <Copyright>Copyright (C) 2026 tribalgfx. GPL-3.0-or-later.</Copyright>
     <Version>0.3.0</Version>
   </PropertyGroup>
 
