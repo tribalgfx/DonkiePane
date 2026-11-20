@@ -63,3 +63,13 @@ The design and the choices behind it are in [PLAN.md](PLAN.md) (in Dutch). Code 
 - The update check only asks GitHub for the latest release, without any data about you. A new version is only downloaded when you click Update now, and only installed if GitHub's SHA-256 checksum matches.
 - If DonkiePane crashes, the error goes into `%APPDATA%\DonkiePane\crash.log`. That file stays on your PC; nothing is sent.
 - Something went wrong and your Windows icons stay hidden? Right-click the desktop → **View** → **Show desktop icons**.
+
+## License
+
+Copyright (C) 2026 tribalgfx
+
+DonkiePane is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version. In short: you may use, change and share it, also commercially, as long as
+whatever you distribute stays open under the same license, with its source code. DonkiePane comes without any
+warranty.

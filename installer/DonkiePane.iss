@@ -16,6 +16,7 @@ AppId={{CC5D6995-47D1-4015-B1E6-D25463DEB7F2}
 AppName=DonkiePane
 AppVersion={#AppVersion}
 AppPublisher=DonkiePane
+AppCopyright=Copyright (C) 2026 tribalgfx. GPL-3.0-or-later.
 DefaultDirName={localappdata}\Programs\DonkiePane
 DefaultGroupName=DonkiePane
 DisableProgramGroupPage=yes
@@ -61,6 +62,8 @@ nl.DeleteData=Wil je ook je panes, taken en instellingen verwijderen?%nDat zijn 
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; De GPL vraagt de licentietekst mee te geven met het programma.
+Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
 [Icons]
 ; Bewust geen snelkoppeling op het bureaublad: die zou als item in je Inbox-pane terechtkomen.
