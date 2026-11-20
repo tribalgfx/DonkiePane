@@ -19,6 +19,12 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
     private readonly Dictionary<string, string> _notices = [];
     private readonly SemaphoreSlim _flushGate = new(1, 1);
 
+    /// <summary>
+    /// Waar binnen <see cref="GetTasksAsync"/> gelezen wordt. Daar is net al verstuurd; een "weer bereikbaar" van dat
+    /// lezen mag dan niet meteen een tweede poging starten (na een geweigerd token zou dat de bron bestoken).
+    /// </summary>
+    private static readonly AsyncLocal<bool> ReadingAfterFlush = new();
+
     // Na Dispose (bijv. de bron is opnieuw gestart) neemt een nieuwe wachtrij hetzelfde bestand over: deze verstuurt
     // en bewaart dan niets meer, anders zou hij een verouderde lijst over die van de nieuwe heen schrijven.
     private readonly CancellationTokenSource _disposed = new();
@@ -56,7 +62,16 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
     public async Task<IReadOnlyList<TaskItem>> GetTasksAsync(string listId, CancellationToken ct = default)
     {
         await FlushAsync(ct); // eerst wat er nog wacht, dan lezen
-        var server = await _inner.GetTasksAsync(listId, ct);
+        IReadOnlyList<TaskItem> server;
+        ReadingAfterFlush.Value = true;
+        try
+        {
+            server = await _inner.GetTasksAsync(listId, ct);
+        }
+        finally
+        {
+            ReadingAfterFlush.Value = false;
+        }
         return Apply(listId, server);
     }
 
@@ -332,7 +347,7 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
         }
         StatusChanged?.Invoke(this, status with { Message = message });
 
-        if (status.IsOnline && status.Message is null && PendingCount > 0)
+        if (status.IsOnline && status.Message is null && PendingCount > 0 && !ReadingAfterFlush.Value)
             _ = Task.Run(() => FlushAsync(_disposed.Token));
     }
 
