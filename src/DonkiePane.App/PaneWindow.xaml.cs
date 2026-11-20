@@ -15,9 +15,14 @@ namespace DonkiePane.App;
 /// </summary>
 public partial class PaneWindow : Window
 {
-    private const double TitleBarHeight = 34;
+    private const double TitleBarHeight = 36; // kop plus de rand eromheen
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
+    private const int WM_NCHITTEST = 0x0084;
+    private const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13, HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
+
+    /// <summary>Hoe dicht bij de rand (in WPF-eenheden) je het pane kunt vergroten.</summary>
+    private const double ResizeBorder = 6;
 
     private Rect _boundsAtMoveStart;
 
@@ -47,6 +52,8 @@ public partial class PaneWindow : Window
         Width = pane.Width;
         ApplyRolledUp();
         ApplyTheme();
+        // De inhoud volgt de afgeronde hoeken (anders steken de titelbalk en iconen bij het scrollen uit de hoek).
+        Chrome.SizeChanged += (_, e) => Chrome.Clip = new RectangleGeometry(new Rect(e.NewSize), 9, 9);
         BuildThemeMenu();
 
         LocationChanged += (_, _) =>
@@ -64,6 +71,13 @@ public partial class PaneWindow : Window
     }
 
     public void SetContent(UIElement content) => Body.Content = content;
+
+    /// <summary>Het aantal iconen, gedempt naast de titel; <c>null</c> = niet tonen (takenpane).</summary>
+    public void SetItemCount(int? count)
+    {
+        CountText.Text = count?.ToString() ?? "";
+        CountText.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     // ---------- Thema, kleur en transparantie ----------
 
@@ -167,9 +181,61 @@ public partial class PaneWindow : Window
             case WM_EXITSIZEMOVE:
                 SnapToGrid();
                 SizeMoveEnded?.Invoke(this, EventArgs.Empty);
+                PaneChanged?.Invoke(this, EventArgs.Empty);
+                break;
+            case WM_NCHITTEST when ResizeMode != ResizeMode.NoResize:
+                var hit = ResizeHitTest(lParam);
+                if (hit != 0)
+                {
+                    handled = true;
+                    return hit;
+                }
                 break;
         }
         return IntPtr.Zero;
+    }
+
+    /// <summary>Vergroten vanaf elke rand en hoek, zoals een gewoon venster (zonder zichtbaar handvat).</summary>
+    private IntPtr ResizeHitTest(IntPtr lParam)
+    {
+        var screen = new Point((short)((long)lParam & 0xFFFF), (short)(((long)lParam >> 16) & 0xFFFF));
+        Point p;
+        try { p = PointFromScreen(screen); }
+        catch (InvalidOperationException) { return IntPtr.Zero; } // nog niet getoond
+        var w = ActualWidth;
+        var h = ActualHeight;
+        if (p.X < 0 || p.Y < 0 || p.X > w || p.Y > h) return IntPtr.Zero;
+
+        var left = p.X < ResizeBorder;
+        var right = p.X > w - ResizeBorder;
+        var top = p.Y < ResizeBorder / 2; // bovenaan zit de titelbalk: daar alleen een smal randje
+        var bottom = p.Y > h - ResizeBorder;
+        var corner = ResizeBorder * 2;
+        var nearLeft = p.X < corner;
+        var nearRight = p.X > w - corner;
+        var nearBottom = p.Y > h - corner;
+
+        return (left, right, top, bottom) switch
+        {
+            _ when (bottom && nearRight) || (right && nearBottom) => HTBOTTOMRIGHT,
+            _ when (bottom && nearLeft) || (left && nearBottom) => HTBOTTOMLEFT,
+            _ when top && nearLeft => HTTOPLEFT,
+            _ when top && nearRight => HTTOPRIGHT,
+            (true, _, _, _) => HTLEFT,
+            (_, true, _, _) => HTRIGHT,
+            (_, _, true, _) => HTTOP,
+            (_, _, _, true) => HTBOTTOM,
+            _ => IntPtr.Zero,
+        };
+    }
+
+    /// <summary>Na het plaatsen door de app (bijv. een nieuw pane waar iconen zijn losgelaten): de hoek op het raster.</summary>
+    public void SnapToGridNow()
+    {
+        var (snap, cell) = GridSettings();
+        if (!snap) return;
+        Left = GridSnap.Position(Left, cell);
+        Top = GridSnap.Position(Top, cell);
     }
 
     /// <summary>
@@ -205,9 +271,7 @@ public partial class PaneWindow : Window
 
         if (e.ClickCount == 2)
         {
-            Pane.IsRolledUp = !Pane.IsRolledUp;
-            ApplyRolledUp();
-            PaneChanged?.Invoke(this, EventArgs.Empty);
+            ToggleRolledUp();
             return;
         }
 
@@ -243,15 +307,49 @@ public partial class PaneWindow : Window
         PaneChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    private void ToggleRolledUp()
+    {
+        Pane.IsRolledUp = !Pane.IsRolledUp;
+        ApplyRolledUp();
+        PaneChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private void ApplyRolledUp()
     {
         Body.Visibility = Pane.IsRolledUp ? Visibility.Collapsed : Visibility.Visible;
-        ResizeMode = Pane.IsRolledUp ? ResizeMode.NoResize : ResizeMode.CanResizeWithGrip;
+        Divider.Visibility = Body.Visibility;
+        ResizeMode = Pane.IsRolledUp ? ResizeMode.NoResize : ResizeMode.CanResize;
         Height = Pane.IsRolledUp ? TitleBarHeight : Pane.Height;
+        RollButton.Content = Pane.IsRolledUp ? "" : ""; // pijltje omlaag/omhoog
+        RollButton.ToolTip = Pane.IsRolledUp ? "Uitrollen" : "Oprollen";
     }
 
-    private void Rename_Click(object sender, RoutedEventArgs e)
+    private void Roll_Click(object sender, RoutedEventArgs e) => ToggleRolledUp();
+
+    /// <summary>De knop met de drie puntjes opent hetzelfde menu als rechts klikken op de titelbalk.</summary>
+    private void Menu_Click(object sender, RoutedEventArgs e)
     {
+        if (TitleBar.ContextMenu is not { } menu) return;
+        menu.PlacementTarget = MenuButton;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.Closed += ResetPlacement;
+        menu.IsOpen = true;
+
+        // Rechts klikken op de titelbalk moet het menu daarna weer bij de muis tonen.
+        void ResetPlacement(object? s, RoutedEventArgs a)
+        {
+            menu.Closed -= ResetPlacement;
+            menu.ClearValue(ContextMenu.PlacementTargetProperty);
+            menu.ClearValue(ContextMenu.PlacementProperty);
+        }
+    }
+
+    private void Rename_Click(object sender, RoutedEventArgs e) => BeginRename();
+
+    /// <summary>De titel bewerken (ook meteen na het maken van een pane door iconen los te laten).</summary>
+    public void BeginRename()
+    {
+        if (IsClosed) return;
         TitleEditor.Text = Pane.Title;
         TitleText.Visibility = Visibility.Collapsed;
         TitleEditor.Visibility = Visibility.Visible;

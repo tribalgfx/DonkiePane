@@ -202,4 +202,60 @@ public sealed class LayoutEditorTests
             Directory.Delete(dir, recursive: true);
         }
     }
+
+    [Fact]
+    public void Sync_puts_new_items_in_the_pane_where_they_were_pasted()
+    {
+        var work = new Pane { Items = ["user/werk.lnk"] };
+        var inbox = new Pane { IsInbox = true };
+        var layout = LayoutWith(work, inbox);
+
+        LayoutEditor.Sync(layout, ["user/werk.lnk", "user/geplakt.txt"], newItemsPane: work.Id);
+
+        Assert.Equal(["user/werk.lnk", "user/geplakt.txt"], work.Items);
+        Assert.Empty(inbox.Items);
+    }
+
+    [Fact]
+    public void Sync_uses_the_inbox_when_the_paste_target_is_gone_or_a_tasks_pane()
+    {
+        var tasks = new Pane { Kind = PaneKind.Tasks };
+        var inbox = new Pane { IsInbox = true };
+        var layout = LayoutWith(tasks, inbox);
+
+        LayoutEditor.Sync(layout, ["user/a.txt"], newItemsPane: tasks.Id);
+        LayoutEditor.Sync(layout, ["user/a.txt", "user/b.txt"], newItemsPane: Guid.NewGuid());
+
+        Assert.Equal(["user/a.txt", "user/b.txt"], inbox.Items);
+    }
+
+    [Theory]
+    [InlineData(-1, new[] { "c", "e", "a", "d" })] // achteraan, in de volgorde van de selectie
+    [InlineData(0, new[] { "a", "d", "c", "e" })]  // vóór c
+    [InlineData(3, new[] { "c", "a", "d", "e" })]  // vóór e (d zelf telt niet als plek)
+    [InlineData(2, new[] { "c", "a", "d", "e" })]  // op d zelf: vóór het eerstvolgende andere item
+    public void MoveItems_keeps_the_selection_together_in_order(int index, string[] expected)
+    {
+        var pane = new Pane { Items = ["a", "c", "d", "e"] };
+        var layout = LayoutWith(pane, new Pane { IsInbox = true });
+
+        Assert.True(LayoutEditor.MoveItems(layout, ["a", "d"], pane.Id, index));
+
+        Assert.Equal(expected, pane.Items);
+    }
+
+    [Fact]
+    public void MoveItems_from_two_panes_into_a_third()
+    {
+        var one = new Pane { Items = ["a", "b"] };
+        var two = new Pane { Items = ["c"] };
+        var target = new Pane { Items = ["x"] };
+        var layout = LayoutWith(one, two, target, new Pane { IsInbox = true });
+
+        LayoutEditor.MoveItems(layout, ["b", "c"], target.Id, 0);
+
+        Assert.Equal(["b", "c", "x"], target.Items);
+        Assert.Equal(["a"], one.Items);
+        Assert.Empty(two.Items);
+    }
 }

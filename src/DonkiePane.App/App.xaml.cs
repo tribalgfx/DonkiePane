@@ -28,6 +28,12 @@ public partial class App : Application
     private ShellRestartWatcher? _shellWatcher;
     private RecycleBinWatcher? _recycleBinWatcher;
     private GridOverlayWindow? _gridOverlay;
+    private readonly List<DesktopDropWindow> _dropWindows = [];
+
+    // Het pane waar iets in geplakt, neergezet of via Nieuw gemaakt is: nieuwe bureaubladitems gaan daarheen.
+    private Guid? _arrivalPane;
+    private DateTime _arrivalUntil;
+    private static readonly TimeSpan ArrivalWindow = TimeSpan.FromSeconds(60);
     private Mutex? _singleInstance;
     private bool _isDuplicate;
 
@@ -158,7 +164,8 @@ public partial class App : Application
         }
 
         // Een map die even weg is (netwerk, OneDrive) wist de indeling niet: die items blijven staan.
-        LayoutEditor.Sync(_layout, items, unavailable);
+        var arrival = _arrivalPane is not null && DateTime.UtcNow < _arrivalUntil ? _arrivalPane : null;
+        LayoutEditor.Sync(_layout, items, unavailable, arrival);
         _desktop.StartWatching(); // na een fout van de watcher: opnieuw volgen
         SaveLayout();
         RefreshItems();
@@ -167,7 +174,11 @@ public partial class App : Application
     private void RefreshItems()
     {
         foreach (var (pane, view) in _iconViews)
-            view.SetItems(pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
+        {
+            var items = pane.Items.Select(GetItemView).OfType<ItemView>().ToList();
+            view.SetItems(items);
+            _windows.FirstOrDefault(w => w.Pane == pane && !w.IsClosed)?.SetItemCount(items.Count);
+        }
     }
 
     /// <summary>De Prullenbak is veranderd: icoon (vol/leeg) en naam van de systeemiconen opnieuw ophalen.</summary>
@@ -230,18 +241,66 @@ public partial class App : Application
         else
         {
             var view = new IconsView();
-            view.ItemDropped += (_, drop) =>
+            view.ItemsDropped += (_, drop) =>
             {
-                if (!LayoutEditor.MoveItem(_layout, drop.ItemId, pane.Id, drop.Index)) return;
+                if (!LayoutEditor.MoveItems(_layout, drop.ItemIds, pane.Id, drop.Index)) return;
                 SaveLayout();
                 RefreshItems();
             };
+            view.ArrivalExpected += (_, _) =>
+            {
+                _arrivalPane = pane.Id;
+                _arrivalUntil = DateTime.UtcNow + ArrivalWindow;
+            };
+            view.DragStarted += (_, _) => ShowDesktopDropWindows();
+            view.DragFinished += (_, _) => HideDesktopDropWindows();
             _iconViews[pane] = view;
             window.SetContent(view);
         }
 
         _windows.Add(window);
         window.Show();
+    }
+
+    // ---------- Iconen op een lege plek van het bureaublad loslaten: nieuw pane ----------
+
+    private void ShowDesktopDropWindows()
+    {
+        var screens = Forms.Screen.AllScreens;
+        while (_dropWindows.Count < screens.Length)
+        {
+            var window = new DesktopDropWindow();
+            window.Dropped += (_, corner) => CreatePaneFromDrop(corner.X, corner.Y);
+            _dropWindows.Add(window);
+        }
+        for (var i = 0; i < _dropWindows.Count; i++)
+        {
+            if (i < screens.Length) _dropWindows[i].ShowOn(screens[i]);
+            else _dropWindows[i].HideNow();
+        }
+    }
+
+    private void HideDesktopDropWindows()
+    {
+        foreach (var window in _dropWindows) window.HideNow();
+    }
+
+    /// <summary>Een nieuw pane op de plek waar de iconen zijn losgelaten (hoek in schermpixels), met die iconen erin.</summary>
+    private void CreatePaneFromDrop(int x, int y)
+    {
+        if (IconsView.ActiveDrag is not { } drag) return;
+        var pane = new Pane { Title = "Nieuw pane", Width = DesktopDropWindow.GhostSize.Width, Height = DesktopDropWindow.GhostSize.Height };
+        _layout.Panes.Add(pane);
+        LayoutEditor.MoveItems(_layout, drag.Ids, pane.Id);
+        ShowPane(pane);
+        var window = _windows[^1];
+        if (DesktopLayer.GetBounds(window) is { } bounds) DesktopLayer.SetBounds(window, x, y, bounds.Width, bounds.Height);
+        window.SnapToGridNow();
+        pane.Monitor = MonitorOf(window) ?? pane.Monitor;
+        RefreshItems();
+        SaveLayout();
+        // Na het slepen meteen een naam laten typen.
+        Dispatcher.InvokeAsync(window.BeginRename, DispatcherPriority.ApplicationIdle);
     }
 
     private async Task DeletePaneAsync(PaneWindow window)
@@ -302,6 +361,8 @@ public partial class App : Application
             _iconViews.Clear();
             _gridOverlay?.Close(); // hing aan het oude bureaublad
             _gridOverlay = null;
+            foreach (var dropWindow in _dropWindows) dropWindow.Close(); // idem
+            _dropWindows.Clear();
             foreach (var pane in _layout.Panes)
                 ShowPane(pane);
             StartRecycleBinWatcher(); // de aanmelding bij de oude Verkenner geldt niet meer

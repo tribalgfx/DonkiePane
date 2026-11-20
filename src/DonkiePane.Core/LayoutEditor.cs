@@ -83,8 +83,13 @@ public static class LayoutEditor
     /// Bureaubladmappen die nu niet te lezen zijn (bijv. een netwerk- of OneDrive-map die nog niet verbonden is).
     /// Hun items blijven staan waar ze staan: een map die even weg is, mag de indeling niet wissen.
     /// </param>
+    /// <param name="newItemsPane">
+    /// Waar nieuwe items heen gaan in plaats van de Inbox, bijv. het pane waarin je net iets hebt geplakt of
+    /// neergezet. Geen (bestaand) iconenpane = de Inbox.
+    /// </param>
     /// <returns><c>true</c> als er iets veranderd is.</returns>
-    public static bool Sync(Layout layout, IEnumerable<string> currentItems, IReadOnlyCollection<string>? unavailableLocations = null)
+    public static bool Sync(Layout layout, IEnumerable<string> currentItems, IReadOnlyCollection<string>? unavailableLocations = null,
+        Guid? newItemsPane = null)
     {
         var current = new HashSet<string>(currentItems, StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -102,10 +107,11 @@ public static class LayoutEditor
             changed |= removed > 0;
         }
 
+        var target = layout.Panes.FirstOrDefault(p => p.Id == newItemsPane && p.Kind == PaneKind.Icons) ?? inbox;
         foreach (var id in current.Order(StringComparer.OrdinalIgnoreCase))
         {
             if (seen.Contains(id)) continue;
-            inbox.Items.Add(id);
+            target.Items.Add(id);
             changed = true;
         }
 
@@ -146,6 +152,29 @@ public static class LayoutEditor
         if (index < 0 || index > target.Items.Count) index = target.Items.Count;
         target.Items.Insert(index, itemId);
         return true;
+    }
+
+    /// <summary>
+    /// Verplaatst meerdere items, in deze volgorde en achter elkaar, naar <paramref name="targetPaneId"/>: vóór het
+    /// item dat nu op <paramref name="index"/> staat (of achteraan bij -1 of een te grote index).
+    /// </summary>
+    public static bool MoveItems(Layout layout, IReadOnlyList<string> itemIds, Guid targetPaneId, int index = -1)
+    {
+        var target = layout.Panes.FirstOrDefault(p => p.Id == targetPaneId);
+        if (target is null || target.Kind != PaneKind.Icons) return false;
+
+        // Het item waar ze vóór moeten komen; zelf een van de verplaatste items telt niet (dan het eerstvolgende andere).
+        bool Moving(string id) => itemIds.Contains(id, StringComparer.OrdinalIgnoreCase);
+        var anchor = index >= 0 ? target.Items.Skip(index).FirstOrDefault(id => !Moving(id)) : null;
+
+        var moved = false;
+        foreach (var id in itemIds)
+        {
+            // Telkens vlak vóór het anker: zo blijft de volgorde van de verplaatste items behouden.
+            var position = anchor is null ? -1 : target.Items.FindIndex(i => string.Equals(i, anchor, StringComparison.OrdinalIgnoreCase));
+            moved |= MoveItem(layout, id, targetPaneId, position);
+        }
+        return moved;
     }
 
     /// <summary>

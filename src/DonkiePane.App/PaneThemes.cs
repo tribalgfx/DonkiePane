@@ -91,7 +91,39 @@ public static class PaneThemes
         resources["PaneTitleText"] = Solid(look.TitleText, 1);
         resources["PaneCheck"] = Solid(look.Check, 1);
         resources["PaneAccent"] = Solid(look.Accent, 1);
-        resources["PaneBorder"] = Solid("#FFFFFF", 0x55 / 255.0);
+        resources["PaneBorder"] = EdgeLight();
+        resources["PaneDivider"] = Solid("#FFFFFF", 0.09);
+
+        // Selectie en markeringen in de accentkleur van Windows, net als op het bureaublad.
+        var accent = SystemAccent(lighter: true);
+        resources["PaneSelection"] = Solid(accent, 0.30);
+        resources["PaneSelectionBorder"] = Solid(accent, 0.75);
+        resources["PaneAccentLine"] = Solid(accent, 1);
+    }
+
+    /// <summary>Een rand die van boven iets lichter is, alsof er licht op de rand van glas valt.</summary>
+    private static Brush EdgeLight()
+    {
+        var brush = new LinearGradientBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF), Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF), 90);
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>
+    /// De accentkleur die je in Windows hebt gekozen (Instellingen → Persoonlijke instellingen → Kleuren), of het
+    /// standaardblauw van Windows. <paramref name="lighter"/>: een lichtere variant, goed leesbaar op een donker pane.
+    /// </summary>
+    public static Color SystemAccent(bool lighter)
+    {
+        var accent = Color.FromRgb(0x00, 0x78, 0xD4);
+        try
+        {
+            // AccentColor is 0xAABBGGRR.
+            if (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\DWM", "AccentColor", null) is int abgr)
+                accent = Color.FromRgb((byte)abgr, (byte)(abgr >> 8), (byte)(abgr >> 16));
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or System.IO.IOException or UnauthorizedAccessException) { }
+        return lighter ? Mix(accent, Colors.White, 0.35) : accent;
     }
 
     // ---------- Kleurhulp ----------
@@ -119,9 +151,10 @@ public static class PaneThemes
         (byte)Math.Round(from.G + (to.G - from.G) * amount),
         (byte)Math.Round(from.B + (to.B - from.B) * amount));
 
-    private static SolidColorBrush Solid(string hex, double opacity)
+    private static SolidColorBrush Solid(string hex, double opacity) => Solid((Color)ColorConverter.ConvertFromString(hex), opacity);
+
+    private static SolidColorBrush Solid(Color color, double opacity)
     {
-        var color = (Color)ColorConverter.ConvertFromString(hex);
         color.A = (byte)Math.Round(Math.Clamp(opacity, 0, 1) * 255);
         var brush = new SolidColorBrush(color);
         brush.Freeze();

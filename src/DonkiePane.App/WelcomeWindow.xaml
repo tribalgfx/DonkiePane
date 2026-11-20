@@ -61,7 +61,7 @@
 
         <TextBlock Style="{StaticResource Heading}" Text="Je bureaubladiconen" />
         <TextBlock Foreground="{StaticResource Muted}"
-                   Text="DonkiePane zet de iconen van je bureaublad in een pane met de naam Inbox. Je bestanden blijven precies waar ze staan: er wordt niets verplaatst of verwijderd. Je kunt ze daarna over eigen panes verdelen." />
+                   Text="DonkiePane zet de iconen van je bureaublad in een pane met de naam Inbox. Je bestanden blijven precies waar ze staan: uit zichzelf verplaatst of verwijdert DonkiePane niets. Je kunt ze daarna over eigen panes verdelen, en alles doen wat je op het bureaublad ook doet (slepen, Delete, F2, kopiëren en plakken)." />
         <CheckBox x:Name="HideIconsBox" Style="{StaticResource Option}" IsChecked="True">
             <TextBlock Text="Windows-bureaubladiconen verbergen" />
         </CheckBox>

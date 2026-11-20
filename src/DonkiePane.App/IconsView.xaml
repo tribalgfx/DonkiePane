@@ -3,61 +3,136 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:DonkiePane.App">
     <UserControl.Resources>
-        <DropShadowEffect x:Key="TextShadow" BlurRadius="3" ShadowDepth="1" Opacity="0.8" />
+        <DropShadowEffect x:Key="TextShadow" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.75" Color="#000000" />
 
         <!-- Rechtermuisknop toont het menu van Verkenner; dit is alleen de terugval als dat niet lukt. -->
         <ContextMenu x:Key="FallbackMenu" x:Shared="False">
-            <MenuItem Header="Openen" FontWeight="Bold" Click="OpenItem_Click" />
+            <MenuItem Header="Openen" FontWeight="SemiBold" Click="OpenItem_Click" />
             <MenuItem Header="Bestandslocatie openen" Click="ShowInExplorer_Click" />
         </ContextMenu>
 
-        <DataTemplate x:Key="ItemTemplate" DataType="{x:Type local:ItemView}">
-            <Border x:Name="Tile"
-                    Width="84" Margin="2" Padding="4,6,4,4"
-                    CornerRadius="4"
-                    Background="Transparent"
-                    ToolTip="{Binding DisplayName}"
-                    MouseLeftButtonDown="Tile_MouseLeftButtonDown"
-                    MouseRightButtonUp="Tile_MouseRightButtonUp"
-                    MouseMove="Tile_MouseMove">
-                <StackPanel>
-                    <Image Source="{Binding Icon}" Width="48" Height="48"
-                           RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="{Binding DisplayName}"
-                               Margin="0,4,0,0"
-                               MaxHeight="32"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap"
-                               TextTrimming="CharacterEllipsis"
-                               FontSize="12"
-                               Foreground="{DynamicResource PaneText}"
-                               Effect="{StaticResource TextShadow}" />
-                </StackPanel>
-            </Border>
-            <DataTemplate.Triggers>
-                <Trigger SourceName="Tile" Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Tile" Property="Background" Value="#33FFFFFF" />
-                </Trigger>
-            </DataTemplate.Triggers>
-        </DataTemplate>
+        <!-- Eén icoon: zoals op het bureaublad, met een afgeronde markering bij aanwijzen en selecteren. -->
+        <Style x:Key="TileStyle" TargetType="ListBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Tile"
+                                Width="86" Padding="4,7,4,6"
+                                CornerRadius="7"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                ToolTip="{Binding DisplayName}"
+                                ToolTipService.InitialShowDelay="900">
+                            <StackPanel>
+                                <Image x:Name="Icon" Source="{Binding Icon}" Width="48" Height="48"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <Grid Margin="0,5,0,0">
+                                    <TextBlock x:Name="NameText"
+                                               Text="{Binding DisplayName}"
+                                               MaxHeight="32"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               FontSize="12"
+                                               LineHeight="16"
+                                               LineStackingStrategy="BlockLineHeight"
+                                               Foreground="{DynamicResource PaneText}"
+                                               Effect="{StaticResource TextShadow}" />
+                                    <TextBox x:Name="NameEditor"
+                                             Visibility="Collapsed"
+                                             TextAlignment="Center"
+                                             TextWrapping="Wrap"
+                                             AcceptsReturn="False"
+                                             MaxLength="255"
+                                             FontSize="12"
+                                             Padding="2,1"
+                                             Style="{DynamicResource PaneTextBox}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneHover}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneHoverBorder}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneSelection}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneSelectionBorder}" />
+                            </Trigger>
+                            <!-- Pane niet actief: de selectie blijft, maar gedempt (zoals in Verkenner). -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True" />
+                                    <Condition Property="Selector.IsSelectionActive" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneHover}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneSelectionInactiveBorder}" />
+                            </MultiTrigger>
+                            <!-- Bestanden zweven boven een map, de Prullenbak of een programma: daar neerzetten. -->
+                            <Trigger Property="Tag" Value="DropTarget">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneSelection}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneAccentLine}" />
+                            </Trigger>
+                            <!-- Geknipt (Ctrl+X): half doorzichtig tot het geplakt is, zoals in Verkenner. -->
+                            <Trigger Property="local:IconsView.IsCut" Value="True">
+                                <Setter TargetName="Icon" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Background="Transparent" AllowDrop="True" DragOver="Body_DragOver" Drop="Body_Drop">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl x:Name="ItemsHost" Margin="4" ItemTemplate="{StaticResource ItemTemplate}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
-        </ScrollViewer>
-        <TextBlock x:Name="EmptyHint"
-                   Margin="12"
-                   Foreground="{DynamicResource PaneText}"
-                   Opacity="0.6"
-                   TextWrapping="Wrap"
-                   IsHitTestVisible="False"
-                   Text="Sleep hier iconen naartoe." />
+    <Grid x:Name="Root" Background="Transparent" AllowDrop="True"
+          DragEnter="Root_DragEnter" DragOver="Root_DragOver" DragLeave="Root_DragLeave" Drop="Root_Drop"
+          PreviewMouseMove="Root_PreviewMouseMove" PreviewMouseLeftButtonUp="Root_PreviewMouseLeftButtonUp"
+          LostMouseCapture="Root_LostMouseCapture">
+        <ListBox x:Name="ItemsHost"
+                 SelectionMode="Extended"
+                 ItemContainerStyle="{StaticResource TileStyle}"
+                 IsTextSearchEnabled="True"
+                 TextSearch.TextPath="DisplayName"
+                 KeyboardNavigation.DirectionalNavigation="Contained"
+                 FocusVisualStyle="{x:Null}"
+                 PreviewMouseLeftButtonDown="ItemsHost_PreviewMouseLeftButtonDown"
+                 PreviewMouseRightButtonDown="ItemsHost_PreviewMouseRightButtonDown"
+                 MouseRightButtonUp="ItemsHost_MouseRightButtonUp"
+                 PreviewKeyDown="ItemsHost_PreviewKeyDown"
+                 SelectionChanged="ItemsHost_SelectionChanged">
+            <ListBox.Template>
+                <ControlTemplate TargetType="ListBox">
+                    <ScrollViewer x:Name="Scroller" Focusable="False" Padding="6,6,6,10"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsPresenter />
+                    </ScrollViewer>
+                </ControlTemplate>
+            </ListBox.Template>
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+
+        <!-- Selectiekader en de plek waar gesleepte iconen komen. -->
+        <Canvas x:Name="Overlay" IsHitTestVisible="False" ClipToBounds="True">
+            <Border x:Name="Marquee" Visibility="Collapsed" CornerRadius="3" BorderThickness="1"
+                    Background="{DynamicResource PaneSelection}" BorderBrush="{DynamicResource PaneAccentLine}" />
+            <Border x:Name="InsertMarker" Visibility="Collapsed" Width="3" CornerRadius="1.5"
+                    Background="{DynamicResource PaneAccentLine}" />
+        </Canvas>
+
+        <StackPanel x:Name="EmptyHint" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
+                    IsHitTestVisible="False" Opacity="0.7">
+            <TextBlock Text="&#xE8B7;" FontFamily="{DynamicResource IconFont}" FontSize="26"
+                       HorizontalAlignment="Center" Foreground="{DynamicResource PaneMutedText}" />
+            <TextBlock Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap" FontSize="12"
+                       Foreground="{DynamicResource PaneMutedText}"
+                       Text="Sleep hier iconen of bestanden naartoe" />
+        </StackPanel>
     </Grid>
 </UserControl>

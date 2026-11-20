@@ -6,7 +6,7 @@ namespace DonkiePane.Shell;
 /// <summary>
 /// De twee mappen waaruit het Windows-bureaublad bestaat: je eigen
 /// bureaublad en het openbare bureaublad (voor alle gebruikers). DonkiePane
-/// leest ze alleen; bestanden worden nooit verplaatst of verwijderd.
+/// leest ze alleen; wat je zelf met een item doet (slepen, Delete, plakken) gaat via de shell (zie ShellItems).
 /// </summary>
 public sealed class DesktopFolders : IDisposable
 {
