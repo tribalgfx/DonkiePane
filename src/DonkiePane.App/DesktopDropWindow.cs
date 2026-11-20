@@ -52,7 +52,7 @@ public sealed class DesktopDropWindow : Window
             IsHitTestVisible = false,
             Child = new TextBlock
             {
-                Text = "Nieuw pane",
+                Text = Loc.T("Nieuw pane"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 FontSize = 13,

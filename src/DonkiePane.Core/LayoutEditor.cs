@@ -64,7 +64,7 @@ public static class LayoutEditor
 
         var inbox = new Pane
         {
-            Title = "Inbox",
+            Title = Loc.T("Inbox"),
             IsInbox = true,
             Left = 40,
             Top = 40,

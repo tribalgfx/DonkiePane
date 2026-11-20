@@ -1,7 +1,8 @@
 <Window x:Class="DonkiePane.App.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="DonkiePane – Instellingen"
+        xmlns:l="clr-namespace:DonkiePane.App"
+        Title="{l:T 'DonkiePane – Instellingen'}"
         Width="440" SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
@@ -48,33 +49,58 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Keuze uit een paar opties (taal): de gekozen optie licht op. -->
+        <Style x:Key="Chip" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,8,8,0" />
+            <Setter Property="Foreground" Value="#FFF5F0E8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Box" Background="#1FFFFFFF" BorderBrush="Transparent" BorderThickness="1"
+                                CornerRadius="4" Padding="12,5">
+                            <ContentPresenter HorizontalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="#33FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="#4DFFFFFF" />
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#99FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24,12,24,24">
-        <TextBlock Style="{StaticResource Heading}" Margin="0,6,0,6" Text="Bureaublad" />
+        <TextBlock Style="{StaticResource Heading}" Margin="0,6,0,6" Text="{l:T 'Bureaublad'}" />
 
         <CheckBox x:Name="HideIconsBox" Style="{StaticResource Option}" Click="HideIcons_Click">
-            <TextBlock Text="Windows-bureaubladiconen verbergen" />
+            <TextBlock Text="{l:T 'Windows-bureaubladiconen verbergen'}" />
         </CheckBox>
         <TextBlock Style="{StaticResource Hint}"
-                   Text="DonkiePane toont je iconen in panes. Je bestanden blijven gewoon op je bureaublad staan. Uitgezet zie je de Windows-iconen weer." />
+                   Text="{l:T 'DonkiePane toont je iconen in panes. Je bestanden blijven gewoon op je bureaublad staan. Uitgezet zie je de Windows-iconen weer.'}" />
 
         <CheckBox x:Name="DoubleClickBox" Style="{StaticResource Option}" Click="DoubleClick_Click">
-            <TextBlock Text="Dubbelklikken op het bureaublad verbergt de panes" />
+            <TextBlock Text="{l:T 'Dubbelklikken op het bureaublad verbergt de panes'}" />
         </CheckBox>
         <TextBlock Style="{StaticResource Hint}"
-                   Text="Dubbelklik op een leeg stuk bureaublad om alle panes met hun inhoud te verbergen, en nog een keer om ze terug te halen." />
+                   Text="{l:T 'Dubbelklik op een leeg stuk bureaublad om alle panes met hun inhoud te verbergen, en nog een keer om ze terug te halen.'}" />
 
         <CheckBox x:Name="AutoStartBox" Style="{StaticResource Option}" Click="AutoStart_Click">
-            <TextBlock Text="Starten met Windows" />
+            <TextBlock Text="{l:T 'Starten met Windows'}" />
         </CheckBox>
         <TextBlock x:Name="AutoStartHint" Style="{StaticResource Hint}" />
 
-        <TextBlock Style="{StaticResource Heading}" Text="Ruitjesraster" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Ruitjesraster'}" />
 
         <CheckBox x:Name="SnapBox" Style="{StaticResource Option}" Click="Snap_Click">
-            <TextBlock Text="Panes vastklikken op het raster" />
+            <TextBlock Text="{l:T 'Panes vastklikken op het raster'}" />
         </CheckBox>
         <Grid Margin="26,10,0,0">
             <Grid.ColumnDefinitions>
@@ -82,63 +108,76 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="44" />
             </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="Rastergrootte" />
+            <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{l:T 'Rastergrootte'}" />
             <Slider x:Name="GridSlider" Grid.Column="1" Minimum="16" Maximum="64"
                     TickFrequency="8" IsSnapToTickEnabled="True" TickPlacement="BottomRight"
                     ValueChanged="GridSlider_ValueChanged" />
             <TextBlock x:Name="GridValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
-        <TextBlock Style="{StaticResource Heading}" Text="Synchronisatie" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Synchronisatie'}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
-                   Text="Hoe vaak DonkiePane kijkt of er op een ander apparaat iets is veranderd. Wijzigingen die je in DonkiePane maakt, gaan direct weg." />
+                   Text="{l:T 'Hoe vaak DonkiePane kijkt of er op een ander apparaat iets is veranderd. Wijzigingen die je in DonkiePane maakt, gaan direct weg.'}" />
         <Grid Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="56" />
             </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="Controleren elke" />
+            <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{l:T 'Controleren elke'}" />
             <Slider x:Name="SyncSlider" Grid.Column="1" Minimum="15" Maximum="300"
                     TickFrequency="15" IsSnapToTickEnabled="True" TickPlacement="BottomRight"
                     ValueChanged="SyncSlider_ValueChanged" />
             <TextBlock x:Name="SyncValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
-        <TextBlock Style="{StaticResource Heading}" Text="Takenbronnen" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Takenbronnen'}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
-                   Text="Waar een takenpane zijn taken vandaan haalt. Lokale taken werken altijd. Andere bronnen voeg je zelf toe: elke bron heeft zijn eigen gegevens, en tokens worden versleuteld op deze pc bewaard." />
+                   Text="{l:T 'Waar een takenpane zijn taken vandaan haalt. Lokale taken werken altijd. Andere bronnen voeg je zelf toe: elke bron heeft zijn eigen gegevens, en tokens worden versleuteld op deze pc bewaard.'}" />
         <ListBox x:Name="SourcesList" Height="96" Background="#26FFFFFF" BorderThickness="0" Foreground="#FFF5F0E8"
                  DisplayMemberPath="Label" SelectionChanged="Sources_SelectionChanged" />
         <StackPanel Orientation="Horizontal">
-            <Button Style="{StaticResource Action}" Click="AddSource_Click" Content="Toevoegen…" />
-            <Button x:Name="EditSourceButton" Style="{StaticResource Action}" Click="EditSource_Click" Content="Bewerken…" />
-            <Button x:Name="RemoveSourceButton" Style="{StaticResource Action}" Click="RemoveSource_Click" Content="Verwijderen" />
+            <Button Style="{StaticResource Action}" Click="AddSource_Click" Content="{l:T 'Toevoegen…'}" />
+            <Button x:Name="EditSourceButton" Style="{StaticResource Action}" Click="EditSource_Click" Content="{l:T 'Bewerken…'}" />
+            <Button x:Name="RemoveSourceButton" Style="{StaticResource Action}" Click="RemoveSource_Click" Content="{l:T 'Verwijderen'}" />
         </StackPanel>
         <TextBlock x:Name="PluginsInfo" Style="{StaticResource Hint}" Margin="0,8,0,0" />
 
-        <TextBlock Style="{StaticResource Heading}" Text="Schermen" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Schermen'}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,0" Foreground="{StaticResource Muted}"
-                   Text="Valt een scherm weg, dan haalt DonkiePane de panes vanzelf terug en zet ze weer op hun plek zodra het scherm terugkomt. Is er toch iets zoek, haal dan alles naar je hoofdscherm." />
+                   Text="{l:T 'Valt een scherm weg, dan haalt DonkiePane de panes vanzelf terug en zet ze weer op hun plek zodra het scherm terugkomt. Is er toch iets zoek, haal dan alles naar je hoofdscherm.'}" />
         <StackPanel Orientation="Horizontal">
-            <Button Style="{StaticResource Action}" Click="BringPanes_Click" Content="Alle panes naar hoofdscherm" />
+            <Button Style="{StaticResource Action}" Click="BringPanes_Click" Content="{l:T 'Alle panes naar hoofdscherm'}" />
         </StackPanel>
 
-        <TextBlock Style="{StaticResource Heading}" Text="Gegevens" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Gegevens'}" />
         <TextBlock x:Name="DataPath" Style="{StaticResource Hint}" Margin="0" />
         <StackPanel Orientation="Horizontal">
-            <Button Style="{StaticResource Action}" Click="OpenData_Click" Content="Map openen" />
+            <Button Style="{StaticResource Action}" Click="OpenData_Click" Content="{l:T 'Map openen'}" />
         </StackPanel>
 
-        <TextBlock Style="{StaticResource Heading}" Text="Updates" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Taal'}" />
+        <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="LanguageAuto" Style="{StaticResource Chip}" GroupName="Language" Checked="Language_Checked"
+                         Content="{l:T 'Zoals Windows'}" />
+            <RadioButton x:Name="LanguageDutch" Style="{StaticResource Chip}" GroupName="Language" Checked="Language_Checked" />
+            <RadioButton x:Name="LanguageEnglish" Style="{StaticResource Chip}" GroupName="Language" Checked="Language_Checked" />
+        </StackPanel>
+        <TextBlock x:Name="LanguageHint" Style="{StaticResource Hint}" Margin="0,8,0,0" Visibility="Collapsed"
+                   Text="{l:T 'De nieuwe taal geldt na het opnieuw starten van DonkiePane.'}" />
+        <StackPanel x:Name="RestartPanel" Orientation="Horizontal" Visibility="Collapsed">
+            <Button Style="{StaticResource Action}" Click="Restart_Click" Content="{l:T 'Nu opnieuw starten'}" />
+        </StackPanel>
+
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Updates'}" />
         <CheckBox x:Name="UpdatesBox" Style="{StaticResource Option}" Click="Updates_Click">
-            <TextBlock Text="Automatisch kijken of er een nieuwe versie is" />
+            <TextBlock Text="{l:T 'Automatisch kijken of er een nieuwe versie is'}" />
         </CheckBox>
         <TextBlock Style="{StaticResource Hint}"
-                   Text="Kort na het starten en daarna eens per dag kijkt DonkiePane op GitHub. Is er een nieuwe versie, dan krijg je een melding; installeren gebeurt pas als jij op Nu bijwerken klikt." />
+                   Text="{l:T 'Kort na het starten en daarna eens per dag kijkt DonkiePane op GitHub. Is er een nieuwe versie, dan krijg je een melding; installeren gebeurt pas als jij op Nu bijwerken klikt.'}" />
         <StackPanel Orientation="Horizontal">
-            <Button x:Name="CheckNowButton" Style="{StaticResource Action}" Click="CheckNow_Click" Content="Nu controleren" />
-            <Button x:Name="ShowUpdateButton" Style="{StaticResource Action}" Click="ShowUpdate_Click" Content="Bijwerken…" Visibility="Collapsed" />
+            <Button x:Name="CheckNowButton" Style="{StaticResource Action}" Click="CheckNow_Click" Content="{l:T 'Nu controleren'}" />
+            <Button x:Name="ShowUpdateButton" Style="{StaticResource Action}" Click="ShowUpdate_Click" Content="{l:T 'Bijwerken…'}" Visibility="Collapsed" />
         </StackPanel>
         <TextBlock x:Name="UpdateStatus" Style="{StaticResource Hint}" Margin="0,8,0,0" />
 

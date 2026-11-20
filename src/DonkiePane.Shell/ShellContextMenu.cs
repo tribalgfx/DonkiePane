@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Interop;
+using DonkiePane.Core;
 using static DonkiePane.Shell.ShellNative;
 
 namespace DonkiePane.Shell;
@@ -133,8 +134,8 @@ public sealed class ShellContextMenu : IDisposable
     {
         var hmenu = CreatePopupMenu();
         var paste = ShellItems.CanPaste() ? MF_STRING : MF_STRING | MF_GRAYED;
-        AppendMenu(hmenu, paste, CmdPaste, "Plakken");
-        AppendMenu(hmenu, paste, CmdPasteLink, "Snelkoppeling plakken");
+        AppendMenu(hmenu, paste, CmdPaste, Loc.T("Plakken"));
+        AppendMenu(hmenu, paste, CmdPasteLink, Loc.T("Snelkoppeling plakken"));
         AppendMenu(hmenu, MF_SEPARATOR, 0, null);
 
         // Het Nieuw-menu van Windows zelf: alle soorten die op deze pc geregistreerd zijn.
@@ -170,8 +171,8 @@ public sealed class ShellContextMenu : IDisposable
         }
 
         if (newMenu is not null) AppendMenu(hmenu, MF_SEPARATOR, 0, null);
-        AppendMenu(hmenu, MF_STRING, CmdDisplay, "Beeldscherminstellingen");
-        AppendMenu(hmenu, MF_STRING, CmdPersonalize, "Persoonlijke instellingen");
+        AppendMenu(hmenu, MF_STRING, CmdDisplay, Loc.T("Beeldscherminstellingen"));
+        AppendMenu(hmenu, MF_STRING, CmdPersonalize, Loc.T("Persoonlijke instellingen"));
         return new ShellContextMenu(newMenu, hmenu);
     }
 

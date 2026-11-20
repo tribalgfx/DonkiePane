@@ -23,7 +23,7 @@ public sealed class Pane
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public PaneKind Kind { get; set; } = PaneKind.Icons;
-    public string Title { get; set; } = "Nieuw pane";
+    public string Title { get; set; } = Loc.T("Nieuw pane");
     public double Left { get; set; } = 100;
     public double Top { get; set; } = 100;
     public double Width { get; set; } = 320;
@@ -93,7 +93,7 @@ public sealed class Pane
     public static Pane NewTaskPane() => new()
     {
         Kind = PaneKind.Tasks,
-        Title = "Taken",
+        Title = Loc.T("Taken"),
         Width = 300,
         Height = 360,
         TaskListId = Guid.NewGuid().ToString("N"),

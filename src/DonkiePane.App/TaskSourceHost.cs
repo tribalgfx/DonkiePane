@@ -66,7 +66,7 @@ public sealed class TaskSourceHost : IDisposable
         Plugins.Plugins.FirstOrDefault(p => p.Plugin.TypeId == typeId)?.Plugin;
 
     public string TypeName(SourceConnection connection) =>
-        PluginFor(connection.TypeId)?.DisplayName ?? $"{connection.TypeId} (plug-in niet geladen)";
+        PluginFor(connection.TypeId)?.DisplayName ?? Loc.F("{0} (plug-in niet geladen)", connection.TypeId);
 
     public ISecretStore SecretsFor(string connectionId) => _secretsFor(connectionId);
 
@@ -147,17 +147,17 @@ public sealed class TaskSourceHost : IDisposable
 
             var connection = _config.Connections.FirstOrDefault(c => c.Id == connectionId);
             if (connection is not null && !IsSafeId(connection.Id))
-                return Fail(connectionId, $"De bron '{connection.Name}' heeft een ongeldig id in sources.json. Verwijder hem en voeg hem opnieuw toe.");
+                return Fail(connectionId, Loc.F("De bron '{0}' heeft een ongeldig id in sources.json. Verwijder hem en voeg hem opnieuw toe.", connection.Name));
             if (connection is null)
             {
-                error = "De bron van dit pane bestaat niet meer. Voeg hem opnieuw toe bij Instellingen, Takenbronnen.";
+                error = Loc.T("De bron van dit pane bestaat niet meer. Voeg hem opnieuw toe bij Instellingen, Takenbronnen.");
                 return null;
             }
 
             var plugin = PluginFor(connection.TypeId);
             if (plugin is null)
             {
-                error = $"Het soort bron '{connection.TypeId}' is niet beschikbaar: de plug-in is niet geladen. Zet hem terug in de plugins-map.";
+                error = Loc.F("Het soort bron '{0}' is niet beschikbaar: de plug-in is niet geladen. Zet hem terug in de plugins-map.", connection.TypeId);
                 return Fail(connectionId, error);
             }
 
@@ -173,7 +173,7 @@ public sealed class TaskSourceHost : IDisposable
             catch (Exception ex)
 #pragma warning restore CA1031
             {
-                error = $"De bron '{connection.Name}' kon niet worden gestart: {ex.Message}";
+                error = Loc.F("De bron '{0}' kon niet worden gestart: {1}", connection.Name, ex.Message);
                 return Fail(connectionId, error);
             }
         }
@@ -193,7 +193,7 @@ public sealed class TaskSourceHost : IDisposable
     {
         if (string.IsNullOrEmpty(pane.SourceId)) return _local;
         var source = GetSource(pane.SourceId, out var error);
-        if (source is null) return new UnavailableTaskProvider(error ?? "Deze bron is niet beschikbaar.");
+        if (source is null) return new UnavailableTaskProvider(error ?? Loc.T("Deze bron is niet beschikbaar."));
 
         lock (_lock)
         {

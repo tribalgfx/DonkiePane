@@ -63,7 +63,7 @@ public static class PluginLoader
             {
                 if (type.GetConstructor(Type.EmptyTypes) is null)
                 {
-                    result.Errors.Add(new PluginLoadError(dll, $"{type.Name} heeft geen publieke constructor zonder parameters."));
+                    result.Errors.Add(new PluginLoadError(dll, Loc.F("{0} heeft geen publieke constructor zonder parameters.", type.Name)));
                     continue;
                 }
 
@@ -72,12 +72,12 @@ public static class PluginLoader
                 _ = (plugin.DisplayName, plugin.Description, plugin.Fields.Count, plugin.Actions.Count);
                 if (string.IsNullOrWhiteSpace(plugin.TypeId))
                 {
-                    result.Errors.Add(new PluginLoadError(dll, $"{type.Name} heeft geen TypeId."));
+                    result.Errors.Add(new PluginLoadError(dll, Loc.F("{0} heeft geen TypeId.", type.Name)));
                     continue;
                 }
                 if (result.Plugins.Any(p => p.Plugin.TypeId == plugin.TypeId))
                 {
-                    result.Errors.Add(new PluginLoadError(dll, $"Het soort bron '{plugin.TypeId}' bestaat al; deze is overgeslagen."));
+                    result.Errors.Add(new PluginLoadError(dll, Loc.F("Het soort bron '{0}' bestaat al; deze is overgeslagen.", plugin.TypeId)));
                     continue;
                 }
                 result.Plugins.Add(new LoadedPlugin(plugin, dll));
@@ -85,7 +85,7 @@ public static class PluginLoader
             }
 
             if (found == 0 && result.Errors.All(e => e.Path != dll))
-                result.Errors.Add(new PluginLoadError(dll, "Geen plug-in gevonden in dit bestand."));
+                result.Errors.Add(new PluginLoadError(dll, Loc.T("Geen plug-in gevonden in dit bestand.")));
         }
 #pragma warning disable CA1031 // een plug-in is code van buiten: wat hij ook gooit (ook uit een getter of statische constructor), de app start
         catch (Exception ex) when (ex is not OutOfMemoryException)

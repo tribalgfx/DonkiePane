@@ -94,7 +94,7 @@ public sealed partial class HomeAssistantTaskProvider(HomeAssistantClient client
     }
 
     public Task MoveAsync(string listId, string taskId, int newIndex, CancellationToken ct = default) =>
-        throw new TaskProviderException("Deze bron ondersteunt het verplaatsen van taken niet.");
+        throw new TaskProviderException(Loc.T("Deze bron ondersteunt het verplaatsen van taken niet."));
 
     public async Task DeleteAsync(string listId, string taskId, CancellationToken ct = default) =>
         await Write(listId, async () =>
@@ -225,7 +225,7 @@ public sealed partial class HomeAssistantTaskProvider(HomeAssistantClient client
     private static string ValidTitle(string title)
     {
         var text = title.Trim();
-        if (text.Length == 0) throw new TaskProviderException("Een taak heeft een tekst nodig.");
+        if (text.Length == 0) throw new TaskProviderException(Loc.T("Een taak heeft een tekst nodig."));
         return text;
     }
 

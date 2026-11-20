@@ -26,7 +26,7 @@ public sealed class RestTask
 public sealed record RestTaskList(string Revision, IReadOnlyList<RestTask> Tasks);
 
 /// <summary>De taak bestaat niet (meer) bij de bron.</summary>
-public sealed class TaskGoneException() : TaskProviderException("Deze taak bestaat niet meer bij de bron.");
+public sealed class TaskGoneException() : TaskProviderException(Loc.T("Deze taak bestaat niet meer bij de bron."));
 
 /// <summary>
 /// De taal van het protocol "Tasks REST v1": <c>GET/POST/PATCH/DELETE {basis}/api/v1/tasks</c> met een
@@ -45,7 +45,7 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
         var (status, text) = await SendAsync(HttpMethod.Get, "api/v1/tasks", null, knownRevision, ct);
         if (status == HttpStatusCode.NotModified) return null;
 
-        var doc = Parse<TasksResponse>(text) ?? throw new TaskProviderException("De bron gaf een onverwacht antwoord.");
+        var doc = Parse<TasksResponse>(text) ?? throw new TaskProviderException(Loc.T("De bron gaf een onverwacht antwoord."));
         // Een taak zonder id kan DonkiePane niet aanpassen; null-waarden uit de bron worden lege tekst.
         var tasks = (doc.Tasks ?? []).Where(t => !string.IsNullOrEmpty(t?.Id)).Select(Clean).ToList();
         return new RestTaskList(doc.Revision ?? "", tasks);
@@ -78,7 +78,7 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
     private static RestTask SingleTask(string response) =>
         Parse<TaskResponse>(response)?.Task is { Id.Length: > 0 } task
             ? Clean(task)
-            : throw new TaskProviderException("De bron gaf een onverwacht antwoord.");
+            : throw new TaskProviderException(Loc.T("De bron gaf een onverwacht antwoord."));
 
     /// <summary>Een antwoord dat geen JSON van de verwachte vorm is (bijv. HTML) is een haperende bron, geen crash.</summary>
     private static T? Parse<T>(string json) where T : class
@@ -125,12 +125,11 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
         {
             // De TLS-handdruk faalde: bij een pin is dat "andere afdruk", anders "niet vertrouwd".
             throw new TaskProviderException(
-                "Het certificaat van de server klopt niet. Controleer de vingerafdruk in de instellingen van deze bron " +
-                "(of laat hem leeg als de server een gewoon, vertrouwd certificaat heeft).", ex);
+                Loc.T("Het certificaat van de server klopt niet. Controleer de vingerafdruk in de instellingen van deze bron (of laat hem leeg als de server een gewoon, vertrouwd certificaat heeft)."), ex);
         }
         catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested))
         {
-            throw new TaskProviderException("Geen verbinding met de bron.", ex);
+            throw new TaskProviderException(Loc.T("Geen verbinding met de bron."), ex);
         }
 
         using (response)
@@ -149,27 +148,26 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
         {
             case HttpStatusCode.Unauthorized:
                 return new SourceUnauthorizedException(
-                    "De bron accepteert het token niet (fout of ingetrokken). DonkiePane probeert het niet opnieuw, " +
-                    "want de bron kan na een paar mislukte pogingen alles blokkeren. Maak een nieuw token en vul het in bij Instellingen.");
+                    Loc.T("De bron accepteert het token niet (fout of ingetrokken). DonkiePane probeert het niet opnieuw, want de bron kan na een paar mislukte pogingen alles blokkeren. Maak een nieuw token en vul het in bij Instellingen."));
             case HttpStatusCode.TooManyRequests:
                 return new SourceRateLimitedException(RetryAfter(response, text));
             case HttpStatusCode.Forbidden:
-                return new TaskProviderException("De bron weigert de toegang (403). Mag dit profiel de taken nog gebruiken?");
+                return new TaskProviderException(Loc.T("De bron weigert de toegang (403). Mag dit profiel de taken nog gebruiken?"));
             case HttpStatusCode.NotFound:
                 return new TaskGoneException();
             case HttpStatusCode.RequestEntityTooLarge:
-                return new TaskProviderException("De wijziging is te groot voor de bron.");
+                return new TaskProviderException(Loc.T("De wijziging is te groot voor de bron."));
             case HttpStatusCode.BadRequest when error == "https_required":
-                return new TaskProviderException("De bron eist HTTPS. Gebruik een adres dat met https:// begint.");
+                return new TaskProviderException(Loc.T("De bron eist HTTPS. Gebruik een adres dat met https:// begint."));
             case HttpStatusCode.BadRequest:
-                return new TaskProviderException("De bron weigerde de wijziging (ongeldige gegevens, bijvoorbeeld een te lange tekst).");
+                return new TaskProviderException(Loc.T("De bron weigerde de wijziging (ongeldige gegevens, bijvoorbeeld een te lange tekst)."));
             case >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest:
                 return new TaskProviderException(Redirected(response));
             case >= HttpStatusCode.InternalServerError:
                 // Bijv. een proxy die 502 geeft terwijl de dienst herstart: later opnieuw, niets weggooien.
-                return new SourceUnavailableException($"De bron hapert even ({(int)response.StatusCode}). DonkiePane probeert het later opnieuw.");
+                return new SourceUnavailableException(Loc.F("De bron hapert even ({0}). DonkiePane probeert het later opnieuw.", (int)response.StatusCode));
             default:
-                return new TaskProviderException($"De bron gaf een fout ({(int)response.StatusCode}).");
+                return new TaskProviderException(Loc.F("De bron gaf een fout ({0}).", (int)response.StatusCode));
         }
     }
 
@@ -178,9 +176,9 @@ public sealed class RestTasksClient(HttpClient http, Uri baseUri, Func<string> t
 
     /// <summary>DonkiePane volgt geen doorverwijzingen (het token hoort bij het ingevulde adres); dit zegt waarheen.</summary>
     internal static string Redirected(HttpResponseMessage response) =>
-        $"De bron verwijst door ({(int)response.StatusCode})" +
-        (response.Headers.Location is { } to ? $" naar {to}" : "") +
-        ". DonkiePane volgt dat niet; vul het juiste adres in bij Instellingen.";
+        response.Headers.Location is { } to
+            ? Loc.F("De bron verwijst door ({0}) naar {1}. DonkiePane volgt dat niet; vul het juiste adres in bij Instellingen.", (int)response.StatusCode, to)
+            : Loc.F("De bron verwijst door ({0}). DonkiePane volgt dat niet; vul het juiste adres in bij Instellingen.", (int)response.StatusCode);
 
     private static string? ErrorCode(string json)
     {

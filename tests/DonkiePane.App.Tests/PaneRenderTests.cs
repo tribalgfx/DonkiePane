@@ -37,6 +37,8 @@ public sealed class PaneRenderTests : TempData
     private static ResourceDictionary UseTheme()
     {
         var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        // Alleen om te bekijken: DONKIEPANE_RENDER_LANG=en tekent de panes in het Engels (zet de taal voor dit hele testproces).
+        if (Environment.GetEnvironmentVariable("DONKIEPANE_RENDER_LANG") is { Length: > 0 } language) Loc.Use(language);
         var theme = (ResourceDictionary)Application.LoadComponent(new Uri("/DonkiePane;component/Theme.xaml", UriKind.Relative));
         app.Resources.MergedDictionaries.Add(theme);
         return theme;

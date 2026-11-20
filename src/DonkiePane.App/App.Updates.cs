@@ -42,7 +42,7 @@ public partial class App
     /// <summary>Bovenaan het tray-menu, alleen zichtbaar als er een nieuwe versie is.</summary>
     private void AddUpdateMenuItem(Forms.ContextMenuStrip menu)
     {
-        _updateMenuItem = new Forms.ToolStripMenuItem("Bijwerken…") { Visible = false };
+        _updateMenuItem = new Forms.ToolStripMenuItem(Loc.T("Bijwerken…")) { Visible = false };
         _updateMenuItem.Font = new System.Drawing.Font(_updateMenuItem.Font, System.Drawing.FontStyle.Bold);
         _updateMenuItem.Click += (_, _) => ShowUpdateWindow();
         _updateMenuSeparator = new Forms.ToolStripSeparator { Visible = false };
@@ -56,19 +56,19 @@ public partial class App
         var version = release is null ? null : AppVersion.Format(release.Version);
         if (_updateMenuItem is not null && _updateMenuSeparator is not null)
         {
-            _updateMenuItem.Text = $"Bijwerken naar versie {version}…";
+            _updateMenuItem.Text = Loc.F("Bijwerken naar versie {0}…", version);
             _updateMenuItem.Visible = _updateMenuSeparator.Visible = release is not null;
         }
         if (_trayIcon is null) return;
-        _trayIcon.Text = release is null ? "DonkiePane" : $"DonkiePane – versie {version} is beschikbaar";
+        _trayIcon.Text = release is null ? "DonkiePane" : Loc.F("DonkiePane – versie {0} is beschikbaar", version);
 
         // Eén melding per nieuwe versie; daarna blijft alleen het menu-item staan.
         if (version is null || _layout.NotifiedUpdateVersion == version) return;
         _layout.NotifiedUpdateVersion = version;
         SaveLayout();
         _balloonIsUpdate = true;
-        _trayIcon.ShowBalloonTip(10_000, "Nieuwe versie van DonkiePane",
-            $"Versie {version} is beschikbaar. Klik hier om bij te werken.", Forms.ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(10_000, Loc.T("Nieuwe versie van DonkiePane"),
+            Loc.F("Versie {0} is beschikbaar. Klik hier om bij te werken.", version), Forms.ToolTipIcon.Info);
     }
 
     private void ShowUpdateWindow()

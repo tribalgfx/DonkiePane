@@ -85,7 +85,7 @@ internal sealed class UpdateService : IDisposable
             {
                 // Geen internet of GitHub hapert: de vorige uitkomst blijft staan, volgende keer opnieuw.
                 LastError = ex is TaskCanceledException && !ct.IsCancellationRequested
-                    ? "GitHub reageerde niet op tijd." : "Geen verbinding met GitHub.";
+                    ? Loc.T("GitHub reageerde niet op tijd.") : Loc.T("Geen verbinding met GitHub.");
                 outcome = UpdateCheckOutcome.Failed;
             }
             LastChecked = _time.GetLocalNow();
@@ -106,9 +106,9 @@ internal sealed class UpdateService : IDisposable
     public async Task<string> DownloadAsync(ReleaseInfo release, IProgress<double>? progress, CancellationToken ct)
     {
         if (release.Installer is not { } installer)
-            throw new UpdateException("Bij deze versie staat geen installer. Kijk op de releasepagina.");
+            throw new UpdateException(Loc.T("Bij deze versie staat geen installer. Kijk op de releasepagina."));
         if (Interlocked.Exchange(ref _downloading, 1) == 1)
-            throw new UpdateException("Er loopt al een download. Wacht tot die klaar is.");
+            throw new UpdateException(Loc.T("Er loopt al een download. Wacht tot die klaar is."));
         // De time-out van HttpClient geldt maar tot de eerste bytes binnen zijn; deze ook voor het downloaden zelf.
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, _stop.Token);
         limit.CancelAfter(DownloadTimeLimit);
@@ -120,11 +120,11 @@ internal sealed class UpdateService : IDisposable
         }
         catch (HttpRequestException ex)
         {
-            throw new UpdateException("Het downloaden is mislukt: " + ex.Message, ex);
+            throw new UpdateException(Loc.F("Het downloaden is mislukt: {0}", ex.Message), ex);
         }
         catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
         {
-            throw new UpdateException("Het downloaden duurde te lang. Probeer het later opnieuw.", ex);
+            throw new UpdateException(Loc.T("Het downloaden duurde te lang. Probeer het later opnieuw."), ex);
         }
         finally
         {
@@ -143,7 +143,7 @@ internal sealed class UpdateService : IDisposable
     public void LaunchInstaller(string path)
     {
         if (!_verified.TryGetValue(path, out var sha256) || !InstallerDownload.IsUnchanged(path, sha256))
-            throw new UpdateException("De installer is na het controleren veranderd en wordt niet gestart. Probeer het opnieuw.");
+            throw new UpdateException(Loc.T("De installer is na het controleren veranderd en wordt niet gestart. Probeer het opnieuw."));
         Process.Start(new ProcessStartInfo(path, InstallerArguments) { UseShellExecute = true })?.Dispose();
     }
 

@@ -35,7 +35,7 @@ public partial class App
     private static Task OpenBrowser(Uri url)
     {
         if (url.Scheme is not ("https" or "http"))
-            throw new TaskProviderException("Alleen webadressen worden in de browser geopend.");
+            throw new TaskProviderException(Loc.T("Alleen webadressen worden in de browser geopend."));
         Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true });
         return Task.CompletedTask;
     }
@@ -51,14 +51,14 @@ public partial class App
     private void FillNewTasksMenu(Forms.ToolStripMenuItem menu)
     {
         menu.DropDownItems.Clear();
-        menu.DropDownItems.Add("Lokaal (alleen op deze pc)", null, (_, _) => AddPane(Pane.NewTaskPane()));
+        menu.DropDownItems.Add(Loc.T("Lokaal (alleen op deze pc)"), null, (_, _) => AddPane(Pane.NewTaskPane()));
         foreach (var connection in _sources.Connections)
         {
             var captured = connection;
             menu.DropDownItems.Add($"{connection.Name}…", null, (_, _) => _ = AddSourcePaneAsync(captured));
         }
         menu.DropDownItems.Add(new Forms.ToolStripSeparator());
-        menu.DropDownItems.Add("Bronnen beheren…", null, (_, _) => ShowSettings());
+        menu.DropDownItems.Add(Loc.T("Bronnen beheren…"), null, (_, _) => ShowSettings());
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public partial class App
             var lists = await source.GetListsAsync();
             if (lists.Count == 0)
             {
-                MessageBox.Show("Bij deze bron zijn geen lijsten gevonden.", connection.Name, MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Loc.T("Bij deze bron zijn geen lijsten gevonden."), connection.Name, MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -92,7 +92,7 @@ public partial class App
                 return;
             }
 
-            var picker = new ListPickerWindow(connection.Name, "Welke lijst wil je in dit pane tonen? De lijst blijft bij de bron staan; verwijder je het pane later, dan blijven je taken bewaard.", lists);
+            var picker = new ListPickerWindow(connection.Name, Loc.T("Welke lijst wil je in dit pane tonen? De lijst blijft bij de bron staan; verwijder je het pane later, dan blijven je taken bewaard."), lists);
             if (picker.ShowDialog() == true && picker.Selected is { } chosen)
                 AddPane(Pane.NewSourcePane(connection.Id, chosen.Id, chosen.Title));
         }

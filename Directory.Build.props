@@ -8,6 +8,11 @@
     <Version>0.2.4</Version>
   </PropertyGroup>
 
+  <!-- Vertalen (Loc.T("Nederlandse tekst")) kan in elk project zonder extra using. -->
+  <ItemGroup>
+    <Using Include="DonkiePane.Core.Loc" Alias="Loc" />
+  </ItemGroup>
+
   <!--
     Een Release-build is wat gebruikers krijgen. Zonder dit staat het pad van de bouwmap (met de naam van wie
     bouwde) in elke DLL en elk .pdb-bestand. Met PathMap wordt dat /_/; de stacktraces blijven bruikbaar.

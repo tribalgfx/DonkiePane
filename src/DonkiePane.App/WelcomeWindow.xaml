@@ -1,7 +1,8 @@
 <Window x:Class="DonkiePane.App.WelcomeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Welkom bij DonkiePane"
+        xmlns:l="clr-namespace:DonkiePane.App"
+        Title="{l:T 'Welkom bij DonkiePane'}"
         Width="480" SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
@@ -55,32 +56,32 @@
     </Window.Resources>
 
     <StackPanel Margin="24,20,24,22">
-        <TextBlock FontSize="22" FontWeight="SemiBold" Text="Welkom bij DonkiePane" />
+        <TextBlock FontSize="22" FontWeight="SemiBold" Text="{l:T 'Welkom bij DonkiePane'}" />
         <TextBlock Margin="0,8,0,0" Foreground="{StaticResource Muted}"
-                   Text="Vakken (panes) op je bureaublad voor je snelkoppelingen en je taken." />
+                   Text="{l:T 'Vakken (panes) op je bureaublad voor je snelkoppelingen en je taken.'}" />
 
-        <TextBlock Style="{StaticResource Heading}" Text="Je bureaubladiconen" />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Je bureaubladiconen'}" />
         <TextBlock Foreground="{StaticResource Muted}"
-                   Text="DonkiePane zet de iconen van je bureaublad in een pane met de naam Inbox. Je bestanden blijven precies waar ze staan: uit zichzelf verplaatst of verwijdert DonkiePane niets. Je kunt ze daarna over eigen panes verdelen, en alles doen wat je op het bureaublad ook doet (slepen, Delete, F2, kopiëren en plakken)." />
+                   Text="{l:T 'DonkiePane zet de iconen van je bureaublad in een pane met de naam Inbox. Je bestanden blijven precies waar ze staan: uit zichzelf verplaatst of verwijdert DonkiePane niets. Je kunt ze daarna over eigen panes verdelen, en alles doen wat je op het bureaublad ook doet (slepen, Delete, F2, kopiëren en plakken).'}" />
         <CheckBox x:Name="HideIconsBox" Style="{StaticResource Option}" IsChecked="True">
-            <TextBlock Text="Windows-bureaubladiconen verbergen" />
+            <TextBlock Text="{l:T 'Windows-bureaubladiconen verbergen'}" />
         </CheckBox>
         <TextBlock Style="{StaticResource Hint}"
-                   Text="Anders zie je ze dubbel. Het kan altijd weer aan in Instellingen, of met rechtsklikken op het bureaublad → Beeld → Bureaubladpictogrammen weergeven." />
+                   Text="{l:T 'Anders zie je ze dubbel. Het kan altijd weer aan in Instellingen, of met rechtsklikken op het bureaublad → Beeld → Bureaubladpictogrammen weergeven.'}" />
 
         <CheckBox x:Name="AutoStartBox" Style="{StaticResource Option}">
-            <TextBlock Text="DonkiePane starten met Windows" />
+            <TextBlock Text="{l:T 'DonkiePane starten met Windows'}" />
         </CheckBox>
 
-        <TextBlock Style="{StaticResource Heading}" Text="Handig om te weten" />
-        <TextBlock Margin="0,0,0,4" Text="• Het DonkiePane-icoon bij de klok: nieuw pane, instellingen en afsluiten." />
-        <TextBlock Margin="0,0,0,4" Text="• Rechtsklik op een titelbalk: naam, thema, kleur en transparantie van dat pane." />
-        <TextBlock Margin="0,0,0,4" Text="• Dubbelklik op een leeg stuk bureaublad: alle panes verbergen of weer tonen." />
-        <TextBlock Text="• Taken kunnen lokaal blijven of met een bron synchroniseren (Google Taken, Home Assistant of een eigen dienst)." />
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Handig om te weten'}" />
+        <TextBlock Margin="0,0,0,4" Text="{l:T '• Het DonkiePane-icoon bij de klok: nieuw pane, instellingen en afsluiten.'}" />
+        <TextBlock Margin="0,0,0,4" Text="{l:T '• Rechtsklik op een titelbalk: naam, thema, kleur en transparantie van dat pane.'}" />
+        <TextBlock Margin="0,0,0,4" Text="{l:T '• Dubbelklik op een leeg stuk bureaublad: alle panes verbergen of weer tonen.'}" />
+        <TextBlock Text="{l:T '• Taken kunnen lokaal blijven of met een bron synchroniseren (Google Taken, Home Assistant of een eigen dienst).'}" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
-            <Button x:Name="SourcesButton" Style="{StaticResource Action}" Content="Takenbron toevoegen…" Click="Sources_Click" />
-            <Button Style="{StaticResource Action}" Content="Aan de slag" IsDefault="True" Click="Start_Click" />
+            <Button x:Name="SourcesButton" Style="{StaticResource Action}" Content="{l:T 'Takenbron toevoegen…'}" Click="Sources_Click" />
+            <Button Style="{StaticResource Action}" Content="{l:T 'Aan de slag'}" IsDefault="True" Click="Start_Click" />
         </StackPanel>
     </StackPanel>
 </Window>

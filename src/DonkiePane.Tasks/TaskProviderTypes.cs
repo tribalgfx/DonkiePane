@@ -23,7 +23,7 @@ public class SourceUnauthorizedException(string message) : TaskProviderException
 
 /// <summary>De bron vraagt om even te wachten. Respecteer <see cref="RetryAfter"/> en probeer niet eerder opnieuw.</summary>
 public sealed class SourceRateLimitedException(TimeSpan retryAfter)
-    : TaskProviderException($"De bron vraagt om even te wachten ({(int)Math.Ceiling(retryAfter.TotalMinutes)} min). DonkiePane probeert het daarna vanzelf opnieuw.")
+    : TaskProviderException(Loc.F("De bron vraagt om even te wachten ({0} min). DonkiePane probeert het daarna vanzelf opnieuw.", (int)Math.Ceiling(retryAfter.TotalMinutes)))
 {
     public TimeSpan RetryAfter { get; } = retryAfter;
 }
@@ -39,7 +39,7 @@ public static class TaskErrors
     public static bool IsHandled(Exception ex) => ex is not OperationCanceledException;
 
     public static string Message(Exception ex) =>
-        ex is TaskProviderException ? ex.Message : $"Er ging iets mis: {ex.Message}";
+        ex is TaskProviderException ? ex.Message : Loc.F("Er ging iets mis: {0}", ex.Message);
 }
 
 /// <summary>
@@ -48,7 +48,7 @@ public static class TaskErrors
 /// </summary>
 public class SourceUnavailableException(string message, Exception? inner = null) : TaskProviderException(message, inner)
 {
-    public const string UnreadableMessage = "De bron gaf een antwoord dat DonkiePane niet kan lezen. Staat het adres goed, en zit er geen inlogpagina tussen?";
+    public static string UnreadableMessage => Loc.T("De bron gaf een antwoord dat DonkiePane niet kan lezen. Staat het adres goed, en zit er geen inlogpagina tussen?");
 
     /// <summary>Een fout bij het lezen van een antwoord (JSON van de verkeerde vorm, onmogelijke waarden).</summary>
     public static bool IsUnreadable(Exception ex) =>

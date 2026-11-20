@@ -171,7 +171,7 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
                     // komt open aan. Dat zeggen we, in plaats van het stil te laten gebeuren.
                     if (op is { Kind: PendingOperation.Add, Task.IsCompleted: true })
                         lock (_lock)
-                            _notices[op.ListId] = $"De taak \"{op.Task!.Title}\" was offline afgevinkt, maar staat nu als open taak bij de bron. Vink hem opnieuw af.";
+                            _notices[op.ListId] = Loc.F("De taak \"{0}\" was offline afgevinkt, maar staat nu als open taak bij de bron. Vink hem opnieuw af.", op.Task!.Title);
                 }
                 catch (TaskProviderException ex) when (IsTransient(ex) || ex is SourceUnauthorizedException)
                 {
@@ -179,13 +179,13 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
                 }
                 catch (TaskProviderException ex)
                 {
-                    lock (_lock) _notices[op.ListId] = $"Een wijziging is niet verstuurd en weggelaten: {ex.Message}";
+                    lock (_lock) _notices[op.ListId] = Loc.F("Een wijziging is niet verstuurd en weggelaten: {0}", ex.Message);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // Geen melding van de bron maar een onverwachte fout (bijv. in een plug-in): niets weggooien,
                     // later opnieuw proberen. Lezen gaat gewoon door.
-                    lock (_lock) _notices[op.ListId] = $"Wijzigingen wachten nog: {ex.Message}";
+                    lock (_lock) _notices[op.ListId] = Loc.F("Wijzigingen wachten nog: {0}", ex.Message);
                     break;
                 }
 
@@ -305,8 +305,8 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
         return count switch
         {
             0 => null,
-            1 => "1 wijziging wacht om verstuurd te worden.",
-            _ => $"{count} wijzigingen wachten om verstuurd te worden.",
+            1 => Loc.T("1 wijziging wacht om verstuurd te worden."),
+            _ => Loc.F("{0} wijzigingen wachten om verstuurd te worden.", count),
         };
     }
 

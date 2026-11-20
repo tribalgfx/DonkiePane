@@ -1,14 +1,15 @@
 <UserControl x:Class="DonkiePane.App.IconsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="clr-namespace:DonkiePane.App"
              xmlns:local="clr-namespace:DonkiePane.App">
     <UserControl.Resources>
         <DropShadowEffect x:Key="TextShadow" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.75" Color="#000000" />
 
         <!-- Rechtermuisknop toont het menu van Verkenner; dit is alleen de terugval als dat niet lukt. -->
         <ContextMenu x:Key="FallbackMenu" x:Shared="False">
-            <MenuItem Header="Openen" FontWeight="SemiBold" Click="OpenItem_Click" />
-            <MenuItem Header="Bestandslocatie openen" Click="ShowInExplorer_Click" />
+            <MenuItem Header="{l:T 'Openen'}" FontWeight="SemiBold" Click="OpenItem_Click" />
+            <MenuItem Header="{l:T 'Bestandslocatie openen'}" Click="ShowInExplorer_Click" />
         </ContextMenu>
 
         <!-- Eén icoon: zoals op het bureaublad, met een afgeronde markering bij aanwijzen en selecteren. -->
@@ -132,7 +133,7 @@
                        HorizontalAlignment="Center" Foreground="{DynamicResource PaneMutedText}" />
             <TextBlock Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap" FontSize="12"
                        Foreground="{DynamicResource PaneMutedText}"
-                       Text="Sleep hier iconen of bestanden naartoe" />
+                       Text="{l:T 'Sleep hier iconen of bestanden naartoe'}" />
         </StackPanel>
     </Grid>
 </UserControl>

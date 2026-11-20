@@ -18,19 +18,17 @@ public sealed class RestTasksPlugin : ITaskSourcePlugin
 
     public string TypeId => "tasks-rest-v1";
 
-    public string DisplayName => "Taken via REST (Tasks REST v1)";
+    public string DisplayName => Loc.T("Taken via REST (Tasks REST v1)");
 
     public string Description =>
-        "Voor een dashboard of dienst die het protocol 'Tasks REST v1' spreekt: GET, POST, PATCH en DELETE op {adres}/api/v1/tasks, " +
-        "met een bearer-token, alleen via HTTPS. Je maakt het token in dat dashboard zelf. Heeft de server een zelfondertekend " +
-        "certificaat, vul dan de SHA-256-vingerafdruk in; DonkiePane accepteert dan precies dat certificaat en niets anders.";
+        Loc.T("Voor een dashboard of dienst die het protocol 'Tasks REST v1' spreekt: GET, POST, PATCH en DELETE op <adres>/api/v1/tasks, met een bearer-token, alleen via HTTPS. Je maakt het token in dat dashboard zelf. Heeft de server een zelfondertekend certificaat, vul dan de SHA-256-vingerafdruk in; DonkiePane accepteert dan precies dat certificaat en niets anders.");
 
     public IReadOnlyList<SettingField> Fields { get; } =
     [
-        new(BaseUrlKey, "Adres", SettingKind.Url, Required: true, Help: "Bijvoorbeeld https://dashboard.thuis:4173 (zonder /api/…)"),
-        new(TokenKey, "Token", SettingKind.Secret, Required: true, Help: "Het persoonlijke API-token uit je dashboard."),
-        new(FingerprintKey, "Vingerafdruk certificaat (SHA-256)", SettingKind.Fingerprint, Required: false,
-            Help: "AA:BB:CC:… Alleen nodig bij een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows. Krijgt de server een nieuw certificaat, vul dan de nieuwe afdruk in."),
+        new(BaseUrlKey, Loc.T("Adres"), SettingKind.Url, Required: true, Help: Loc.T("Bijvoorbeeld https://dashboard.thuis:4173 (zonder /api/…)")),
+        new(TokenKey, Loc.T("Token"), SettingKind.Secret, Required: true, Help: Loc.T("Het persoonlijke API-token uit je dashboard.")),
+        new(FingerprintKey, Loc.T("Vingerafdruk certificaat (SHA-256)"), SettingKind.Fingerprint, Required: false,
+            Help: Loc.T("AA:BB:CC:… Alleen nodig bij een zelfondertekend certificaat. Leeg = gewone certificaatcontrole van Windows. Krijgt de server een nieuw certificaat, vul dan de nieuwe afdruk in.")),
     ];
 
     public IReadOnlyList<PluginAction> Actions { get; } = [];
@@ -54,7 +52,7 @@ public sealed class RestTaskSource : ITaskSource
             var baseUri = ParseBaseUri(context.Value(RestTasksPlugin.BaseUrlKey));
             var pin = CertPin.Normalize(context.Value(RestTasksPlugin.FingerprintKey));
             var token = context.Secrets.Get(RestTasksPlugin.TokenKey);
-            if (string.IsNullOrWhiteSpace(token)) throw new FormatException("Vul het token in.");
+            if (string.IsNullOrWhiteSpace(token)) throw new FormatException(Loc.T("Vul het token in."));
 
             _http = new HttpClient(handler ?? PinnedHttp.CreateHandler(pin))
             {
@@ -77,7 +75,7 @@ public sealed class RestTaskSource : ITaskSource
     {
         // Eerst controleren dat het adres en het token kloppen, zodat er geen pane van komt dat niets laat zien.
         await Client().GetAsync(null, ct);
-        return [new TaskListInfo(RestTaskProvider.ListId, "Taken")];
+        return [new TaskListInfo(RestTaskProvider.ListId, Loc.T("Taken"))];
     }
 
     public async Task<SourceCheck> TestAsync(CancellationToken ct = default)
@@ -86,7 +84,7 @@ public sealed class RestTaskSource : ITaskSource
         {
             var list = await Client().GetAsync(null, ct);
             var count = list?.Tasks.Count ?? 0;
-            return new SourceCheck(true, $"Verbonden. {count} {(count == 1 ? "taak" : "taken")} gevonden.");
+            return new SourceCheck(true, count == 1 ? Loc.T("Verbonden. 1 taak gevonden.") : Loc.F("Verbonden. {0} taken gevonden.", count));
         }
         catch (TaskProviderException ex)
         {
@@ -95,7 +93,7 @@ public sealed class RestTaskSource : ITaskSource
     }
 
     public Task<string> RunActionAsync(string actionId, CancellationToken ct = default) =>
-        throw new TaskProviderException($"Onbekende actie: {actionId}");
+        throw new TaskProviderException(Loc.F("Onbekende actie: {0}", actionId));
 
     public void Dispose()
     {
@@ -104,14 +102,14 @@ public sealed class RestTaskSource : ITaskSource
     }
 
     private RestTasksClient Client() =>
-        _client ?? throw new TaskProviderException(_configError ?? "Deze bron is niet ingesteld.");
+        _client ?? throw new TaskProviderException(_configError ?? Loc.T("Deze bron is niet ingesteld."));
 
     /// <summary>Alleen https; een adres zonder dat of met iets anders dan een adres wordt geweigerd.</summary>
     public static Uri ParseBaseUri(string text)
     {
-        if (text.Length == 0) throw new FormatException("Vul het adres van de bron in.");
+        if (text.Length == 0) throw new FormatException(Loc.T("Vul het adres van de bron in."));
         if (!Uri.TryCreate(text.EndsWith('/') ? text : text + "/", UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-            throw new FormatException("Het adres moet met https:// beginnen. Een token mag nooit onversleuteld over het netwerk.");
+            throw new FormatException(Loc.T("Het adres moet met https:// beginnen. Een token mag nooit onversleuteld over het netwerk."));
         return uri;
     }
 }

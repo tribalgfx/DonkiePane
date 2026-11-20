@@ -120,7 +120,7 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
     private static string? Str(JsonElement element, string name) =>
         Prop(element, name) is { ValueKind: JsonValueKind.String } value ? value.GetString() : null;
 
-    private static TaskProviderException Unexpected() => new("Home Assistant gaf een onverwacht antwoord. Is dit wel een to-do lijst?");
+    private static TaskProviderException Unexpected() => new(Loc.T("Home Assistant gaf een onverwacht antwoord. Is dit wel een to-do lijst?"));
 
     private async Task<string> SendAsync(HttpMethod method, string relative, JsonNode? body, CancellationToken ct)
     {
@@ -139,12 +139,11 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
         catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException)
         {
             throw new TaskProviderException(
-                "Het certificaat van Home Assistant klopt niet. Controleer de vingerafdruk in de instellingen van deze bron " +
-                "(of laat hem leeg als Home Assistant een gewoon, vertrouwd certificaat heeft).", ex);
+                Loc.T("Het certificaat van Home Assistant klopt niet. Controleer de vingerafdruk in de instellingen van deze bron (of laat hem leeg als Home Assistant een gewoon, vertrouwd certificaat heeft)."), ex);
         }
         catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested))
         {
-            throw new TaskProviderException("Geen verbinding met Home Assistant.", ex);
+            throw new TaskProviderException(Loc.T("Geen verbinding met Home Assistant."), ex);
         }
     }
 
@@ -155,21 +154,20 @@ public sealed class HomeAssistantClient(HttpClient http, Uri baseUri, Func<strin
         return status switch
         {
             HttpStatusCode.Unauthorized => new SourceUnauthorizedException(
-                "Home Assistant accepteert het token niet (fout of ingetrokken). DonkiePane probeert het niet opnieuw, want na een paar " +
-                "mislukte pogingen kan Home Assistant je adres blokkeren. Maak een nieuw token en vul het in bij Instellingen."),
-            HttpStatusCode.NotFound => new TaskProviderException("Home Assistant kent deze lijst of dienst niet (404). Bestaat de to-do lijst nog?"),
-            HttpStatusCode.BadRequest => new TaskProviderException("Home Assistant weigerde de aanvraag (400)." + detail),
+                Loc.T("Home Assistant accepteert het token niet (fout of ingetrokken). DonkiePane probeert het niet opnieuw, want na een paar mislukte pogingen kan Home Assistant je adres blokkeren. Maak een nieuw token en vul het in bij Instellingen.")),
+            HttpStatusCode.NotFound => new TaskProviderException(Loc.T("Home Assistant kent deze lijst of dienst niet (404). Bestaat de to-do lijst nog?")),
+            HttpStatusCode.BadRequest => new TaskProviderException(Loc.T("Home Assistant weigerde de aanvraag (400).") + detail),
             // Een herstart of afsluiten is tijdelijk: wijzigingen blijven wachten en gaan daarna vanzelf mee.
             HttpStatusCode.ServiceUnavailable => new SourceRateLimitedException(TimeSpan.FromSeconds(30)),
             // Home Assistant geeft 500 ook voor "dit item bestaat niet": opnieuw proberen helpt dan niet.
-            HttpStatusCode.InternalServerError => new TaskProviderException("Home Assistant gaf een fout (500)." + detail),
+            HttpStatusCode.InternalServerError => new TaskProviderException(Loc.T("Home Assistant gaf een fout (500).") + detail),
             // Een proxy die Home Assistant (even) niet bereikt: later opnieuw, niets weggooien.
             HttpStatusCode.BadGateway or HttpStatusCode.GatewayTimeout =>
-                new SourceUnavailableException($"Home Assistant is even niet bereikbaar ({(int)status}). DonkiePane probeert het later opnieuw."),
+                new SourceUnavailableException(Loc.F("Home Assistant is even niet bereikbaar ({0}). DonkiePane probeert het later opnieuw.", (int)status)),
             // DonkiePane volgt geen doorverwijzingen: het token hoort bij het ingevulde adres.
             >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest => new TaskProviderException(
-                $"Home Assistant verwijst door ({(int)status}). DonkiePane volgt dat niet; controleer het adres bij Instellingen."),
-            _ =>new TaskProviderException($"Home Assistant gaf een fout ({(int)status})." + detail),
+                Loc.F("Home Assistant verwijst door ({0}). DonkiePane volgt dat niet; controleer het adres bij Instellingen.", (int)status)),
+            _ => new TaskProviderException(Loc.F("Home Assistant gaf een fout ({0}).", (int)status) + detail),
         };
     }
 

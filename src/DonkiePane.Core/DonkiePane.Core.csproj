@@ -4,4 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Vertalingen (Nederlands → andere taal), zie Loc. -->
+    <EmbeddedResource Include="Localization\*.json" LogicalName="DonkiePane.Localization.%(Filename).json" />
+  </ItemGroup>
+
 </Project>
