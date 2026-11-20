@@ -9,7 +9,7 @@ namespace DonkiePane.App;
 
 /// <summary>
 /// Een onzichtbaar vlak over het bureaublad van één scherm, alleen zolang je iconen uit een pane sleept. Laat je ze
-/// op een lege plek los, dan komt daar een nieuw pane met die iconen (zoals bij Fences). Het ligt op de
+/// op een lege plek los, dan komt daar een nieuw pane met die iconen. Het ligt op de
 /// bureaubladlaag onder de panes; Verkenner, andere vensters en de panes zelf blijven dus gewone doelen.
 ///
 /// Zonder dit vlak zou het bureaublad van Windows de iconen aannemen, maar de bestanden staan daar al: er zou niets
