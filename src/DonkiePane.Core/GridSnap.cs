@@ -25,6 +25,33 @@ public static class GridSnap
     }
 
     /// <summary>
+    /// Tijdens het vergroten: de randen die je sleept springen mee met het raster,
+    /// de andere blijven staan. De maat wordt een veelvoud van de cel en nooit
+    /// kleiner dan het minimum (zoals <see cref="Size"/>).
+    /// </summary>
+    public static (double Left, double Top, double Right, double Bottom) Resize(
+        double left, double top, double right, double bottom,
+        bool dragLeft, bool dragTop, bool dragRight, bool dragBottom,
+        double cell, double minWidth, double minHeight, bool snapHeight = true)
+    {
+        if (cell <= 0) return (left, top, right, bottom);
+
+        if (dragLeft || dragRight)
+        {
+            var width = Size(right - left, cell, minWidth);
+            if (dragLeft) left = right - width;
+            else right = left + width;
+        }
+        if (snapHeight && (dragTop || dragBottom))
+        {
+            var height = Size(bottom - top, cell, minHeight);
+            if (dragTop) top = bottom - height;
+            else bottom = top + height;
+        }
+        return (left, top, right, bottom);
+    }
+
+    /// <summary>
     /// Verschuiving van het raster ten opzichte van een venster dat op
     /// <paramref name="origin"/> staat: hoe ver de eerste rasterlijn rechts
     /// (of onder) van de venster-oorsprong ligt, om het raster te tekenen.

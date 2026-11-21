@@ -47,4 +47,24 @@ public sealed class GridSnapTests
         var once = GridSnap.Position(137.4, 32);
         Assert.Equal(once, GridSnap.Position(once, 32));
     }
+
+    [Fact]
+    public void Resize_moves_only_the_dragged_edges()
+    {
+        // Rechterrand slepen: links blijft staan, breedte wordt een hele cel.
+        Assert.Equal((64.0, 32.0, 64.0 + 352, 32.0 + 200), GridSnap.Resize(64, 32, 64 + 350, 32 + 200,
+            false, false, true, false, 32, 160, 100));
+
+        // Linksboven slepen: rechts en onder blijven staan.
+        Assert.Equal((320.0 - 192, 320.0 - 128, 320.0, 320.0), GridSnap.Resize(130, 200, 320, 320,
+            true, true, false, false, 32, 160, 100));
+    }
+
+    [Fact]
+    public void Resize_respects_minimum_and_rolled_up_height()
+    {
+        // Te smal: naar de kleinste hele cel boven het minimum (192 bij minimum 170); hoogte blijft (opgerold).
+        Assert.Equal((0.0, 0.0, 192.0, 37.0), GridSnap.Resize(0, 0, 50, 37,
+            false, false, true, true, 32, 170, 100, snapHeight: false));
+    }
 }

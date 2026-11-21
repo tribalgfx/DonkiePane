@@ -19,6 +19,9 @@ public partial class PaneWindow : Window
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
     private const int WM_NCHITTEST = 0x0084;
+    private const int WM_SIZING = 0x0214;
+    private const int WM_MOVING = 0x0216;
+    private const int WMSZ_LEFT = 1, WMSZ_RIGHT = 2, WMSZ_TOP = 3, WMSZ_TOPLEFT = 4, WMSZ_TOPRIGHT = 5, WMSZ_BOTTOM = 6, WMSZ_BOTTOMLEFT = 7, WMSZ_BOTTOMRIGHT = 8;
     private const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13, HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
 
     /// <summary>Hoe dicht bij de rand (in WPF-eenheden) je het pane kunt vergroten.</summary>
@@ -28,7 +31,7 @@ public partial class PaneWindow : Window
 
     public Pane Pane { get; }
 
-    /// <summary>Of en hoe groot het raster is; wordt gelezen op het moment van loslaten.</summary>
+    /// <summary>Of en hoe groot het raster is; wordt tijdens het slepen en bij het loslaten gelezen.</summary>
     public Func<(bool Snap, double Cell)> GridSettings { get; set; } = () => (false, GridSnap.DefaultCell);
 
     /// <summary>Positie, grootte, titel, thema of status is veranderd en moet bewaard worden.</summary>
@@ -183,6 +186,12 @@ public partial class PaneWindow : Window
                 SizeMoveEnded?.Invoke(this, EventArgs.Empty);
                 PaneChanged?.Invoke(this, EventArgs.Empty);
                 break;
+            case WM_MOVING:
+                SnapWhileDragging(lParam, null);
+                break;
+            case WM_SIZING:
+                SnapWhileDragging(lParam, (int)wParam);
+                break;
             case WM_NCHITTEST when ResizeMode != ResizeMode.NoResize:
                 var hit = ResizeHitTest(lParam);
                 if (hit != 0)
@@ -227,6 +236,54 @@ public partial class PaneWindow : Window
             (_, _, _, true) => HTBOTTOM,
             _ => IntPtr.Zero,
         };
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct NativeRect { public int Left, Top, Right, Bottom; }
+
+    /// <summary>
+    /// Magnetisch raster: terwijl je sleept, springt het pane al van rasterlijn naar
+    /// rasterlijn, zodat je ziet waar het komt. Windows geeft de nieuwe plek in
+    /// fysieke pixels; die passen we aan voordat het venster daar echt staat.
+    /// <paramref name="sizingEdge"/> is <c>null</c> bij verplaatsen.
+    /// </summary>
+    private void SnapWhileDragging(IntPtr lParam, int? sizingEdge)
+    {
+        var (snap, cell) = GridSettings();
+        if (!snap || cell <= 0) return;
+
+        var r = System.Runtime.InteropServices.Marshal.PtrToStructure<NativeRect>(lParam);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double sx = dpi.DpiScaleX, sy = dpi.DpiScaleY;
+        double left = r.Left / sx, top = r.Top / sy, right = r.Right / sx, bottom = r.Bottom / sy;
+
+        if (sizingEdge is not int edge)
+        {
+            var width = right - left;
+            var height = bottom - top;
+            left = GridSnap.Position(left, cell);
+            top = GridSnap.Position(top, cell);
+            right = left + width;
+            bottom = top + height;
+        }
+        else
+        {
+            var dragLeft = edge is WMSZ_LEFT or WMSZ_TOPLEFT or WMSZ_BOTTOMLEFT;
+            var dragRight = edge is WMSZ_RIGHT or WMSZ_TOPRIGHT or WMSZ_BOTTOMRIGHT;
+            var dragTop = edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT;
+            var dragBottom = edge is WMSZ_BOTTOM or WMSZ_BOTTOMLEFT or WMSZ_BOTTOMRIGHT;
+            (left, top, right, bottom) = GridSnap.Resize(left, top, right, bottom,
+                dragLeft, dragTop, dragRight, dragBottom, cell, MinWidth, MinHeight, snapHeight: !Pane.IsRolledUp);
+        }
+
+        var snapped = new NativeRect
+        {
+            Left = (int)Math.Round(left * sx),
+            Top = (int)Math.Round(top * sy),
+            Right = (int)Math.Round(right * sx),
+            Bottom = (int)Math.Round(bottom * sy),
+        };
+        System.Runtime.InteropServices.Marshal.StructureToPtr(snapped, lParam, false);
     }
 
     /// <summary>Na het plaatsen door de app (bijv. een nieuw pane waar iconen zijn losgelaten): de hoek op het raster.</summary>
