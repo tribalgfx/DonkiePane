@@ -48,6 +48,9 @@
                 <Border.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="{l:T 'Naam wijzigen'}" Click="Rename_Click" />
+                        <!-- Alleen bij iconenpanes; de opties komen uit BuildViewMenus. -->
+                        <MenuItem x:Name="ViewMenu" Header="{l:T 'Weergave'}" />
+                        <MenuItem x:Name="SortMenu" Header="{l:T 'Sorteren op'}" />
                         <MenuItem x:Name="ThemeMenu" Header="{l:T 'Thema'}">
                             <!-- De themakleuren komen hier bovenin (zie BuildThemeMenu). -->
                             <Separator x:Name="ThemeSeparator" />

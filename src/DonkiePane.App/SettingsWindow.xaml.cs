@@ -19,13 +19,16 @@ public partial class SettingsWindow : Window
     private readonly UpdateService? _updates;
     private readonly Action? _showUpdate;
     private readonly Action? _restart;
+    private readonly Action<string>? _exportLayout;
+    private readonly Action<Layout>? _importLayout;
     private bool _loading = true;
 
     /// <summary>Een regel in de lijst met bronnen.</summary>
     private sealed record SourceRow(SourceConnection Connection, string Label);
 
     internal SettingsWindow(Layout layout, Action save, Action bringPanes, TaskSourceHost sources,
-        UpdateService? updates = null, Action? showUpdate = null, Action? restart = null)
+        UpdateService? updates = null, Action? showUpdate = null, Action? restart = null,
+        Action<string>? exportLayout = null, Action<Layout>? importLayout = null)
     {
         InitializeComponent();
         // Nooit hoger dan het scherm; wat er niet in past, scrolt.
@@ -37,7 +40,12 @@ public partial class SettingsWindow : Window
         _updates = updates;
         _showUpdate = showUpdate;
         _restart = restart;
+        _exportLayout = exportLayout;
+        _importLayout = importLayout;
+        ExportButton.IsEnabled = exportLayout is not null;
+        ImportButton.IsEnabled = importLayout is not null;
         UpdatesBox.IsChecked = layout.CheckForUpdates;
+        RemindDueBox.IsChecked = layout.RemindDueTasks;
 
         // Taal: de namen van de talen staan altijd in hun eigen taal.
         LanguageDutch.Content = Loc.Languages.First(l => l.Code == Loc.Dutch).Name;
@@ -247,6 +255,71 @@ public partial class SettingsWindow : Window
         if (updates.LastError is { } error) return Loc.F("Controleren lukte niet: {0}", error);
         if (outcome == UpdateCheckOutcome.NoReleases) return Loc.T("Er zijn nog geen versies gepubliceerd.");
         return updates.LastChecked is { } at ? Loc.F("Je hebt de nieuwste versie (gecontroleerd om {0:HH:mm}).", at) : "";
+    }
+
+    private void RemindDue_Click(object sender, RoutedEventArgs e)
+    {
+        _layout.RemindDueTasks = RemindDueBox.IsChecked == true;
+        _save();
+    }
+
+    // ---------- Indeling exporteren en importeren ----------
+
+    private const string LayoutFileFilter = "JSON (*.json)|*.json";
+
+    private void ExportLayout_Click(object sender, RoutedEventArgs e)
+    {
+        if (_exportLayout is null) return;
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = Loc.T("Indeling exporteren"),
+            Filter = LayoutFileFilter,
+            FileName = Loc.F("DonkiePane-indeling-{0}.json", DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)),
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            _exportLayout(dialog.FileName);
+            MessageBox.Show(this, Loc.F("De indeling is bewaard in {0}.", dialog.FileName), "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, Loc.F("Exporteren lukte niet: {0}", ex.Message), "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void ImportLayout_Click(object sender, RoutedEventArgs e)
+    {
+        if (_importLayout is null) return;
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = Loc.T("Indeling importeren"), Filter = LayoutFileFilter };
+        if (dialog.ShowDialog(this) != true) return;
+
+        Layout imported;
+        try
+        {
+            imported = LayoutTransfer.Parse(File.ReadAllText(dialog.FileName));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            MessageBox.Show(this, Loc.F("Importeren lukte niet: {0}", ex.Message), "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var answer = MessageBox.Show(this,
+            Loc.F("Je huidige panes ({0}) vervangen door de {1} panes uit dit bestand? Je huidige indeling wordt eerst bewaard als {2}. Iconen die op deze pc niet bestaan, vallen weg; wat hier wel op het bureaublad staat, komt in de Inbox.",
+                _layout.Panes.Count, imported.Panes.Count, Path.GetFileName(App.BeforeImportPath)),
+            "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            _importLayout(imported);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Lukt het bewaren van de huidige indeling niet, dan is er nog niets vervangen.
+            MessageBox.Show(this, Loc.F("Importeren lukte niet: {0}", ex.Message), "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void BringPanes_Click(object sender, RoutedEventArgs e) => _bringPanes();

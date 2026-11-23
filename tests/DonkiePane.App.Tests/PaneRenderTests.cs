@@ -230,4 +230,70 @@ public sealed class PaneRenderTests : TempData
             }
         });
     }
+
+    [Theory]
+    [InlineData(IconSize.Small)]
+    [InlineData(IconSize.List)]
+    public void Small_icons_and_the_list_render(IconSize size)
+    {
+        OnStaThread(() =>
+        {
+            var theme = UseTheme();
+            try
+            {
+                var pane = new Pane { Title = "Programma's", Width = 352, Height = 288, IconSize = size };
+                var window = new PaneWindow(pane);
+                var view = new IconsView();
+                var items = SampleItems();
+                view.SetView(size, sorted: false);
+                view.SetItems(items);
+                view.Select([items[2].Id]);
+                window.SetContent(view);
+
+                var bitmap = Render(window, pane.Width, pane.Height);
+                Save(bitmap, "icons-pane-" + size.ToString().ToLowerInvariant());
+                Assert.True(bitmap.PixelWidth > 0);
+            }
+            finally
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(theme);
+            }
+        });
+    }
+
+    [Fact]
+    public void Typing_filters_the_icons_by_name_and_survives_a_refresh()
+    {
+        OnStaThread(() =>
+        {
+            var theme = UseTheme();
+            try
+            {
+                var pane = new Pane { Title = "Programma's", Width = 352, Height = 288 };
+                var window = new PaneWindow(pane);
+                var view = new IconsView();
+                var items = SampleItems();
+                view.SetItems(items);
+                window.SetContent(view);
+
+                view.OpenFilter("KLAD");
+                Assert.Equal(["Kladblok"], view.VisibleItems.Select(i => i.DisplayName));
+
+                // Er verandert iets op het bureaublad: het filter blijft staan.
+                view.SetItems(items.Take(4).ToList());
+                Assert.Equal(["Kladblok"], view.VisibleItems.Select(i => i.DisplayName));
+
+                view.OpenFilter("taak");
+                var bitmap = Render(window, pane.Width, pane.Height);
+                Save(bitmap, "icons-pane-filter");
+
+                view.CloseFilter(focusIcons: false);
+                Assert.Equal(4, view.VisibleItems.Count);
+            }
+            finally
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(theme);
+            }
+        });
+    }
 }

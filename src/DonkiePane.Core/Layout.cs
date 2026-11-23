@@ -36,6 +36,15 @@ public sealed class Layout
     /// <summary>De nieuwste versie waarover al een melding is getoond; die melding komt niet bij elke start terug.</summary>
     public string? NotifiedUpdateVersion { get; set; }
 
+    /// <summary>Een melding bij het icoon bij de klok als een open taak vandaag zijn deadline heeft.</summary>
+    public bool RemindDueTasks { get; set; } = true;
+
+    /// <summary>De dag (jjjj-mm-dd) waar <see cref="DueRemindedTaskIds"/> bij hoort; een nieuwe dag begint leeg.</summary>
+    public string? DueRemindersDate { get; set; }
+
+    /// <summary>Taken waarover vandaag al een melding is geweest (bron/lijst/taak), zodat die niet bij elke controle terugkomt.</summary>
+    public List<string> DueRemindedTaskIds { get; set; } = [];
+
     public const int DefaultSyncSeconds = 60;
     public const int MinSyncSeconds = 15;
     public const int MaxSyncSeconds = 300;

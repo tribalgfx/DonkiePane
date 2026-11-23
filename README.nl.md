@@ -12,15 +12,17 @@ Vakken (panes) op je Windows-bureaublad voor je snelkoppelingen en je taken. Met
 
 - **Panes op het bureaublad.** Ze staan achter je vensters en blijven staan bij Win+D.
 - **Je bureaubladiconen in panes.** Wat je op het bureaublad met een bestand of snelkoppeling doet, kan in een pane ook: openen, selecteren (Ctrl, Shift, een kader trekken), slepen naar Verkenner, een app, een map of de Prullenbak, bestanden in een pane slepen, Delete, F2, Ctrl+C/X/V, Ctrl+Shift+N, Alt+Enter en het menu van Verkenner (rechts klikken op een lege plek geeft Plakken en Nieuw). Laat je iconen los op een lege plek van het bureaublad, dan komt daar een nieuw pane mee. Windows voert het uit, dus meldingen en Prullenbak zijn zoals altijd; uit zichzelf verplaatst of verwijdert DonkiePane niets. Nieuwe bestanden komen in de Inbox-pane, of in het pane waarin je ze plakte of neerzette.
+- **Weergave en sortering per pane.** Grote iconen, kleine iconen of een lijst, in je eigen volgorde of gesorteerd op naam, type of datum (rechtsklik op de titelbalk). Begin te typen in een pane om de iconen op naam te filteren; Esc haalt het filter weg.
 - **Takenpanes.** Taken toevoegen, afvinken, ordenen en met een ster markeren. Lokaal, of gesynchroniseerd met een bron die je zelf toevoegt:
   - Google Taken
   - Home Assistant (to-do lijsten)
   - een eigen dienst via het protocol Tasks REST v1
 
-  Wat je offline doet wordt bewaard en later verstuurd. Zie [docs/Bronnen.md](docs/Bronnen.md).
+  Wat je offline doet wordt bewaard en later verstuurd. Zie [docs/Bronnen.md](docs/Bronnen.md). Bij taken met een deadline van vandaag krijg je een melding bij de klok (hooguit één per taak per dag; uit te zetten in Instellingen).
 - **Rustig en aanpasbaar.** Effen thema's, een eigen kleur en transparantie per pane, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
 - **Dubbelklik op een leeg stuk bureaublad** verbergt alle panes; nog een keer haalt ze terug.
 - **Nederlands en Engels.** DonkiePane volgt de taal van Windows; kiezen kan in Instellingen → Taal. Vertalingen staan in `src/DonkiePane.Core/Localization`.
+- **Indeling exporteren en importeren.** Instellingen → Gegevens bewaart je panes en hun plek als bestand, als reservekopie of om ze op een andere pc over te zetten. Taken, bronnen en tokens gaan niet mee.
 - **Meerdere schermen.** Valt een scherm weg, dan komen de panes naar een ander scherm en gaan ze terug zodra het scherm terugkomt.
 
 ## Installeren

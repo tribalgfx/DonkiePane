@@ -12,15 +12,17 @@ Panes on your Windows desktop for your shortcuts and your tasks. With a calm loo
 
 - **Panes on the desktop.** They sit behind your windows and stay put when you press Win+D.
 - **Your desktop icons in panes.** Whatever you do with a file or shortcut on the desktop, you can do in a pane too: open, select (Ctrl, Shift, drag a selection box), drag to File Explorer, an app, a folder or the Recycle Bin, drag files into a pane, Delete, F2, Ctrl+C/X/V, Ctrl+Shift+N, Alt+Enter and the File Explorer menu (right-clicking an empty spot gives Paste and New). Drop icons on an empty spot of the desktop and a new pane appears there with them. Windows carries it all out, so confirmations and the Recycle Bin work as always; DonkiePane never moves or deletes anything by itself. New files land in the Inbox pane, or in the pane you pasted or dropped them in.
+- **View and sorting per pane.** Large icons, small icons or a list, sorted in your own order, by name, by type or by date modified (right-click the title bar). Start typing in a pane to filter its icons by name; Esc clears the filter.
 - **Task panes.** Add, check off, reorder and star tasks. Local, or synced with a source you add yourself:
   - Google Tasks
   - Home Assistant (to-do lists)
   - a service of your own that speaks the Tasks REST v1 protocol
 
-  What you do offline is kept and sent later. See [docs/Sources.md](docs/Sources.md).
+  What you do offline is kept and sent later. See [docs/Sources.md](docs/Sources.md). Tasks due today give a notification next to the clock (once per task per day; can be turned off in Settings).
 - **Calm and customizable.** Plain themes, your own color and transparency per pane, a grid to snap panes to, and an optional tea-towel check pattern.
 - **Double-click an empty spot on the desktop** to hide all panes; double-click again to bring them back.
 - **English and Dutch.** DonkiePane follows the language of Windows; you can choose in Settings → Language. Translations live in `src/DonkiePane.Core/Localization`.
+- **Export and import your layout.** Settings → Data saves your panes and where they are as a file, as a backup or to move them to another PC. Tasks, sources and tokens are not included.
 - **Multiple screens.** If a screen disappears, its panes move to another screen and go back as soon as the screen returns.
 
 ## Installing

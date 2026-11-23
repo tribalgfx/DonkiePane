@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using DonkiePane.Core;
 using DonkiePane.Shell;
 using ComIDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 
@@ -36,13 +37,24 @@ public partial class IconsView : UserControl
     public static bool GetIsCut(DependencyObject element) => (bool)element.GetValue(IsCutProperty);
     public static void SetIsCut(DependencyObject element, bool value) => element.SetValue(IsCutProperty, value);
 
+    /// <summary>De weergave van het pane; erft door naar elk icoon, zodat de tegel weet hoe groot hij is.</summary>
+    public static readonly DependencyProperty ModeProperty =
+        DependencyProperty.RegisterAttached("Mode", typeof(IconSize), typeof(IconsView),
+            new FrameworkPropertyMetadata(IconSize.Large, FrameworkPropertyMetadataOptions.Inherits));
+
+    public static IconSize GetMode(DependencyObject element) => (IconSize)element.GetValue(ModeProperty);
+    public static void SetMode(DependencyObject element, IconSize value) => element.SetValue(ModeProperty, value);
+
     private static readonly HashSet<string> CutIds = new(StringComparer.OrdinalIgnoreCase);
     private static ComIDataObject? _cutData;
     private static DispatcherTimer? _cutTimer;
     private static event EventHandler? CutChanged;
 
-    private IReadOnlyList<ItemView> _items = [];
-    private Point? _dragStart;               // waar de linkerknop op een icoon omlaag ging
+    private IReadOnlyList<ItemView> _allItems = []; // alles in dit pane, in de volgorde op het scherm
+    private IReadOnlyList<ItemView> _items = [];    // wat er nu te zien is (na het filter)
+    private IconSize _mode = IconSize.Large;
+    private bool _sorted;                            // gesorteerd op naam/type/datum: zelf ordenen kan dan niet
+    private Point? _dragStart;              // waar de linkerknop op een icoon omlaag ging
     private ListBoxItem? _deferredSelect;    // klik op een al geselecteerd icoon: pas bij loslaten alleen dat selecteren
     private Point? _marqueeStart;            // kader trekken vanaf een lege plek
     private HashSet<ItemView> _marqueeBase = [];
@@ -103,17 +115,9 @@ public partial class IconsView : UserControl
             return;
         }
 
-        var selected = SelectedIds();
-        var previous = new HashSet<string>(_items.Select(i => i.Id), StringComparer.OrdinalIgnoreCase);
-        var focusedId = (Keyboard.FocusedElement as ListBoxItem)?.DataContext is ItemView f ? f.Id : null;
-        _items = items;
-        ItemsHost.ItemsSource = items;
-        EmptyHint.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (selected.Count > 0) Select(selected);
-        if (focusedId is not null && items.FirstOrDefault(i => i.Id == focusedId) is { } focused)
-            Dispatcher.InvokeAsync(() => (ItemsHost.ItemContainerGenerator.ContainerFromItem(focused) as ListBoxItem)?.Focus(),
-                DispatcherPriority.Loaded);
-        Dispatcher.InvokeAsync(ApplyCutState, DispatcherPriority.Loaded);
+        var previous = new HashSet<string>(_allItems.Select(i => i.Id), StringComparer.OrdinalIgnoreCase);
+        _allItems = items;
+        ShowItems();
 
         // Net gemaakt (nieuwe map, Nieuw → ...): meteen de naam laten typen, zoals op het bureaublad.
         var arrived = items.Where(i => !previous.Contains(i.Id)).ToList();
@@ -128,6 +132,34 @@ public partial class IconsView : UserControl
             _renameNextNewUntil = default;
             Dispatcher.InvokeAsync(() => BeginRename(rename), DispatcherPriority.Loaded);
         }
+    }
+
+    /// <summary>Toont wat er na het filter overblijft; selectie en focus blijven waar ze waren.</summary>
+    private void ShowItems()
+    {
+        var selected = SelectedIds();
+        var focusedId = (Keyboard.FocusedElement as ListBoxItem)?.DataContext is ItemView f ? f.Id : null;
+        var filter = FilterBar.Visibility == Visibility.Visible ? FilterBox.Text.Trim() : "";
+        _items = filter.Length == 0
+            ? _allItems
+            : _allItems.Where(i => i.DisplayName.Contains(filter, StringComparison.CurrentCultureIgnoreCase)).ToList();
+        ItemsHost.ItemsSource = _items;
+        EmptyHint.Visibility = _allItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        NoMatchHint.Visibility = _allItems.Count > 0 && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (selected.Count > 0) Select(selected);
+        if (focusedId is not null && _items.FirstOrDefault(i => i.Id == focusedId) is { } focused)
+            Dispatcher.InvokeAsync(() => ContainerOf(focused)?.Focus(), DispatcherPriority.Loaded);
+        Dispatcher.InvokeAsync(ApplyCutState, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>Grote of kleine iconen, of een lijst; en of de volgorde gesorteerd is (dan kun je niet zelf ordenen).</summary>
+    public void SetView(IconSize mode, bool sorted)
+    {
+        _sorted = sorted;
+        if (_mode == mode) return;
+        _mode = mode;
+        SetMode(ItemsHost, mode);
+        ItemsHost.ItemsPanel = (ItemsPanelTemplate)FindResource(mode == IconSize.List ? "ListItems" : "WrapItems");
     }
 
     /// <summary>Selecteert precies deze items (onbekende id's tellen niet).</summary>
@@ -383,6 +415,12 @@ public partial class IconsView : UserControl
             case Key.A when ctrl:
                 ItemsHost.SelectAll();
                 break;
+            case Key.F when ctrl:
+                OpenFilter("");
+                break;
+            case Key.Escape when FilterBar.Visibility == Visibility.Visible:
+                CloseFilter();
+                break;
             case Key.Escape:
                 ItemsHost.UnselectAll();
                 break;
@@ -395,6 +433,83 @@ public partial class IconsView : UserControl
         }
         e.Handled = true;
     }
+
+    // ---------- Snel filteren ----------
+
+    /// <summary>Typen in het pane filtert de iconen op naam (in plaats van naar het eerste icoon met die letter te springen).</summary>
+    private void ItemsHost_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        if (e.OriginalSource is TextBox || _renaming is not null) return;
+        if (string.IsNullOrEmpty(e.Text) || char.IsControl(e.Text[0])) return;
+        if (FilterBar.Visibility != Visibility.Visible && string.IsNullOrWhiteSpace(e.Text)) return; // een spatie begint geen filter
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) return;
+        OpenFilter(FilterBar.Visibility == Visibility.Visible ? FilterBox.Text + e.Text : e.Text);
+        e.Handled = true;
+    }
+
+    /// <summary>Toont het filtervak met deze tekst en zet de cursor erin.</summary>
+    internal void OpenFilter(string text)
+    {
+        FilterBar.Visibility = Visibility.Visible;
+        FilterBox.Text = text;
+        FilterBox.CaretIndex = text.Length;
+        ShowItems();
+        Dispatcher.InvokeAsync(() =>
+        {
+            Window.GetWindow(this)?.Activate();
+            FilterBox.Focus();
+        }, DispatcherPriority.Input);
+    }
+
+    /// <summary>Filter weg: alle iconen weer zichtbaar.</summary>
+    internal void CloseFilter(bool focusIcons = true)
+    {
+        if (FilterBar.Visibility != Visibility.Visible) return;
+        FilterBar.Visibility = Visibility.Collapsed;
+        FilterBox.Text = "";
+        ShowItems();
+        if (focusIcons) ItemsHost.Focus();
+    }
+
+    /// <summary>Wat er nu zichtbaar is (voor tests).</summary>
+    internal IReadOnlyList<ItemView> VisibleItems => _items;
+
+    private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (FilterBar.Visibility == Visibility.Visible) ShowItems();
+    }
+
+    private void FilterBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape:
+                CloseFilter();
+                break;
+            case Key.Enter when _items.Count > 0:
+                // Het gekozen icoon, of anders het eerste dat overblijft.
+                Open(ItemsHost.SelectedItem as ItemView ?? _items[0]);
+                CloseFilter();
+                break;
+            case Key.Down when _items.Count > 0:
+            case Key.Tab when _items.Count > 0:
+                ItemsHost.SelectedItems.Clear();
+                ItemsHost.SelectedItem = _items[0];
+                ContainerOf(_items[0])?.Focus();
+                break;
+            default:
+                return;
+        }
+        e.Handled = true;
+    }
+
+    /// <summary>Leeg filtervak en ergens anders heen geklikt: het vak mag weg.</summary>
+    private void FilterBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (FilterBox.Text.Length == 0) CloseFilter(focusIcons: false);
+    }
+
+    private void ClearFilter_Click(object sender, RoutedEventArgs e) => CloseFilter();
 
     // ---------- Knippen: half doorzichtig tot het geplakt of vervangen is ----------
 
@@ -692,29 +807,60 @@ public partial class IconsView : UserControl
         InsertMarker.Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>De plek in de lijst: vóór het icoon onder de muis, of erna als de muis op de rechterhelft staat.</summary>
+    /// <summary>
+    /// De plek in de eigen volgorde van het pane: vóór het icoon onder de muis, of erna als de muis op de rechterhelft
+    /// (in een lijst: de onderste helft) staat. Gesorteerd telt de plek niet: dan -1 (achteraan).
+    /// </summary>
     private int DropIndex(DragEventArgs e)
     {
-        if (ContainerAt(e.GetPosition(ItemsHost)) is not { DataContext: ItemView target } container) return -1;
+        if (_sorted) return -1;
+        if (VisibleDropIndex(e) is not { } visible) return -1;
+        // Met een filter zijn niet alle iconen te zien: de plek telt in de hele volgorde.
+        if (visible >= _items.Count) return _items.Count == 0 ? -1 : IndexInAll(_items[^1]) + 1;
+        return IndexInAll(_items[visible]);
+    }
+
+    private int IndexInAll(ItemView item) => _allItems.ToList().FindIndex(i => i.Id == item.Id);
+
+    /// <summary>De plek tussen de zichtbare iconen, of <c>null</c> als de muis niet boven een icoon staat.</summary>
+    private int? VisibleDropIndex(DragEventArgs e)
+    {
+        if (ContainerAt(e.GetPosition(ItemsHost)) is not { DataContext: ItemView target } container) return null;
         var index = _items.ToList().FindIndex(i => i.Id == target.Id);
-        if (index < 0) return -1;
-        return e.GetPosition(container).X > container.ActualWidth / 2 ? index + 1 : index;
+        if (index < 0) return null;
+        var position = e.GetPosition(container);
+        var after = _mode == IconSize.List ? position.Y > container.ActualHeight / 2 : position.X > container.ActualWidth / 2;
+        return after ? index + 1 : index;
     }
 
     private void ShowInsertMarker(DragEventArgs e)
     {
-        var index = DropIndex(e);
+        // Gesorteerd bepaalt de sortering de plek; een streep zou iets beloven wat niet gebeurt.
+        int? index = _sorted ? null : VisibleDropIndex(e) ?? _items.Count;
         ListBoxItem? container;
         bool after;
-        if (index >= 0 && index < _items.Count) { container = ContainerOf(_items[index]); after = false; }
+        if (index is null) { InsertMarker.Visibility = Visibility.Collapsed; return; }
+        if (index < _items.Count) { container = ContainerOf(_items[index.Value]); after = false; }
         else if (_items.Count > 0) { container = ContainerOf(_items[^1]); after = true; }
         else { InsertMarker.Visibility = Visibility.Collapsed; return; }
         if (container is null) { InsertMarker.Visibility = Visibility.Collapsed; return; }
 
         var bounds = container.TransformToVisual(Overlay).TransformBounds(new Rect(container.RenderSize));
-        Canvas.SetLeft(InsertMarker, (after ? bounds.Right + 1 : bounds.Left - 3) - InsertMarker.Width / 2 + 1);
-        Canvas.SetTop(InsertMarker, bounds.Top + 6);
-        InsertMarker.Height = Math.Max(0, bounds.Height - 12);
+        if (_mode == IconSize.List)
+        {
+            // Een liggende streep tussen twee regels.
+            InsertMarker.Width = Math.Max(0, bounds.Width - 12);
+            InsertMarker.Height = 3;
+            Canvas.SetLeft(InsertMarker, bounds.Left + 6);
+            Canvas.SetTop(InsertMarker, (after ? bounds.Bottom : bounds.Top) - 1.5);
+        }
+        else
+        {
+            InsertMarker.Width = 3;
+            Canvas.SetLeft(InsertMarker, (after ? bounds.Right + 1 : bounds.Left - 3) - InsertMarker.Width / 2 + 1);
+            Canvas.SetTop(InsertMarker, bounds.Top + 6);
+            InsertMarker.Height = Math.Max(0, bounds.Height - 12);
+        }
         InsertMarker.Visibility = Visibility.Visible;
     }
 

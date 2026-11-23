@@ -131,6 +131,13 @@
             <TextBlock x:Name="SyncValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Taken'}" />
+        <CheckBox x:Name="RemindDueBox" Style="{StaticResource Option}" Margin="0,2,0,0" Click="RemindDue_Click">
+            <TextBlock Text="{l:T 'Melding bij taken met een deadline van vandaag'}" />
+        </CheckBox>
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="{l:T 'Kort na het starten en daarna elk kwartier kijkt DonkiePane in je takenpanes. Over elke taak krijg je hooguit één melding per dag.'}" />
+
         <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Takenbronnen'}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
                    Text="{l:T 'Waar een takenpane zijn taken vandaan haalt. Lokale taken werken altijd. Andere bronnen voeg je zelf toe: elke bron heeft zijn eigen gegevens, en tokens worden versleuteld op deze pc bewaard.'}" />
@@ -154,6 +161,12 @@
         <TextBlock x:Name="DataPath" Style="{StaticResource Hint}" Margin="0" />
         <StackPanel Orientation="Horizontal">
             <Button Style="{StaticResource Action}" Click="OpenData_Click" Content="{l:T 'Map openen'}" />
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
+                   Text="{l:T 'Bewaar je panes en hun plek als bestand, bijvoorbeeld als reservekopie of om ze op een andere pc over te zetten. Taken, bronnen en tokens gaan niet mee.'}" />
+        <StackPanel Orientation="Horizontal">
+            <Button x:Name="ExportButton" Style="{StaticResource Action}" Click="ExportLayout_Click" Content="{l:T 'Indeling exporteren…'}" />
+            <Button x:Name="ImportButton" Style="{StaticResource Action}" Click="ImportLayout_Click" Content="{l:T 'Indeling importeren…'}" />
         </StackPanel>
 
         <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Taal'}" />

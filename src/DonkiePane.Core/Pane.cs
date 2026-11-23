@@ -15,6 +15,31 @@ public enum PaneKind
     Tasks,
 }
 
+/// <summary>Hoe een iconenpane zijn iconen laat zien.</summary>
+public enum IconSize
+{
+    /// <summary>Grote iconen met de naam eronder, zoals op het bureaublad.</summary>
+    Large,
+
+    /// <summary>Kleinere iconen met de naam eronder: er past meer in een pane.</summary>
+    Small,
+
+    /// <summary>Een lijst: klein icoon met de naam ernaast, één item per regel.</summary>
+    List,
+}
+
+/// <summary>In welke volgorde een iconenpane zijn iconen laat zien.</summary>
+public enum ItemSortOrder
+{
+    /// <summary>De volgorde waarin je ze zelf hebt gesleept.</summary>
+    Manual,
+    Name,
+    Type,
+
+    /// <summary>Laatst gewijzigd eerst.</summary>
+    Modified,
+}
+
 /// <summary>
 /// Eén vak ("ruitje") op het bureaublad. Positie en grootte zijn in
 /// apparaat-onafhankelijke pixels (WPF-eenheden).
@@ -65,7 +90,16 @@ public sealed class Pane
     /// </summary>
     public bool IsInbox { get; set; }
 
-    /// <summary>Bureaubladitems in dit pane, in weergavevolgorde (zie <see cref="DesktopItemId"/>). Alleen bij <see cref="PaneKind.Icons"/>.</summary>
+    /// <summary>Grote of kleine iconen, of een lijst. Alleen bij <see cref="PaneKind.Icons"/>.</summary>
+    public IconSize IconSize { get; set; } = IconSize.Large;
+
+    /// <summary>
+    /// De volgorde op het scherm. Bij <see cref="ItemSortOrder.Manual"/> is dat <see cref="Items"/>; anders gesorteerd,
+    /// en blijft de eigen volgorde in <see cref="Items"/> bewaard voor als je terug wilt. Alleen bij <see cref="PaneKind.Icons"/>.
+    /// </summary>
+    public ItemSortOrder SortBy { get; set; } = ItemSortOrder.Manual;
+
+    /// <summary>Bureaubladitems in dit pane, in de eigen volgorde (zie <see cref="DesktopItemId"/>). Alleen bij <see cref="PaneKind.Icons"/>.</summary>
     public List<string> Items { get; set; } = [];
 
     /// <summary>De takenlijst die dit pane toont. Alleen bij <see cref="PaneKind.Tasks"/>. Bij Google Taken is dit het ID van de lijst bij Google.</summary>

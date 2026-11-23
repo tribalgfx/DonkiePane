@@ -12,7 +12,19 @@
             <MenuItem Header="{l:T 'Bestandslocatie openen'}" Click="ShowInExplorer_Click" />
         </ContextMenu>
 
-        <!-- Eén icoon: zoals op het bureaublad, met een afgeronde markering bij aanwijzen en selecteren. -->
+        <!-- Hoe de iconen naast elkaar staan: in rijen (grote en kleine iconen) of onder elkaar (lijst). -->
+        <ItemsPanelTemplate x:Key="WrapItems">
+            <WrapPanel />
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="ListItems">
+            <StackPanel />
+        </ItemsPanelTemplate>
+
+        <!--
+            Eén icoon: zoals op het bureaublad, met een afgeronde markering bij aanwijzen en selecteren.
+            De weergave van het pane (IconsView.Mode, erft door naar elk icoon) bepaalt de maat: groot, klein of een
+            lijstregel met het icoon links van de naam.
+        -->
         <Style x:Key="TileStyle" TargetType="ListBoxItem">
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Margin" Value="2" />
@@ -27,10 +39,18 @@
                                 BorderThickness="1"
                                 ToolTip="{Binding DisplayName}"
                                 ToolTipService.InitialShowDelay="900">
-                            <StackPanel>
-                                <Image x:Name="Icon" Source="{Binding Icon}" Width="48" Height="48"
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Image x:Name="Icon" Grid.ColumnSpan="2" Source="{Binding Icon}" Width="48" Height="48"
                                        RenderOptions.BitmapScalingMode="HighQuality" />
-                                <Grid Margin="0,5,0,0">
+                                <Grid x:Name="NameArea" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
                                     <TextBlock x:Name="NameText"
                                                Text="{Binding DisplayName}"
                                                MaxHeight="32"
@@ -52,9 +72,37 @@
                                              Padding="2,1"
                                              Style="{DynamicResource PaneTextBox}" />
                                 </Grid>
-                            </StackPanel>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="local:IconsView.Mode" Value="Small">
+                                <Setter TargetName="Tile" Property="Width" Value="78" />
+                                <Setter TargetName="Tile" Property="Padding" Value="2,5,2,4" />
+                                <Setter TargetName="Icon" Property="Width" Value="32" />
+                                <Setter TargetName="Icon" Property="Height" Value="32" />
+                                <Setter TargetName="NameArea" Property="Margin" Value="0,4,0,0" />
+                                <Setter TargetName="NameText" Property="FontSize" Value="11" />
+                                <Setter TargetName="NameText" Property="LineHeight" Value="14" />
+                                <Setter TargetName="NameText" Property="MaxHeight" Value="28" />
+                                <Setter TargetName="NameEditor" Property="FontSize" Value="11" />
+                            </Trigger>
+                            <Trigger Property="local:IconsView.Mode" Value="List">
+                                <Setter TargetName="Tile" Property="Width" Value="NaN" />
+                                <Setter TargetName="Tile" Property="Padding" Value="6,3" />
+                                <Setter TargetName="Tile" Property="CornerRadius" Value="5" />
+                                <Setter TargetName="Icon" Property="Width" Value="20" />
+                                <Setter TargetName="Icon" Property="Height" Value="20" />
+                                <Setter TargetName="Icon" Property="Grid.ColumnSpan" Value="1" />
+                                <Setter TargetName="NameArea" Property="Grid.Row" Value="0" />
+                                <Setter TargetName="NameArea" Property="Grid.Column" Value="1" />
+                                <Setter TargetName="NameArea" Property="Grid.ColumnSpan" Value="1" />
+                                <Setter TargetName="NameArea" Property="Margin" Value="8,0,0,0" />
+                                <Setter TargetName="NameArea" Property="VerticalAlignment" Value="Center" />
+                                <Setter TargetName="NameText" Property="TextAlignment" Value="Left" />
+                                <Setter TargetName="NameText" Property="TextWrapping" Value="NoWrap" />
+                                <Setter TargetName="NameEditor" Property="TextAlignment" Value="Left" />
+                                <Setter TargetName="NameEditor" Property="TextWrapping" Value="NoWrap" />
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneHover}" />
                                 <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneHoverBorder}" />
@@ -85,6 +133,11 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="local:IconsView.Mode" Value="List">
+                    <Setter Property="Margin" Value="0,1" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
@@ -92,17 +145,44 @@
           DragEnter="Root_DragEnter" DragOver="Root_DragOver" DragLeave="Root_DragLeave" Drop="Root_Drop"
           PreviewMouseMove="Root_PreviewMouseMove" PreviewMouseLeftButtonUp="Root_PreviewMouseLeftButtonUp"
           LostMouseCapture="Root_LostMouseCapture">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Snel filteren: verschijnt zodra je in het pane begint te typen (of met Ctrl+F). -->
+        <Border x:Name="FilterBar" Visibility="Collapsed" Margin="8,7,8,1" Padding="7,0,2,0" CornerRadius="5"
+                Background="{DynamicResource PaneHover}" BorderBrush="{DynamicResource PaneHoverBorder}" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE721;" FontFamily="{DynamicResource IconFont}" FontSize="11" VerticalAlignment="Center"
+                           Foreground="{DynamicResource PaneMutedText}" />
+                <TextBox x:Name="FilterBox" Grid.Column="1" Margin="4,0,0,0" BorderThickness="0" Background="Transparent"
+                         Style="{DynamicResource PaneTextBox}"
+                         TextChanged="FilterBox_TextChanged" PreviewKeyDown="FilterBox_PreviewKeyDown"
+                         LostKeyboardFocus="FilterBox_LostKeyboardFocus" />
+                <Button Grid.Column="2" Style="{DynamicResource GlyphButton}" Foreground="{DynamicResource PaneMutedText}"
+                        Content="&#xE711;" FontSize="9" ToolTip="{l:T 'Filter wissen (Esc)'}" Click="ClearFilter_Click" />
+            </Grid>
+        </Border>
+
         <ListBox x:Name="ItemsHost"
+                 Grid.Row="1"
                  SelectionMode="Extended"
                  ItemContainerStyle="{StaticResource TileStyle}"
-                 IsTextSearchEnabled="True"
-                 TextSearch.TextPath="DisplayName"
+                 ItemsPanel="{StaticResource WrapItems}"
+                 IsTextSearchEnabled="False"
                  KeyboardNavigation.DirectionalNavigation="Contained"
                  FocusVisualStyle="{x:Null}"
                  PreviewMouseLeftButtonDown="ItemsHost_PreviewMouseLeftButtonDown"
                  PreviewMouseRightButtonDown="ItemsHost_PreviewMouseRightButtonDown"
                  MouseRightButtonUp="ItemsHost_MouseRightButtonUp"
                  PreviewKeyDown="ItemsHost_PreviewKeyDown"
+                 PreviewTextInput="ItemsHost_PreviewTextInput"
                  SelectionChanged="ItemsHost_SelectionChanged">
             <ListBox.Template>
                 <ControlTemplate TargetType="ListBox">
@@ -112,22 +192,21 @@
                     </ScrollViewer>
                 </ControlTemplate>
             </ListBox.Template>
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
         </ListBox>
 
         <!-- Selectiekader en de plek waar gesleepte iconen komen. -->
-        <Canvas x:Name="Overlay" IsHitTestVisible="False" ClipToBounds="True">
+        <Canvas x:Name="Overlay" Grid.Row="1" IsHitTestVisible="False" ClipToBounds="True">
             <Border x:Name="Marquee" Visibility="Collapsed" CornerRadius="3" BorderThickness="1"
                     Background="{DynamicResource PaneSelection}" BorderBrush="{DynamicResource PaneAccentLine}" />
             <Border x:Name="InsertMarker" Visibility="Collapsed" Width="3" CornerRadius="1.5"
                     Background="{DynamicResource PaneAccentLine}" />
         </Canvas>
 
-        <StackPanel x:Name="EmptyHint" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
+        <TextBlock x:Name="NoMatchHint" Grid.Row="1" Visibility="Collapsed" Margin="16" IsHitTestVisible="False"
+                   HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="12" Opacity="0.8"
+                   Foreground="{DynamicResource PaneMutedText}" Text="{l:T 'Geen iconen gevonden'}" />
+
+        <StackPanel x:Name="EmptyHint" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16"
                     IsHitTestVisible="False" Opacity="0.7">
             <TextBlock Text="&#xE8B7;" FontFamily="{DynamicResource IconFont}" FontSize="26"
                        HorizontalAlignment="Center" Foreground="{DynamicResource PaneMutedText}" />

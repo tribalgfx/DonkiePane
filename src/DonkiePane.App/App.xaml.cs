@@ -21,7 +21,7 @@ public partial class App : Application
     private DesktopFolders? _desktop;
     private DispatcherTimer? _resyncTimer;
     private DispatcherTimer? _watchTimer;
-    private bool _balloonIsUpdate;   // waar een klik op de melding bij het icoon heen gaat
+    private Action? _balloonClicked; // wat een klik op de melding bij het icoon doet
     private bool _saveFailureShown;  // één melding per reeks mislukte keren opslaan
     private bool _exited;            // OnExit is geweest (kan al tijdens het welkomstscherm)
     private Forms.NotifyIcon? _trayIcon;
@@ -122,6 +122,7 @@ public partial class App : Application
 
         _trayIcon = CreateTrayIcon();
         StartUpdateChecks();
+        StartDueReminders();
         if (options.OpenSettings || openSettingsAfterWelcome) ShowSettings(); // --settings is handig voor een snelkoppeling
 
         _shellWatcher = new ShellRestartWatcher();
@@ -192,8 +193,28 @@ public partial class App : Application
     {
         foreach (var (pane, view) in _iconViews)
         {
-            view.SetItems(pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
+            var items = pane.Items.Select(GetItemView).OfType<ItemView>().ToList();
+            view.SetView(pane.IconSize, sorted: pane.SortBy != ItemSortOrder.Manual);
+            view.SetItems(pane.SortBy == ItemSortOrder.Manual ? items : Sorted(items, pane.SortBy));
         }
+    }
+
+    /// <summary>De iconen gesorteerd op naam, type of datum; de eigen volgorde in het pane blijft bewaard.</summary>
+    private static List<ItemView> Sorted(List<ItemView> items, ItemSortOrder order)
+    {
+        var byId = new Dictionary<string, ItemView>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in items) byId.TryAdd(item.Id, item);
+        var sortable = byId.Values.Select(i =>
+        {
+            var isVirtual = VirtualDesktopItems.IsVirtual(i.Path);
+            var isFolder = isVirtual || Directory.Exists(i.Path);
+            DateTime modified;
+            try { modified = isVirtual ? DateTime.MinValue : isFolder ? Directory.GetLastWriteTimeUtc(i.Path) : File.GetLastWriteTimeUtc(i.Path); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { modified = DateTime.MinValue; }
+            var extension = isFolder ? "" : Path.GetExtension(i.Path).TrimStart('.');
+            return new SortableItem(i.Id, i.DisplayName, isFolder, extension, modified);
+        });
+        return ItemSort.Order(sortable, order).Select(id => byId[id]).ToList();
     }
 
     /// <summary>De Prullenbak is veranderd: icoon (vol/leeg) en naam van de systeemiconen opnieuw ophalen.</summary>
@@ -246,6 +267,7 @@ public partial class App : Application
             pane.Monitor = MonitorOf(window) ?? pane.Monitor;
         };
         window.PaneChanged += (_, _) => SaveLayout();
+        window.ViewChanged += (_, _) => RefreshItems();
         window.DeleteRequested += async (_, _) => await DeletePaneAsync(window);
 
         if (pane.Kind == PaneKind.Tasks)
@@ -369,23 +391,29 @@ public partial class App : Application
         timer.Tick += (_, _) =>
         {
             timer.Stop();
-            foreach (var window in _windows.ToList())
-                window.Close();
-            _windows.Clear();
-            _panesHidden = false; // de nieuwe panes zijn zichtbaar
-            _iconViews.Clear();
             _gridOverlay?.Close(); // hing aan het oude bureaublad
             _gridOverlay = null;
             foreach (var dropWindow in _dropWindows) dropWindow.Close(); // idem
             _dropWindows.Clear();
-            foreach (var pane in _layout.Panes)
-                ShowPane(pane);
             StartRecycleBinWatcher(); // de aanmelding bij de oude Verkenner geldt niet meer
-            RefreshItems();
+            RecreatePaneWindows();
             ApplyDesktopIconsSetting();
-            EnsurePanesVisible();
         };
         timer.Start();
+    }
+
+    /// <summary>Sluit alle pane-vensters en bouwt ze opnieuw op uit de indeling.</summary>
+    private void RecreatePaneWindows()
+    {
+        foreach (var window in _windows.ToList())
+            window.Close();
+        _windows.Clear();
+        _panesHidden = false; // de nieuwe panes zijn zichtbaar
+        _iconViews.Clear();
+        foreach (var pane in _layout.Panes)
+            ShowPane(pane);
+        RefreshItems();
+        EnsurePanesVisible();
     }
 
     /// <summary>Volgt of de Prullenbak vol of leeg is (voor het icoon); na een herstart van Verkenner opnieuw.</summary>
@@ -411,7 +439,7 @@ public partial class App : Application
         {
             if (_saveFailureShown || _trayIcon is null) return;
             _saveFailureShown = true;
-            _balloonIsUpdate = false;
+            _balloonClicked = null;
             _trayIcon.ShowBalloonTip(10_000, Loc.T("DonkiePane kon je indeling niet opslaan"),
                 Loc.F("{0} DonkiePane probeert het bij de volgende wijziging opnieuw.", ex.Message), Forms.ToolTipIcon.Warning);
         }
@@ -496,7 +524,7 @@ public partial class App : Application
             Visible = true,
         };
         icon.DoubleClick += (_, _) => ShowSettings();
-        icon.BalloonTipClicked += (_, _) => { if (_balloonIsUpdate) ShowUpdateWindow(); };
+        icon.BalloonTipClicked += (_, _) => _balloonClicked?.Invoke();
         return icon;
     }
 
@@ -516,6 +544,7 @@ public partial class App : Application
         RestoreDesktopIcons(); // eerst: wat er verder ook misgaat, het bureaublad moet terug
         SaveLayout();
         StopUpdateChecks();
+        StopDueReminders();
         StopWatchingDisplays();
         _watchTimer?.Stop();
         _doubleClickWatcher?.Dispose();

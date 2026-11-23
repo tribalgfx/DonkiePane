@@ -38,6 +38,9 @@ public partial class PaneWindow : Window
     public event EventHandler? PaneChanged;
     public event EventHandler? DeleteRequested;
 
+    /// <summary>Weergave of sortering van een iconenpane is veranderd: de iconen opnieuw tonen.</summary>
+    public event EventHandler? ViewChanged;
+
     /// <summary>Het verplaatsen of vergroten begint/eindigt (om het raster te tonen).</summary>
     public event EventHandler? SizeMoveStarted;
     public event EventHandler? SizeMoveEnded;
@@ -58,6 +61,7 @@ public partial class PaneWindow : Window
         // De inhoud volgt de afgeronde hoeken (anders steken de titelbalk en iconen bij het scrollen uit de hoek).
         Chrome.SizeChanged += (_, e) => Chrome.Clip = new RectangleGeometry(new Rect(e.NewSize), 9, 9);
         BuildThemeMenu();
+        BuildViewMenus();
 
         LocationChanged += (_, _) =>
         {
@@ -162,6 +166,67 @@ public partial class PaneWindow : Window
         Pane.Opacity = Pane.DefaultOpacity;
         Pane.ShowPattern = false;
         LookChanged();
+    }
+
+    // ---------- Weergave en sortering (iconenpanes) ----------
+
+    private static readonly (IconSize Size, string Name)[] Sizes =
+    [
+        (IconSize.Large, "Grote iconen"),
+        (IconSize.Small, "Kleine iconen"),
+        (IconSize.List, "Lijst"),
+    ];
+
+    private static readonly (ItemSortOrder Order, string Name)[] SortOrders =
+    [
+        (ItemSortOrder.Manual, "Eigen volgorde"),
+        (ItemSortOrder.Name, "Naam"),
+        (ItemSortOrder.Type, "Type"),
+        (ItemSortOrder.Modified, "Laatst gewijzigd"),
+    ];
+
+    private void BuildViewMenus()
+    {
+        var icons = Pane.Kind == PaneKind.Icons;
+        ViewMenu.Visibility = SortMenu.Visibility = icons ? Visibility.Visible : Visibility.Collapsed;
+        if (!icons) return;
+
+        ViewMenu.Items.Clear();
+        foreach (var (size, name) in Sizes)
+        {
+            var item = new MenuItem { Header = Loc.T(name), IsCheckable = true, IsChecked = Pane.IconSize == size, Tag = size };
+            item.Click += Size_Click;
+            ViewMenu.Items.Add(item);
+        }
+
+        SortMenu.Items.Clear();
+        foreach (var (order, name) in SortOrders)
+        {
+            var item = new MenuItem { Header = Loc.T(name), IsCheckable = true, IsChecked = Pane.SortBy == order, Tag = order };
+            item.Click += Sort_Click;
+            SortMenu.Items.Add(item);
+        }
+    }
+
+    private void Size_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: IconSize size }) return;
+        Pane.IconSize = size;
+        AfterViewChange();
+    }
+
+    private void Sort_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: ItemSortOrder order }) return;
+        Pane.SortBy = order;
+        AfterViewChange();
+    }
+
+    private void AfterViewChange()
+    {
+        BuildViewMenus(); // het vinkje bij de nieuwe keuze (ook als je dezelfde nog eens kiest)
+        ViewChanged?.Invoke(this, EventArgs.Empty);
+        PaneChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ---------- Verplaatsen en vergroten, vastklikken op het raster ----------
