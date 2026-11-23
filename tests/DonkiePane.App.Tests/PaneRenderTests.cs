@@ -143,7 +143,6 @@ public sealed class PaneRenderTests : TempData
                 view.SetItems(items);
                 view.Select([items[1].Id, items[2].Id]);
                 window.SetContent(view);
-                window.SetItemCount(items.Count);
                 // Hoe een map/programma oplicht als je er bestanden boven houdt (in de accentkleur).
                 view.Loaded += (_, _) => { };
                 view.Dispatcher.InvokeAsync(() =>

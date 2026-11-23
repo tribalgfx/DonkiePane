@@ -192,9 +192,7 @@ public partial class App : Application
     {
         foreach (var (pane, view) in _iconViews)
         {
-            var items = pane.Items.Select(GetItemView).OfType<ItemView>().ToList();
-            view.SetItems(items);
-            _windows.FirstOrDefault(w => w.Pane == pane && !w.IsClosed)?.SetItemCount(items.Count);
+            view.SetItems(pane.Items.Select(GetItemView).OfType<ItemView>().ToList());
         }
     }
 

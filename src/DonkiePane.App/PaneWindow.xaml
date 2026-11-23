@@ -65,23 +65,13 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="TitleText"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource PaneTitleText}"
-                                   FontFamily="{DynamicResource UiDisplayFont}"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <!-- Aantal iconen, gedempt naast de titel (alleen bij iconenpanes). -->
-                        <TextBlock x:Name="CountText"
-                                   Margin="8,1,0,0"
-                                   VerticalAlignment="Center"
-                                   FontSize="11.5"
-                                   Foreground="{DynamicResource PaneTitleText}"
-                                   Opacity="0.55"
-                                   Visibility="Collapsed" />
-                    </StackPanel>
+                    <TextBlock x:Name="TitleText"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource PaneTitleText}"
+                               FontFamily="{DynamicResource UiDisplayFont}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
                     <TextBox x:Name="TitleEditor"
                              Visibility="Collapsed"
                              VerticalAlignment="Center"

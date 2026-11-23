@@ -75,13 +75,6 @@ public partial class PaneWindow : Window
 
     public void SetContent(UIElement content) => Body.Content = content;
 
-    /// <summary>Het aantal iconen, gedempt naast de titel; <c>null</c> = niet tonen (takenpane).</summary>
-    public void SetItemCount(int? count)
-    {
-        CountText.Text = count?.ToString() ?? "";
-        CountText.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
-    }
-
     // ---------- Thema, kleur en transparantie ----------
 
     private void ApplyTheme() => PaneThemes.Apply(Resources, Pane);
