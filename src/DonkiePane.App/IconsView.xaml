@@ -110,6 +110,8 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneSelection}" />
                                 <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneSelectionBorder}" />
+                                <!-- Zoals op het bureaublad: geselecteerd staat de hele naam er, niet afgekapt na twee regels. -->
+                                <Setter TargetName="NameText" Property="MaxHeight" Value="Infinity" />
                             </Trigger>
                             <!-- Pane niet actief: de selectie blijft, maar gedempt (zoals in Verkenner). -->
                             <MultiTrigger>

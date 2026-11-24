@@ -628,6 +628,7 @@ public partial class IconsView : UserControl
         finally
         {
             ActiveDrag = null;
+            ResetDrop(); // ook als het pane waar het slepen begon geen "weg" meer kreeg
             DragFinished?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -660,12 +661,26 @@ public partial class IconsView : UserControl
     private void Root_DragLeave(object sender, DragEventArgs e)
     {
         // WPF meldt ook "weg" als de muis van het ene onderdeel naar het andere gaat; alleen echt het pane uit telt.
-        var p = e.GetPosition(Root);
-        if (p.X >= 0 && p.Y >= 0 && p.X < Root.ActualWidth && p.Y < Root.ActualHeight) return;
+        // De plek uit het event is de laatst bekende plek binnen het pane: bij snel wegslepen ligt die nog binnen, en
+        // dan bleef de invoegstreep staan. Daarom de echte plek van de muis.
+        if (IsCursorInside()) return;
         ResetDrop();
         DragImages.Leave();
         e.Handled = true;
     }
+
+    private bool IsCursorInside()
+    {
+        if (!GetCursorPos(out var pt) || PresentationSource.FromVisual(Root) is null) return false;
+        var p = Root.PointFromScreen(new Point(pt.X, pt.Y));
+        return p.X >= 0 && p.Y >= 0 && p.X < Root.ActualWidth && p.Y < Root.ActualHeight;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct CursorPoint { public int X; public int Y; }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out CursorPoint pt);
 
     private void Root_Drop(object sender, DragEventArgs e)
     {
