@@ -32,7 +32,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Tile"
-                                Width="86" Padding="4,7,4,6"
+                                Width="100" Padding="4,7,4,6"
                                 CornerRadius="7"
                                 Background="Transparent"
                                 BorderBrush="Transparent"
@@ -76,7 +76,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="local:IconsView.Mode" Value="Small">
-                                <Setter TargetName="Tile" Property="Width" Value="78" />
+                                <Setter TargetName="Tile" Property="Width" Value="88" />
                                 <Setter TargetName="Tile" Property="Padding" Value="2,5,2,4" />
                                 <Setter TargetName="Icon" Property="Width" Value="32" />
                                 <Setter TargetName="Icon" Property="Height" Value="32" />
