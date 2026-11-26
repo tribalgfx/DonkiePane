@@ -60,7 +60,23 @@ public static class PaneThemes
         All.FirstOrDefault(t => t.Id == id) ?? All.First(t => t.Id == DefaultId);
 
     /// <summary>Zoek uit welke kleuren dit pane krijgt.</summary>
-    public static PaneLook Resolve(Pane pane)
+    /// <summary>Zoek uit welke kleuren dit pane krijgt. <paramref name="lightMode"/>: lichte panes (achtergrond licht, tekst donker).</summary>
+    public static PaneLook Resolve(Pane pane, bool lightMode = false)
+    {
+        var look = ResolveDark(pane);
+        if (!lightMode) return look;
+
+        // Licht: een heel lichte tint van de titelkleur als achtergrond; titelbalk en patroon blijven in de themakleur.
+        var title = (Color)ColorConverter.ConvertFromString(look.Title);
+        return look with
+        {
+            Base = Hex(Mix(title, Colors.White, 0.88)),
+            Check = Hex(Luminance(title) > 0.75 ? Mix(title, Colors.Black, 0.45) : title), // een bijna wit vinkje valt weg
+            PatternColor = Hex(Mix(title, Colors.White, 0.2)),
+        };
+    }
+
+    private static PaneLook ResolveDark(Pane pane)
     {
         var theme = Get(pane.Theme);
         var pattern = pane.ShowPattern ? theme.Pattern : PatternKind.None;
@@ -83,30 +99,79 @@ public static class PaneThemes
     }
 
     /// <summary>Zet de kleuren van <paramref name="pane"/> als resources, zodat alle onderdelen ze (dynamisch) overnemen.</summary>
-    public static void Apply(ResourceDictionary resources, Pane pane)
+    public static void Apply(ResourceDictionary resources, Pane pane, bool lightMode = false)
     {
-        var look = Resolve(pane);
+        var look = Resolve(pane, lightMode);
         resources["PaneBackground"] = CreateBackground(look);
         resources["PaneTitleBackground"] = Solid(look.Title, Math.Min(1.0, look.Opacity + 0.08));
         resources["PaneTitleText"] = Solid(look.TitleText, 1);
         resources["PaneCheck"] = Solid(look.Check, 1);
         resources["PaneAccent"] = Solid(look.Accent, 1);
-        resources["PaneBorder"] = EdgeLight();
-        resources["PaneDivider"] = Solid("#FFFFFF", 0.09);
+        resources["PaneBorder"] = EdgeLight(lightMode);
+
+        // Tekst en markeringen: licht op donker, of donker op licht.
+        var ink = lightMode ? "#1B1C1E" : "#F5F3EF";
+        var line = lightMode ? "#000000" : "#FFFFFF";
+        resources["PaneText"] = Solid(ink, 1);
+        resources["PaneMutedText"] = Solid(ink, 0.65);
+        resources["PaneDivider"] = Solid(line, 0.09);
+        resources["PaneHover"] = Solid(line, lightMode ? 0.06 : 0.08);
+        resources["PaneHoverBorder"] = Solid(line, 0.1);
+        resources["PaneInputBackground"] = Solid(line, lightMode ? 0.05 : 0.1);
+        resources["PaneInputBorder"] = Solid(line, lightMode ? 0.16 : 0.12);
+        resources["PaneSelectionInactiveBorder"] = Solid(line, 0.22);
+        resources["PaneOverdue"] = Solid(lightMode ? "#C42B1C" : "#FF9A8A", 1);
+        resources["PaneCheckRing"] = Solid(ink, 0.55);
+        resources["PaneScrollThumb"] = Solid(ink, 0.35);
+        resources["PaneScrollThumbHover"] = Solid(ink, 0.65);
+        resources["PaneScrollThumbDrag"] = Solid(ink, 0.8);
+        resources["PaneButtonHover"] = Solid(line, lightMode ? 0.09 : 0.12);
+        resources["PaneButtonPressed"] = Solid(line, lightMode ? 0.05 : 0.07);
+        resources["PaneInputHoverBorder"] = Solid(line, 0.2);
+        resources["PaneInputFocusBackground"] = lightMode ? Solid("#FFFFFF", 0.95) : Solid("#1C1D20", 0.9);
+        if (lightMode) resources.Remove("PaneTextShadow"); // donkere tekst op een licht vlak heeft geen schaduw nodig
+        else resources["PaneTextShadow"] = TextShadow();
 
         // Selectie en markeringen in de accentkleur van Windows, net als op het bureaublad.
-        var accent = SystemAccent(lighter: true);
+        var accent = SystemAccent(lighter: !lightMode);
         resources["PaneSelection"] = Solid(accent, 0.30);
         resources["PaneSelectionBorder"] = Solid(accent, 0.75);
         resources["PaneAccentLine"] = Solid(accent, 1);
     }
 
     /// <summary>Een rand die van boven iets lichter is, alsof er licht op de rand van glas valt.</summary>
-    private static Brush EdgeLight()
+    private static Brush EdgeLight(bool lightMode)
     {
-        var brush = new LinearGradientBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF), Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF), 90);
+        var brush = lightMode
+            ? new LinearGradientBrush(Color.FromArgb(0x14, 0, 0, 0), Color.FromArgb(0x2E, 0, 0, 0), 90)
+            : new LinearGradientBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF), Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF), 90);
         brush.Freeze();
         return brush;
+    }
+
+    private static System.Windows.Media.Effects.Effect TextShadow()
+    {
+        var shadow = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            BlurRadius = 4, ShadowDepth = 1, Direction = 270, Opacity = 0.75, Color = Colors.Black,
+        };
+        shadow.Freeze();
+        return shadow;
+    }
+
+    /// <summary>Licht of donker, na de keuze "zoals Windows" (de instelling voor apps in Windows).</summary>
+    public static bool IsLight(AppTheme appearance)
+    {
+        if (appearance != AppTheme.System) return appearance == AppTheme.Light;
+        try
+        {
+            return Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "AppsUseLightTheme", 0) is int value && value != 0;
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or System.IO.IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

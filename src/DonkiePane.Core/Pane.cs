@@ -13,6 +13,19 @@ public enum PaneKind
 
     /// <summary>Een takenlijst.</summary>
     Tasks,
+
+    /// <summary>De inhoud van een map naar keuze, waarin je kunt rondkijken en zoeken.</summary>
+    Folder,
+}
+
+/// <summary>Waar de achtergrond van een pane van gemaakt is.</summary>
+public enum PaneMaterial
+{
+    /// <summary>Effen kleur (met de gekozen transparantie).</summary>
+    Solid,
+
+    /// <summary>Mica: de achtergrond van het bureaublad, sterk vervaagd, met de kleur van het thema eroverheen.</summary>
+    Mica,
 }
 
 /// <summary>Hoe een iconenpane zijn iconen laat zien.</summary>
@@ -84,6 +97,21 @@ public sealed class Pane
     /// <summary>Toon het ruitpatroon van het thema. Standaard uit: rustig en zakelijk.</summary>
     public bool ShowPattern { get; set; }
 
+    /// <summary>Effen of Mica. Bij Mica bepaalt <see cref="Opacity"/> hoe sterk de themakleur over de vervaagde achtergrond ligt.</summary>
+    public PaneMaterial Material { get; set; } = PaneMaterial.Solid;
+
+    /// <summary>
+    /// Dit pane is een tabblad in het venster van het pane met dit ID. <c>null</c> = een eigen venster. De plek en
+    /// grootte van een tabblad zijn die van dat venster; die van het tabblad zelf worden niet gebruikt.
+    /// </summary>
+    public Guid? TabHost { get; set; }
+
+    /// <summary>Bij een pane met tabbladen: welk tabblad open staat. <c>null</c> of onbekend = het pane zelf.</summary>
+    public Guid? ActiveTab { get; set; }
+
+    /// <summary>De map die een mappane toont. Alleen bij <see cref="PaneKind.Folder"/>.</summary>
+    public string? FolderPath { get; set; }
+
     /// <summary>
     /// De Inbox vangt bureaubladitems op die nog in geen enkel pane staan.
     /// Er is er altijd precies één.
@@ -122,6 +150,16 @@ public sealed class Pane
         Height = 384,
         SourceId = sourceId,
         TaskListId = listId,
+    };
+
+    public static Pane NewFolderPane(string folderPath) => new()
+    {
+        Kind = PaneKind.Folder,
+        Title = Path.GetFileName(Path.TrimEndingDirectorySeparator(folderPath)) is { Length: > 0 } name ? name : folderPath,
+        Width = 360,
+        Height = 300,
+        FolderPath = folderPath,
+        SortBy = ItemSortOrder.Name,
     };
 
     public static Pane NewTaskPane() => new()

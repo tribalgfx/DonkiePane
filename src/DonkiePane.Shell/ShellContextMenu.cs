@@ -30,6 +30,9 @@ public sealed class ShellContextMenu : IDisposable
     private static HwndSource? _helper;
     private static ShellContextMenu? _active;
 
+    /// <summary>Er staat nu een menu van Verkenner open (een opgerold pane mag dan niet dichtklappen).</summary>
+    public static bool IsShowing => _active is not null;
+
     private readonly IContextMenu? _menu; // null: een menu met alleen eigen opties
     private readonly IntPtr _hmenu;
     private bool _disposed;

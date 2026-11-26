@@ -43,8 +43,11 @@ public partial class App
     /// <summary>De instellingen van een bron zijn veranderd: panes die hem gebruiken beginnen opnieuw met de nieuwe waarden.</summary>
     private void RebuildTaskPanes(string sourceId)
     {
-        foreach (var window in _windows.Where(w => w.Pane is { Kind: PaneKind.Tasks, TaskListId: not null } p && p.SourceId == sourceId))
-            window.SetContent(new TasksView(_sources.ProviderFor(window.Pane), window.Pane.TaskListId!));
+        foreach (var pane in _layout.Panes.Where(p => p is { Kind: PaneKind.Tasks, TaskListId: not null } && p.SourceId == sourceId).ToList())
+        {
+            ForgetContent(pane);
+            if (WindowOf(pane) is { } window) RefreshTabs(window);
+        }
     }
 
     /// <summary>Het submenu "Nieuw takenpane": lokaal plus elke ingestelde bron, alleen wat er echt is.</summary>

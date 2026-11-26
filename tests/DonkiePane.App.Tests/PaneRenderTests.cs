@@ -162,8 +162,10 @@ public sealed class PaneRenderTests : TempData
         });
     }
 
-    [Fact]
-    public void A_tasks_pane_renders()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_tasks_pane_renders(bool light)
     {
         OnStaThread(() =>
         {
@@ -193,8 +195,8 @@ public sealed class PaneRenderTests : TempData
                 while (!reload.IsCompleted) Pump(20);
                 reload.GetAwaiter().GetResult();
 
-                var bitmap = Render(window, pane.Width, pane.Height);
-                Save(bitmap, "tasks-pane");
+                var bitmap = light ? RenderWithLook(window, pane.Width, pane.Height, light: true) : Render(window, pane.Width, pane.Height);
+                Save(bitmap, light ? "tasks-pane-light" : "tasks-pane");
                 Assert.True(bitmap.PixelWidth > 0);
             }
             finally
@@ -259,6 +261,136 @@ public sealed class PaneRenderTests : TempData
                 Application.Current.Resources.MergedDictionaries.Remove(theme);
             }
         });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_pane_with_tabs_renders_dark_and_light(bool light)
+    {
+        OnStaThread(() =>
+        {
+            var theme = UseTheme();
+            try
+            {
+                var work = new Pane { Title = "Programma's", Width = 352, Height = 288 };
+                var home = new Pane { Title = "Thuis", Theme = "groen" };
+                var docs = new Pane { Title = "Documenten", Theme = "klassiek-rood" };
+                var window = new PaneWindow(work) { LookSettings = () => new PaneStyle(light, 10, RollUpOpen.Button) };
+                var view = new IconsView();
+                var items = SampleItems();
+                view.SetItems(items);
+                view.Select([items[1].Id]);
+                window.SetTabs([work, home, docs], work, view);
+
+                var bitmap = RenderWithLook(window, work.Width, work.Height, light);
+                Save(bitmap, light ? "tabs-pane-light" : "tabs-pane");
+                Assert.True(bitmap.PixelWidth > 0);
+            }
+            finally
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(theme);
+            }
+        });
+    }
+
+    [Fact]
+    public void A_folder_pane_renders()
+    {
+        var root = Path.Combine(Dir, "Projecten");
+        Directory.CreateDirectory(Path.Combine(root, "Website"));
+        Directory.CreateDirectory(Path.Combine(root, "Foto's"));
+        File.WriteAllText(Path.Combine(root, "Plan van aanpak.docx"), "x");
+        File.WriteAllText(Path.Combine(root, "Begroting 2027.xlsx"), "x");
+        File.WriteAllText(Path.Combine(root, "notities.txt"), "x");
+
+        OnStaThread(() =>
+        {
+            var theme = UseTheme();
+            try
+            {
+                var pane = Pane.NewFolderPane(root);
+                pane.Width = 352;
+                pane.Height = 288;
+                var window = new PaneWindow(pane);
+                var view = new FolderPaneView(pane);
+                window.SetContent(view);
+                view.Navigate(root, force: true);
+                view.Icons.Select([Path.Combine(root, "Website")]);
+
+                var bitmap = Render(window, pane.Width, pane.Height);
+                Save(bitmap, "folder-pane");
+                Assert.True(bitmap.PixelWidth > 0);
+            }
+            finally
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(theme);
+            }
+        });
+    }
+
+    [Fact]
+    public void The_mica_backdrop_is_made_from_the_wallpaper()
+    {
+        OnStaThread(() =>
+        {
+            // Zonder te lezen achtergrond (bijv. op een server) is er geen Mica; dat mag.
+            if (WallpaperBackdrop.For(new PxRect(200, 150, 704, 576)) is not { } sample) return;
+            Assert.InRange(sample.Viewbox.Width, 0.01, 1.5);
+
+            var theme = UseTheme();
+            try
+            {
+                var pane = new Pane { Title = "Mica", Width = 352, Height = 288, Material = PaneMaterial.Mica };
+                var window = new PaneWindow(pane);
+                var view = new IconsView();
+                view.SetItems(SampleItems());
+                window.SetContent(view);
+                var backdrop = (Border)window.FindName("Backdrop");
+                backdrop.Background = new ImageBrush(sample.Image) { Viewbox = sample.Viewbox, ViewboxUnits = BrushMappingMode.RelativeToBoundingBox, Stretch = Stretch.Fill };
+                backdrop.Visibility = Visibility.Visible;
+                Save(Render(window, pane.Width, pane.Height), "mica-pane");
+            }
+            finally
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(theme);
+            }
+        });
+    }
+
+    /// <summary>Zoals <see cref="Render"/>, maar met lichte of donkere kleuren (Render past de donkere toe).</summary>
+    private static BitmapSource RenderWithLook(PaneWindow window, double width, double height, bool light)
+    {
+        var root = (FrameworkElement)window.Content;
+        window.Content = null;
+        PaneThemes.Apply(root.Resources, window.ActivePane, light);
+        foreach (var key in window.Resources.Keys) root.Resources[key] ??= window.Resources[key];
+        return RenderElement(root, width, height);
+    }
+
+    private static BitmapSource RenderElement(FrameworkElement root, double width, double height)
+    {
+        if (root.Parent is Panel panel) panel.Children.Remove(root);
+        var wallpaper = new LinearGradientBrush(Color.FromRgb(0x2B, 0x4C, 0x7E), Color.FromRgb(0xC9, 0x7B, 0x63), 35);
+        var stage = new Grid { Background = wallpaper, Width = width + 64, Height = height + 64 };
+        root.Width = width;
+        root.Height = height;
+        root.Margin = new Thickness(32);
+        root.HorizontalAlignment = HorizontalAlignment.Left;
+        root.VerticalAlignment = VerticalAlignment.Top;
+        stage.Children.Add(root);
+        var size = new Size(stage.Width, stage.Height);
+        for (var i = 0; i < 3; i++)
+        {
+            stage.Measure(size);
+            stage.Arrange(new Rect(size));
+            stage.UpdateLayout();
+            Pump(50);
+        }
+        var bitmap = new RenderTargetBitmap((int)(size.Width * 2), (int)(size.Height * 2), 192, 192, PixelFormats.Pbgra32);
+        bitmap.Render(stage);
+        bitmap.Freeze();
+        return bitmap;
     }
 
     [Fact]

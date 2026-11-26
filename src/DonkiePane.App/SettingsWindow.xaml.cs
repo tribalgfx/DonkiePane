@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using DonkiePane.Core;
 using DonkiePane.Shell;
 using DonkiePane.Tasks.Plugins;
@@ -21,15 +22,25 @@ public partial class SettingsWindow : Window
     private readonly Action? _restart;
     private readonly Action<string>? _exportLayout;
     private readonly Action<Layout>? _importLayout;
+    private readonly Action? _lookChanged;
+    private readonly Func<string?, string?>? _setPeekHotkey;
+    private readonly Func<int>? _applyRules;
     private bool _loading = true;
+
+    /// <summary>Een regel in de lijst met regels.</summary>
+    private sealed record RuleRow(FileRule Rule, string Label);
 
     /// <summary>Een regel in de lijst met bronnen.</summary>
     private sealed record SourceRow(SourceConnection Connection, string Label);
 
     internal SettingsWindow(Layout layout, Action save, Action bringPanes, TaskSourceHost sources,
         UpdateService? updates = null, Action? showUpdate = null, Action? restart = null,
-        Action<string>? exportLayout = null, Action<Layout>? importLayout = null)
+        Action<string>? exportLayout = null, Action<Layout>? importLayout = null,
+        Action? lookChanged = null, Func<string?, string?>? setPeekHotkey = null, Func<int>? applyRules = null)
     {
+        _lookChanged = lookChanged;
+        _setPeekHotkey = setPeekHotkey;
+        _applyRules = applyRules;
         InitializeComponent();
         // Nooit hoger dan het scherm; wat er niet in past, scrolt.
         MaxHeight = SystemParameters.WorkArea.Height - 40;
@@ -66,6 +77,14 @@ public partial class SettingsWindow : Window
         SyncValue.Text = FormatSeconds(layout.SyncInterval.TotalSeconds);
         RefreshAutoStart();
         RefreshSources();
+
+        (layout.Appearance switch { AppTheme.Light => AppearanceLight, AppTheme.System => AppearanceSystem, _ => AppearanceDark }).IsChecked = true;
+        CornerSlider.Value = layout.EffectiveCornerRadius;
+        CornerValue.Text = $"{layout.EffectiveCornerRadius:0}";
+        (layout.RollUpOpen switch { RollUpOpen.Hover => RollHover, RollUpOpen.Click => RollClick, _ => RollButtonOnly }).IsChecked = true;
+        // Opnieuw instellen laat meteen zien of de sneltoets werkt (of al door iets anders gebruikt wordt).
+        ShowHotkey(layout.PeekHotkey, error: setPeekHotkey?.Invoke(layout.PeekHotkey));
+        RefreshRules();
         DataPath.Text = Path.GetDirectoryName(LayoutStore.DefaultPath);
         VersionText.Text = "DonkiePane " + (Assembly.GetEntryAssembly()?
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "");
@@ -133,6 +152,171 @@ public partial class SettingsWindow : Window
         _layout.GridSize = GridSlider.Value;
         GridValue.Text = $"{GridSlider.Value:0}";
         _save();
+    }
+
+    // ---------- Panes: uiterlijk, hoeken, oprollen ----------
+
+    private void Appearance_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _layout.Appearance = AppearanceLight.IsChecked == true ? AppTheme.Light : AppearanceSystem.IsChecked == true ? AppTheme.System : AppTheme.Dark;
+        _save();
+        _lookChanged?.Invoke();
+    }
+
+    private void CornerSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loading) return;
+        _layout.CornerRadius = CornerSlider.Value;
+        CornerValue.Text = $"{CornerSlider.Value:0}";
+        _save();
+        _lookChanged?.Invoke();
+    }
+
+    private void RollUp_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _layout.RollUpOpen = RollHover.IsChecked == true ? RollUpOpen.Hover : RollClick.IsChecked == true ? RollUpOpen.Click : RollUpOpen.Button;
+        _save();
+        _lookChanged?.Invoke();
+    }
+
+    // ---------- Sneltoets ----------
+
+    private void ShowHotkey(string? text, string? error)
+    {
+        HotkeyBox.Text = string.IsNullOrWhiteSpace(text) ? Loc.T("Geen") : text.Replace("Space", Loc.T("Spatie"));
+        HotkeyHint.Text = error ?? Loc.T("Klik in het vak en druk de toetsen in die je wilt gebruiken. Nog een keer de sneltoets, Esc of ernaast klikken zet de panes terug.");
+    }
+
+    private void HotkeyBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+        HotkeyHint.Text = Loc.T("Druk nu de toetsen in, bijvoorbeeld Ctrl+Alt+Spatie.");
+
+    private void HotkeyBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (HotkeyHint.Text == Loc.T("Druk nu de toetsen in, bijvoorbeeld Ctrl+Alt+Spatie.")) ShowHotkey(_layout.PeekHotkey, null);
+    }
+
+    /// <summary>De ingedrukte combinatie wordt de sneltoets (Esc laat hem zoals hij was).</summary>
+    private void HotkeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        e.Handled = true;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Escape)
+        {
+            ShowHotkey(_layout.PeekHotkey, null);
+            Keyboard.ClearFocus();
+            return;
+        }
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+            return; // wachten op de gewone toets
+
+        var modifiers = HotkeyModifiers.None;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) modifiers |= HotkeyModifiers.Ctrl;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) modifiers |= HotkeyModifiers.Alt;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) modifiers |= HotkeyModifiers.Shift;
+        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin)) modifiers |= HotkeyModifiers.Win;
+        var hotkey = new Hotkey(modifiers, key.ToString());
+        if (Hotkey.Parse(hotkey.ToString()) is null)
+        {
+            HotkeyHint.Text = Loc.T("Gebruik Ctrl, Alt of Win samen met een gewone toets.");
+            return;
+        }
+        SetHotkey(hotkey.ToString());
+    }
+
+    private void ClearHotkey_Click(object sender, RoutedEventArgs e) => SetHotkey(null);
+
+    private void SetHotkey(string? text)
+    {
+        var error = _setPeekHotkey is not null ? _setPeekHotkey(text) : null;
+        if (_setPeekHotkey is null)
+        {
+            _layout.PeekHotkey = text ?? "";
+            _save();
+        }
+        ShowHotkey(text, error);
+    }
+
+    // ---------- Regels ----------
+
+    private static string KindName(RuleKind kind) => kind switch
+    {
+        RuleKind.Extension => Loc.T("Extensie is"),
+        RuleKind.NameContains => Loc.T("Naam bevat"),
+        RuleKind.NameIs => Loc.T("Naam is precies"),
+        _ => Loc.T("Is een map"),
+    };
+
+    private void RefreshRules(FileRule? select = null)
+    {
+        var rows = _layout.Rules.Select(r =>
+        {
+            var target = _layout.Panes.FirstOrDefault(p => p.Id == r.TargetPane)?.Title ?? Loc.T("(pane bestaat niet meer)");
+            var condition = r.Kind == RuleKind.Folder ? KindName(r.Kind) : $"{KindName(r.Kind)} \"{r.Value}\"";
+            return new RuleRow(r, $"{condition}  →  {target}");
+        }).ToList();
+        RulesList.ItemsSource = rows;
+        if (select is not null) RulesList.SelectedItem = rows.FirstOrDefault(r => r.Rule == select);
+        UpdateRuleButtons();
+        ApplyRulesButton.IsEnabled = _applyRules is not null && _layout.Rules.Count > 0;
+    }
+
+    private FileRule? SelectedRule => (RulesList.SelectedItem as RuleRow)?.Rule;
+
+    private void UpdateRuleButtons()
+    {
+        EditRuleButton.IsEnabled = RemoveRuleButton.IsEnabled = SelectedRule is not null;
+        RuleUpButton.IsEnabled = SelectedRule is { } rule && _layout.Rules.IndexOf(rule) > 0;
+    }
+
+    private void Rules_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateRuleButtons();
+
+    private List<Pane> RuleTargets() => _layout.Panes.Where(p => p.Kind == PaneKind.Icons).ToList();
+
+    private void AddRule_Click(object sender, RoutedEventArgs e)
+    {
+        var targets = RuleTargets();
+        var rule = new FileRule { TargetPane = targets.FirstOrDefault(p => !p.IsInbox)?.Id ?? targets.FirstOrDefault()?.Id ?? Guid.Empty };
+        if (new RuleEditWindow(rule, targets) { Owner = this }.ShowDialog() != true) return;
+        _layout.Rules.Add(rule);
+        _save();
+        RefreshRules(rule);
+    }
+
+    private void EditRule_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedRule is not { } rule) return;
+        if (new RuleEditWindow(rule, RuleTargets()) { Owner = this }.ShowDialog() != true) return;
+        _save();
+        RefreshRules(rule);
+    }
+
+    private void RemoveRule_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedRule is not { } rule) return;
+        _layout.Rules.Remove(rule);
+        _save();
+        RefreshRules();
+    }
+
+    private void RuleUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedRule is not { } rule) return;
+        var index = _layout.Rules.IndexOf(rule);
+        if (index <= 0) return;
+        _layout.Rules.RemoveAt(index);
+        _layout.Rules.Insert(index - 1, rule);
+        _save();
+        RefreshRules(rule);
+    }
+
+    private void ApplyRules_Click(object sender, RoutedEventArgs e)
+    {
+        if (_applyRules is null) return;
+        var moved = _applyRules();
+        RulesStatus.Text = moved == 0 ? Loc.T("In de Inbox stond niets dat bij een regel past.")
+            : moved == 1 ? Loc.T("1 icoon is verplaatst.") : Loc.F("{0} iconen zijn verplaatst.", moved);
     }
 
     // ---------- Synchronisatie ----------

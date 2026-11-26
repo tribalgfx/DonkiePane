@@ -15,6 +15,8 @@ public partial class App : Application
     private readonly LayoutStore _store = new(LayoutStore.DefaultPath);
     private readonly List<PaneWindow> _windows = [];
     private readonly Dictionary<Pane, IconsView> _iconViews = [];
+    private readonly Dictionary<Pane, FolderPaneView> _folderViews = [];
+    private readonly Dictionary<Pane, FrameworkElement> _contents = []; // de inhoud van elk pane, ook van tabbladen die niet open staan
     private readonly ITaskProvider _localTasks = new LocalTaskProvider(new TaskStore(TaskStore.DefaultPath));
     private readonly Dictionary<string, ItemView> _itemCache = new(StringComparer.OrdinalIgnoreCase);
     private Layout _layout = new();
@@ -85,10 +87,10 @@ public partial class App : Application
         if (LegacyGoogleMigration.Run(_sources, _layout)) SaveLayout();
         _desktop = new DesktopFolders();
         var unavailable = new List<string>();
-        LayoutEditor.Sync(_layout, _desktop.EnumerateItems(unavailable), unavailable);
+        LayoutEditor.Sync(_layout, _desktop.EnumerateItems(unavailable), unavailable, isFolder: IsFolderItem);
         SaveLayout();
 
-        foreach (var pane in _layout.Panes)
+        foreach (var pane in _layout.Panes.Where(p => p.TabHost is null).ToList())
             ShowPane(pane);
         RefreshItems();
         var openSettingsAfterWelcome = ShowWelcomeIfFirstRun(); // vóór het verbergen van de Windows-iconen
@@ -127,6 +129,9 @@ public partial class App : Application
 
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
+
+        StartPeekHotkey();
+        WatchLookChanges();
     }
 
     /// <summary>Opnieuw starten: wachten tot de vorige DonkiePane weg is (hooguit 20 seconden).</summary>
@@ -183,7 +188,7 @@ public partial class App : Application
 
         // Een map die even weg is (netwerk, OneDrive) wist de indeling niet: die items blijven staan.
         var arrival = _arrivalPane is not null && DateTime.UtcNow < _arrivalUntil ? _arrivalPane : null;
-        LayoutEditor.Sync(_layout, items, unavailable, arrival);
+        LayoutEditor.Sync(_layout, items, unavailable, arrival, IsFolderItem);
         _desktop.StartWatching(); // na een fout van de watcher: opnieuw volgen
         SaveLayout();
         RefreshItems();
@@ -191,13 +196,19 @@ public partial class App : Application
 
     private void RefreshItems()
     {
-        foreach (var (pane, view) in _iconViews)
-        {
-            var items = pane.Items.Select(GetItemView).OfType<ItemView>().ToList();
-            view.SetView(pane.IconSize, sorted: pane.SortBy != ItemSortOrder.Manual);
-            view.SetItems(pane.SortBy == ItemSortOrder.Manual ? items : Sorted(items, pane.SortBy));
-        }
+        foreach (var pane in _iconViews.Keys.ToList()) RefreshItems(pane);
     }
+
+    private void RefreshItems(Pane pane)
+    {
+        if (!_iconViews.TryGetValue(pane, out var view)) return;
+        var items = pane.Items.Select(GetItemView).OfType<ItemView>().ToList();
+        view.SetView(pane.IconSize, sorted: pane.SortBy != ItemSortOrder.Manual);
+        view.SetItems(pane.SortBy == ItemSortOrder.Manual ? items : Sorted(items, pane.SortBy));
+    }
+
+    /// <summary>Voor de regel "is een map": staat dit bureaubladitem voor een map?</summary>
+    private bool IsFolderItem(string id) => _desktop?.ResolvePath(id) is { } path && Directory.Exists(path);
 
     /// <summary>De iconen gesorteerd op naam, type of datum; de eigen volgorde in het pane blijft bewaard.</summary>
     private static List<ItemView> Sorted(List<ItemView> items, ItemSortOrder order)
@@ -250,10 +261,13 @@ public partial class App : Application
         SaveLayout();
     }
 
-    private void ShowPane(Pane pane)
+    /// <summary>Een venster voor dit pane met zijn tabbladen (alleen voor panes die geen tabblad in een ander venster zijn).</summary>
+    private PaneWindow ShowPane(Pane pane)
     {
         var window = new PaneWindow(pane);
         window.GridSettings = () => (_layout.SnapToGrid, _layout.GridSize);
+        window.LookSettings = CurrentPaneStyle;
+        window.MergeTargets = () => _windows.Where(w => w != window && !w.IsClosed).Select(w => w.ActivePane).ToList();
         window.SizeMoveStarted += (_, _) =>
         {
             if (!_layout.SnapToGrid) return;
@@ -263,40 +277,241 @@ public partial class App : Application
         window.SizeMoveEnded += (_, _) =>
         {
             _gridOverlay?.Hide();
-            ClearHome(pane); // zelf verplaatst: niet meer terugzetten naar de oude plek
-            pane.Monitor = MonitorOf(window) ?? pane.Monitor;
+            ClearHome(window.Pane); // zelf verplaatst: niet meer terugzetten naar de oude plek
+            window.Pane.Monitor = MonitorOf(window) ?? window.Pane.Monitor;
         };
         window.PaneChanged += (_, _) => SaveLayout();
-        window.ViewChanged += (_, _) => RefreshItems();
+        window.ViewChanged += (_, _) =>
+        {
+            RefreshItems();
+            if (_folderViews.TryGetValue(window.ActivePane, out var folder)) folder.Refresh();
+        };
         window.DeleteRequested += async (_, _) => await DeletePaneAsync(window);
-
-        if (pane.Kind == PaneKind.Tasks)
+        window.TabSelected += (_, tab) =>
         {
-            pane.TaskListId ??= Guid.NewGuid().ToString("N");
-            window.SetContent(new TasksView(TaskProviderFor(pane), pane.TaskListId));
-        }
-        else
-        {
-            var view = new IconsView();
-            view.ItemsDropped += (_, drop) =>
-            {
-                if (!LayoutEditor.MoveItems(_layout, drop.ItemIds, pane.Id, drop.Index)) return;
-                SaveLayout();
-                RefreshItems();
-            };
-            view.ArrivalExpected += (_, _) =>
-            {
-                _arrivalPane = pane.Id;
-                _arrivalUntil = DateTime.UtcNow + ArrivalWindow;
-            };
-            view.DragStarted += (_, _) => ShowDesktopDropWindows();
-            view.DragFinished += (_, _) => HideDesktopDropWindows();
-            _iconViews[pane] = view;
-            window.SetContent(view);
-        }
+            if (!LayoutEditor.ActivateTab(_layout, tab.Id)) return;
+            RefreshTabs(window);
+            SaveLayout();
+        };
+        window.TabDetachRequested += (_, tab) => DetachTab(tab, followCursor: System.Windows.Forms.Control.MouseButtons == System.Windows.Forms.MouseButtons.Left);
+        window.MergeRequested += (_, target) => MergeIntoWindow(window.ActivePane, target, wholeWindow: false);
+        window.FolderChangeRequested += (_, _) => ChooseFolder(window.ActivePane);
+        window.Moving += (_, cursor) => TrackMergeTarget(window, cursor);
+        window.MoveFinished += (_, cursor) => FinishMergeDrag(window, cursor);
 
         _windows.Add(window);
+        RefreshTabs(window);
         window.Show();
+        return window;
+    }
+
+    /// <summary>De inhoud van een pane (iconen, taken of een map); gemaakt bij het eerste gebruik en daarna bewaard.</summary>
+    private FrameworkElement ContentFor(Pane pane)
+    {
+        if (_contents.TryGetValue(pane, out var existing)) return existing;
+        FrameworkElement content;
+        switch (pane.Kind)
+        {
+            case PaneKind.Tasks:
+                pane.TaskListId ??= Guid.NewGuid().ToString("N");
+                content = new TasksView(TaskProviderFor(pane), pane.TaskListId);
+                break;
+            case PaneKind.Folder:
+                var folder = new FolderPaneView(pane);
+                _folderViews[pane] = folder;
+                content = folder;
+                break;
+            default:
+                var view = new IconsView();
+                view.ItemsDropped += (_, drop) =>
+                {
+                    if (!LayoutEditor.MoveItems(_layout, drop.ItemIds, pane.Id, drop.Index)) return;
+                    SaveLayout();
+                    RefreshItems();
+                };
+                view.ArrivalExpected += (_, _) =>
+                {
+                    _arrivalPane = pane.Id;
+                    _arrivalUntil = DateTime.UtcNow + ArrivalWindow;
+                };
+                view.DragStarted += (_, _) => ShowDesktopDropWindows();
+                view.DragFinished += (_, _) => HideDesktopDropWindows();
+                _iconViews[pane] = view;
+                content = view;
+                RefreshItems(pane);
+                break;
+        }
+        _contents[pane] = content;
+        return content;
+    }
+
+    /// <summary>Vergeet de inhoud van een pane (verwijderd, of opnieuw op te bouwen).</summary>
+    private void ForgetContent(Pane pane)
+    {
+        if (_contents.Remove(pane, out var content) && content.Parent is System.Windows.Controls.ContentControl owner) owner.Content = null;
+        _iconViews.Remove(pane);
+        _folderViews.Remove(pane);
+    }
+
+    /// <summary>Het venster waarin dit pane staat (als eigen venster of als tabblad).</summary>
+    private PaneWindow? WindowOf(Pane pane)
+    {
+        var host = LayoutEditor.HostOf(_layout, pane);
+        return _windows.FirstOrDefault(w => ReferenceEquals(w.Pane, host) && !w.IsClosed);
+    }
+
+    /// <summary>Toont de tabbladen van het venster en de inhoud van het open tabblad.</summary>
+    private void RefreshTabs(PaneWindow window)
+    {
+        var tabs = LayoutEditor.TabsOf(_layout, window.Pane);
+        var active = LayoutEditor.ActiveTabOf(_layout, window.Pane);
+        var content = ContentFor(active);
+        // Een inhoud kan maar in één venster tegelijk staan: eerst los uit het venster waar hij nu nog in staat.
+        if (!window.Shows(content) && content.Parent is System.Windows.Controls.ContentControl owner) owner.Content = null;
+        window.SetTabs(tabs, active, content);
+    }
+
+    /// <summary>
+    /// Brengt de vensters in lijn met de indeling na samenvoegen, losmaken of verwijderen: één venster per pane dat geen
+    /// tabblad is, op de plek uit de indeling, met de juiste tabbladen.
+    /// </summary>
+    private void SyncWindows()
+    {
+        var hosts = _layout.Panes.Where(p => p.TabHost is null).ToList();
+        foreach (var window in _windows.ToList())
+        {
+            if (hosts.Contains(window.Pane) && !window.IsClosed) continue;
+            _windows.Remove(window);
+            window.ReleaseContent();
+            window.Close();
+        }
+        foreach (var pane in _contents.Keys.Except(_layout.Panes).ToList()) ForgetContent(pane);
+
+        // Eerst alle bestaande vensters hun (nieuwe) tabbladen geven, daarna de nieuwe vensters maken.
+        foreach (var window in _windows.ToList())
+        {
+            window.ApplyPaneBounds();
+            RefreshTabs(window);
+        }
+        foreach (var host in hosts.Where(h => _windows.All(w => !ReferenceEquals(w.Pane, h))))
+        {
+            var window = ShowPane(host);
+            if (_panesHidden) window.Hide();
+        }
+    }
+
+    // ---------- Tabbladen: samenvoegen en losmaken ----------
+
+    private PaneWindow? _mergeTarget;
+    private bool _mergeArmed;
+    private DispatcherTimer? _mergeTimer;
+
+    /// <summary>
+    /// Een pane wordt versleept: staat de muis even (een halve seconde) op de titelbalk van een ander pane, dan licht die
+    /// op en wordt het bij loslaten een tabblad daarvan.
+    /// </summary>
+    private void TrackMergeTarget(PaneWindow moving, System.Drawing.Point cursor)
+    {
+        var target = _windows.FirstOrDefault(w => w != moving && !w.IsClosed && w.IsVisible && w.TitleBarContains(cursor));
+        if (ReferenceEquals(target, _mergeTarget)) return;
+        _mergeTarget?.SetMergeHighlight(false);
+        _mergeTarget = target;
+        _mergeArmed = false;
+        _mergeTimer ??= CreateMergeTimer();
+        _mergeTimer.Stop();
+        if (target is not null) _mergeTimer.Start();
+    }
+
+    private DispatcherTimer CreateMergeTimer()
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (_mergeTarget is null) return;
+            _mergeArmed = true;
+            _mergeTarget.SetMergeHighlight(true);
+        };
+        return timer;
+    }
+
+    private void FinishMergeDrag(PaneWindow moving, System.Drawing.Point cursor)
+    {
+        _mergeTimer?.Stop();
+        var target = _mergeTarget;
+        var armed = _mergeArmed && target is not null && target.TitleBarContains(cursor);
+        target?.SetMergeHighlight(false);
+        _mergeTarget = null;
+        _mergeArmed = false;
+        if (!armed) return;
+        // Na het afhandelen van het slepen; het versleepte venster verdwijnt.
+        Dispatcher.InvokeAsync(() => MergeIntoWindow(moving.Pane, target!.ActivePane, wholeWindow: true));
+    }
+
+    /// <summary>
+    /// Maakt <paramref name="pane"/> een tabblad in het venster van <paramref name="target"/>. Met
+    /// <paramref name="wholeWindow"/> gaan alle tabbladen van zijn venster mee (een heel venster versleept); anders alleen dit tabblad.
+    /// </summary>
+    private void MergeIntoWindow(Pane pane, Pane target, bool wholeWindow)
+    {
+        var source = LayoutEditor.HostOf(_layout, pane);
+        if (!wholeWindow && LayoutEditor.TabsOf(_layout, source).Count > 1) LayoutEditor.DetachTab(_layout, pane.Id);
+        if (LayoutEditor.AddTab(_layout, target.Id, pane.Id) is null) return;
+        SyncWindows();
+        SaveLayout();
+    }
+
+    /// <summary>Haalt een tabblad uit zijn venster; met <paramref name="followCursor"/> hangt het nieuwe venster aan de muis.</summary>
+    private void DetachTab(Pane pane, bool followCursor)
+    {
+        if (LayoutEditor.DetachTab(_layout, pane.Id) is null) return;
+        SyncWindows();
+        SaveLayout();
+        if (!followCursor || WindowOf(pane) is not { } window || DesktopLayer.GetBounds(window) is not { } bounds) return;
+
+        // Het venster onder de muis, met de muis op de titelbalk, en meteen verder slepen.
+        var cursor = DesktopLayer.CursorPosition();
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window);
+        DesktopLayer.SetBounds(window, cursor.X - (int)(60 * dpi.DpiScaleX), cursor.Y - (int)(16 * dpi.DpiScaleY), bounds.Width, bounds.Height);
+        window.Activate();
+        DesktopLayer.BeginDragMove(window);
+    }
+
+    // ---------- Mappanes ----------
+
+    /// <summary>Een nieuw mappane: eerst een map kiezen.</summary>
+    private void AddFolderPane()
+    {
+        if (PickFolder(null) is { } folder) AddPane(Pane.NewFolderPane(folder));
+    }
+
+    private void ChooseFolder(Pane pane)
+    {
+        if (PickFolder(pane.FolderPath) is not { } folder) return;
+        var renamed = pane.FolderPath is null || pane.Title == Pane.NewFolderPane(pane.FolderPath).Title;
+        pane.FolderPath = folder;
+        if (renamed) pane.Title = Pane.NewFolderPane(folder).Title; // de naam volgde de map: blijf volgen
+        if (_folderViews.TryGetValue(pane, out var view)) view.ChangeRoot();
+        if (WindowOf(pane) is { } window) RefreshTabs(window);
+        SaveLayout();
+    }
+
+    private static string? PickFolder(string? start)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = Loc.T("Welke map moet dit pane tonen?") };
+        if (start is not null && Directory.Exists(start)) dialog.InitialDirectory = start;
+        return dialog.ShowDialog() == true ? dialog.FolderName : null;
+    }
+
+    // ---------- Uiterlijk voor alle panes ----------
+
+    private PaneStyle CurrentPaneStyle() =>
+        new(PaneThemes.IsLight(_layout.Appearance), _layout.EffectiveCornerRadius, _layout.RollUpOpen);
+
+    /// <summary>Licht/donker, hoeken of oprollen is veranderd: alle panes opnieuw tekenen.</summary>
+    private void RefreshAllLooks()
+    {
+        foreach (var window in _windows.Where(w => !w.IsClosed)) window.RefreshLook();
     }
 
     // ---------- Iconen op een lege plek van het bureaublad loslaten: nieuw pane ----------
@@ -329,8 +544,7 @@ public partial class App : Application
         var pane = new Pane { Title = Loc.T("Nieuw pane"), Width = DesktopDropWindow.GhostSize.Width, Height = DesktopDropWindow.GhostSize.Height };
         _layout.Panes.Add(pane);
         LayoutEditor.MoveItems(_layout, drag.Ids, pane.Id);
-        ShowPane(pane);
-        var window = _windows[^1];
+        var window = ShowPane(pane);
         if (DesktopLayer.GetBounds(window) is { } bounds) DesktopLayer.SetBounds(window, x, y, bounds.Width, bounds.Height);
         window.SnapToGridNow();
         pane.Monitor = MonitorOf(window) ?? pane.Monitor;
@@ -342,7 +556,7 @@ public partial class App : Application
 
     private async Task DeletePaneAsync(PaneWindow window)
     {
-        var pane = window.Pane;
+        var pane = window.ActivePane; // met tabbladen: het tabblad dat open staat
         if (pane.Kind == PaneKind.Tasks && pane.TaskListId is { } listId)
         {
             var provider = TaskProviderFor(pane);
@@ -373,9 +587,8 @@ public partial class App : Application
         }
 
         if (!LayoutEditor.DeletePane(_layout, pane.Id)) return;
-        _windows.Remove(window);
-        _iconViews.Remove(pane);
-        window.Close();
+        ForgetContent(pane);
+        SyncWindows();
         SaveLayout();
         RefreshItems();
     }
@@ -406,11 +619,14 @@ public partial class App : Application
     private void RecreatePaneWindows()
     {
         foreach (var window in _windows.ToList())
+        {
+            window.ReleaseContent();
             window.Close();
+        }
         _windows.Clear();
         _panesHidden = false; // de nieuwe panes zijn zichtbaar
-        _iconViews.Clear();
-        foreach (var pane in _layout.Panes)
+        foreach (var pane in _contents.Keys.ToList()) ForgetContent(pane);
+        foreach (var pane in _layout.Panes.Where(p => p.TabHost is null).ToList())
             ShowPane(pane);
         RefreshItems();
         EnsurePanesVisible();
@@ -509,8 +725,10 @@ public partial class App : Application
         newTasks.DropDownOpening += (_, _) => FillNewTasksMenu(newTasks);
         FillNewTasksMenu(newTasks);
         menu.Items.Add(newTasks);
+        menu.Items.Add(Loc.T("Nieuw mappane…"), null, (_, _) => AddFolderPane());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Loc.T("Panes verbergen of tonen"), null, (_, _) => TogglePanesHidden());
+        menu.Items.Add(Loc.T("Panes naar voren halen"), null, (_, _) => BeginPeek());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Loc.T("Instellingen…"), null, (_, _) => ShowSettings());
         menu.Items.Add(new Forms.ToolStripSeparator());
@@ -542,6 +760,7 @@ public partial class App : Application
         }
 
         RestoreDesktopIcons(); // eerst: wat er verder ook misgaat, het bureaublad moet terug
+        StopPeek();
         SaveLayout();
         StopUpdateChecks();
         StopDueReminders();

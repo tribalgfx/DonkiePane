@@ -19,7 +19,12 @@ Panes on your Windows desktop for your shortcuts and your tasks. With a calm loo
   - a service of your own that speaks the Tasks REST v1 protocol
 
   What you do offline is kept and sent later. See [docs/Sources.md](docs/Sources.md). Tasks due today give a notification next to the clock (once per task per day; can be turned off in Settings).
-- **Calm and customizable.** Plain themes, your own color and transparency per pane, a grid to snap panes to, and an optional tea-towel check pattern.
+- **Folder panes.** A pane that shows the contents of a folder of your choice (New folder pane in the menu next to the clock). Double-click a folder to look inside, Backspace goes back; typing searches that folder and the folders below it.
+- **Tabs.** Drag a pane by its title bar onto the title bar of another pane and hold for a moment: it becomes a tab. Pull a tab out of the title bar to detach it again. Files you hold over a tab open that tab.
+- **Rules.** New files on the desktop go straight to the right pane, by extension, by name or because they are a folder (Settings → Rules). What is already in the Inbox can be sorted there in one go.
+- **Peek into rolled-up panes.** A rolled-up pane opens on hover or with a single click and rolls up again when the mouse leaves (Settings → Panes).
+- **Bring panes to the front.** A shortcut (Ctrl+Alt+Space by default, configurable) brings all panes above your windows; press it again, press Esc or click beside them to put them back.
+- **Calm and customizable.** Plain themes, light or dark (or like Windows), Mica (your desktop background blurred behind the pane), your own color and transparency per pane, rounded or square corners, a grid to snap panes to, and an optional tea-towel check pattern.
 - **Double-click an empty spot on the desktop** to hide all panes; double-click again to bring them back.
 - **English and Dutch.** DonkiePane follows the language of Windows; you can choose in Settings → Language. Translations live in `src/DonkiePane.Core/Localization`.
 - **Export and import your layout.** Settings → Data saves your panes and where they are as a file, as a backup or to move them to another PC. Tasks, sources and tokens are not included.

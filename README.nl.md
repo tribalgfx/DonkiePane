@@ -19,7 +19,12 @@ Vakken (panes) op je Windows-bureaublad voor je snelkoppelingen en je taken. Met
   - een eigen dienst via het protocol Tasks REST v1
 
   Wat je offline doet wordt bewaard en later verstuurd. Zie [docs/Bronnen.md](docs/Bronnen.md). Bij taken met een deadline van vandaag krijg je een melding bij de klok (hooguit één per taak per dag; uit te zetten in Instellingen).
-- **Rustig en aanpasbaar.** Effen thema's, een eigen kleur en transparantie per pane, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
+- **Mappanes.** Een pane dat de inhoud van een map naar keuze toont (Nieuw mappane in het menu bij de klok). Dubbelklik op een map om erin te kijken, Backspace gaat terug; typen zoekt in die map en de mappen eronder.
+- **Tabbladen.** Sleep een pane aan zijn titelbalk op de titelbalk van een ander pane en houd even vast: het wordt een tabblad. Trek een tabblad uit de titelbalk om het weer los te maken. Bestanden die je boven een tabblad houdt, openen dat tabblad.
+- **Regels.** Nieuwe bestanden op het bureaublad gaan meteen naar het juiste pane, op extensie, naam of omdat het een map is (Instellingen → Regels). Wat al in de Inbox staat, kun je daar in één keer laten indelen.
+- **Opgerolde panes even openen.** Een opgerold pane gaat open bij aanwijzen of met één klik en rolt weer op als de muis weggaat (Instellingen → Panes).
+- **Panes naar voren halen.** Met een sneltoets (standaard Ctrl+Alt+Spatie, in te stellen) komen alle panes boven je vensters; nog een keer, Esc of ernaast klikken zet ze terug.
+- **Rustig en aanpasbaar.** Effen thema's, licht of donker (of zoals Windows), Mica (je bureaubladachtergrond vervaagd achter het pane), een eigen kleur en transparantie per pane, ronde of rechte hoeken, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
 - **Dubbelklik op een leeg stuk bureaublad** verbergt alle panes; nog een keer haalt ze terug.
 - **Nederlands en Engels.** DonkiePane volgt de taal van Windows; kiezen kan in Instellingen → Taal. Vertalingen staan in `src/DonkiePane.Core/Localization`.
 - **Indeling exporteren en importeren.** Instellingen → Gegevens bewaart je panes en hun plek als bestand, als reservekopie of om ze op een andere pc over te zetten. Taken, bronnen en tokens gaan niet mee.

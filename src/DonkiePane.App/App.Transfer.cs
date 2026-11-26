@@ -26,7 +26,7 @@ public partial class App
         LayoutTransfer.ApplyTo(_layout, imported);
         LayoutEditor.Repair(_layout);
         var unavailable = new List<string>();
-        LayoutEditor.Sync(_layout, _desktop!.EnumerateItems(unavailable), unavailable);
+        LayoutEditor.Sync(_layout, _desktop!.EnumerateItems(unavailable), unavailable, isFolder: IsFolderItem);
         SaveLayout();
 
         _sources.SetPollInterval(_layout.SyncInterval);

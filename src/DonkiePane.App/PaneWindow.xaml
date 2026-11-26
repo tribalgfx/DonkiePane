@@ -11,91 +11,109 @@
         TextOptions.TextFormattingMode="Ideal"
         UseLayoutRounding="True"
         MinWidth="160" MinHeight="36">
-    <Border x:Name="Frame"
-            Background="{DynamicResource PaneBackground}"
-            BorderBrush="{DynamicResource PaneBorder}"
-            BorderThickness="1"
-            CornerRadius="10">
-        <Border.Triggers>
-            <!-- De knoppen in de kop verschijnen pas als je met de muis boven het pane komt. -->
-            <EventTrigger RoutedEvent="MouseEnter">
-                <BeginStoryboard>
-                    <Storyboard>
-                        <DoubleAnimation Storyboard.TargetName="HeaderButtons" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12" />
-                    </Storyboard>
-                </BeginStoryboard>
-            </EventTrigger>
-            <EventTrigger RoutedEvent="MouseLeave">
-                <BeginStoryboard>
-                    <Storyboard>
-                        <DoubleAnimation Storyboard.TargetName="HeaderButtons" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
-                    </Storyboard>
-                </BeginStoryboard>
-            </EventTrigger>
-        </Border.Triggers>
+    <Grid x:Name="Root">
+        <!-- Mica: de vervaagde bureaubladachtergrond onder het pane (alleen als het pane Mica gebruikt). -->
+        <Border x:Name="Backdrop" CornerRadius="10" Visibility="Collapsed" />
 
-        <Grid x:Name="Chrome">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="34" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <Border x:Name="Frame"
+                Background="{DynamicResource PaneBackground}"
+                BorderBrush="{DynamicResource PaneBorder}"
+                BorderThickness="1"
+                CornerRadius="10">
+            <Border.Triggers>
+                <!-- De knoppen in de kop verschijnen pas als je met de muis boven het pane komt. -->
+                <EventTrigger RoutedEvent="MouseEnter">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="HeaderButtons" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="MouseLeave">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="HeaderButtons" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Border.Triggers>
 
-            <!-- Titelbalk: slepen verplaatst, dubbelklik rolt op/uit. -->
-            <Border x:Name="TitleBar"
-                    Grid.Row="0"
-                    Background="{DynamicResource PaneTitleBackground}"
-                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
-                <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{l:T 'Naam wijzigen'}" Click="Rename_Click" />
-                        <!-- Alleen bij iconenpanes; de opties komen uit BuildViewMenus. -->
-                        <MenuItem x:Name="ViewMenu" Header="{l:T 'Weergave'}" />
-                        <MenuItem x:Name="SortMenu" Header="{l:T 'Sorteren op'}" />
-                        <MenuItem x:Name="ThemeMenu" Header="{l:T 'Thema'}">
-                            <!-- De themakleuren komen hier bovenin (zie BuildThemeMenu). -->
-                            <Separator x:Name="ThemeSeparator" />
-                            <MenuItem Header="{l:T 'Eigen kleur kiezen…'}" Click="PickColor_Click" />
-                            <MenuItem x:Name="TransparencyMenu" Header="{l:T 'Transparantie'}" />
-                            <MenuItem x:Name="PatternMenuItem" Header="{l:T 'Ruitpatroon'}" IsCheckable="True" Click="Pattern_Click" />
-                            <Separator />
-                            <MenuItem Header="{l:T 'Standaard herstellen'}" Click="ResetLook_Click" />
-                        </MenuItem>
-                        <MenuItem x:Name="DeleteMenuItem" Header="{l:T 'Pane verwijderen'}" Click="Delete_Click" />
-                    </ContextMenu>
-                </Border.ContextMenu>
-                <Grid Margin="12,0,4,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="TitleText"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource PaneTitleText}"
-                               FontFamily="{DynamicResource UiDisplayFont}"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBox x:Name="TitleEditor"
-                             Visibility="Collapsed"
-                             VerticalAlignment="Center"
-                             Margin="-5,0,6,0"
-                             FontWeight="SemiBold"
-                             Style="{DynamicResource PaneTextBox}"
-                             KeyDown="TitleEditor_KeyDown"
-                             LostKeyboardFocus="TitleEditor_LostKeyboardFocus" />
+            <Grid x:Name="Chrome">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="34" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                    <StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Opacity="0" VerticalAlignment="Center">
-                        <Button x:Name="RollButton" Style="{DynamicResource GlyphButton}" Click="Roll_Click"
-                                Foreground="{DynamicResource PaneTitleText}" ToolTip="{l:T 'Oprollen'}" Content="&#xE70E;" FontSize="10" />
-                        <Button x:Name="MenuButton" Style="{DynamicResource GlyphButton}" Click="Menu_Click"
-                                Foreground="{DynamicResource PaneTitleText}" ToolTip="{l:T 'Opties'}" Content="&#xE712;" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-            <Border x:Name="Divider" Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{DynamicResource PaneDivider}" />
+                <!-- Titelbalk: slepen verplaatst, dubbelklik rolt op/uit. Met tabbladen staan die hier. -->
+                <Border x:Name="TitleBar"
+                        Grid.Row="0"
+                        Background="{DynamicResource PaneTitleBackground}"
+                        AllowDrop="True"
+                        DragEnter="TitleBar_DragEnter"
+                        DragOver="TitleBar_DragOver"
+                        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <Border.ContextMenu>
+                        <ContextMenu Opened="TitleMenu_Opened">
+                            <MenuItem Header="{l:T 'Naam wijzigen'}" Click="Rename_Click" />
+                            <!-- Alleen bij iconen- en mappanes; de opties komen uit BuildViewMenus. -->
+                            <MenuItem x:Name="ViewMenu" Header="{l:T 'Weergave'}" />
+                            <MenuItem x:Name="SortMenu" Header="{l:T 'Sorteren op'}" />
+                            <MenuItem x:Name="ChooseFolderMenuItem" Header="{l:T 'Andere map kiezen…'}" Click="ChooseFolder_Click" />
+                            <MenuItem x:Name="ThemeMenu" Header="{l:T 'Thema'}">
+                                <!-- De themakleuren komen hier bovenin (zie BuildThemeMenu). -->
+                                <Separator x:Name="ThemeSeparator" />
+                                <MenuItem Header="{l:T 'Eigen kleur kiezen…'}" Click="PickColor_Click" />
+                                <MenuItem x:Name="TransparencyMenu" Header="{l:T 'Transparantie'}" />
+                                <MenuItem x:Name="PatternMenuItem" Header="{l:T 'Ruitpatroon'}" IsCheckable="True" Click="Pattern_Click" />
+                                <MenuItem x:Name="MicaMenuItem" Header="{l:T 'Mica (vervaagde achtergrond)'}" IsCheckable="True" Click="Mica_Click" />
+                                <Separator />
+                                <MenuItem Header="{l:T 'Standaard herstellen'}" Click="ResetLook_Click" />
+                            </MenuItem>
+                            <MenuItem x:Name="MergeMenu" Header="{l:T 'Als tabblad toevoegen aan'}" />
+                            <MenuItem x:Name="DetachMenuItem" Header="{l:T 'Tabblad losmaken'}" Click="Detach_Click" />
+                            <MenuItem x:Name="DeleteMenuItem" Header="{l:T 'Pane verwijderen'}" Click="Delete_Click" />
+                        </ContextMenu>
+                    </Border.ContextMenu>
+                    <Grid x:Name="TitleGrid" Margin="12,0,4,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TitleText"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PaneTitleText}"
+                                   FontFamily="{DynamicResource UiDisplayFont}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <!-- Tabbladen (als er meer dan één pane in dit venster staat); gevuld door BuildTabs. -->
+                        <StackPanel x:Name="TabStrip" Orientation="Horizontal" Visibility="Collapsed" Margin="-8,0,0,0"
+                                    HorizontalAlignment="Left" ClipToBounds="True" />
+                        <TextBox x:Name="TitleEditor"
+                                 Visibility="Collapsed"
+                                 VerticalAlignment="Center"
+                                 Margin="-5,0,6,0"
+                                 FontWeight="SemiBold"
+                                 Style="{DynamicResource PaneTextBox}"
+                                 KeyDown="TitleEditor_KeyDown"
+                                 LostKeyboardFocus="TitleEditor_LostKeyboardFocus" />
 
-            <!-- Inhoud: iconen of taken. -->
-            <ContentControl x:Name="Body" Grid.Row="1" Focusable="False" />
-        </Grid>
-    </Border>
+                        <StackPanel x:Name="HeaderButtons" Grid.Column="1" Orientation="Horizontal" Opacity="0" VerticalAlignment="Center">
+                            <Button x:Name="RollButton" Style="{DynamicResource GlyphButton}" Click="Roll_Click"
+                                    Foreground="{DynamicResource PaneTitleText}" ToolTip="{l:T 'Oprollen'}" Content="&#xE70E;" FontSize="10" />
+                            <Button x:Name="MenuButton" Style="{DynamicResource GlyphButton}" Click="Menu_Click"
+                                    Foreground="{DynamicResource PaneTitleText}" ToolTip="{l:T 'Opties'}" Content="&#xE712;" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <!-- Een ander pane wordt hierop losgelaten: het wordt een tabblad van dit pane. -->
+                <Border x:Name="MergeHighlight" Grid.Row="0" Visibility="Collapsed" IsHitTestVisible="False"
+                        BorderThickness="2" BorderBrush="{DynamicResource PaneAccentLine}" Background="{DynamicResource PaneSelection}" />
+                <Border x:Name="Divider" Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{DynamicResource PaneDivider}" />
+
+                <!-- Inhoud: iconen, taken of een map. -->
+                <ContentControl x:Name="Body" Grid.Row="1" Focusable="False" />
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

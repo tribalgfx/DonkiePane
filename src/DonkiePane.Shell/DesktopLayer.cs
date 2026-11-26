@@ -93,9 +93,70 @@ public static class DesktopLayer
     private static void SendToBottom(IntPtr hwnd) =>
         SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
+    /// <summary>
+    /// De panes staan even boven alle vensters (de sneltoets om naar je panes te kijken). Zolang dit aan staat, worden
+    /// ze niet naar onderen gestuurd als je erop klikt.
+    /// </summary>
+    public static bool Peeking { get; private set; }
+
+    /// <summary>Haalt deze vensters boven alle andere (ook boven vensters die "altijd bovenop" staan, als laatste gezet).</summary>
+    public static void BeginPeek(IEnumerable<Window> windows)
+    {
+        Peeking = true;
+        foreach (var window in windows)
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd != IntPtr.Zero) SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+    }
+
+    /// <summary>Zet de vensters weer gewoon op de bureaubladlaag.</summary>
+    public static void EndPeek(IEnumerable<Window> windows)
+    {
+        Peeking = false;
+        foreach (var window in windows)
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) continue;
+            SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            SendToBottom(hwnd);
+        }
+    }
+
+    /// <summary>Maakt dit venster het actieve (mag direct na een sneltoets).</summary>
+    public static void Activate(Window window) => SetForegroundWindow(new WindowInteropHelper(window).Handle);
+
+    /// <summary>
+    /// Begint het verslepen van een venster aan de titelbalk alsof je hem net hebt vastgepakt, terwijl de muisknop nog
+    /// ingedrukt is (bijv. een tabblad dat je uit een pane trekt en dat een eigen venster wordt).
+    /// </summary>
+    public static void BeginDragMove(Window window)
+    {
+        const int WM_NCLBUTTONDOWN = 0x00A1, HTCAPTION = 2;
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        ReleaseCapture();
+        GetCursorPos(out var pt);
+        var lParam = new IntPtr((pt.Y << 16) | (pt.X & 0xFFFF));
+        PostMessage(hwnd, WM_NCLBUTTONDOWN, new IntPtr(HTCAPTION), lParam);
+    }
+
+    /// <summary>Waar de muis nu is, in fysieke schermpixels.</summary>
+    public static System.Drawing.Point CursorPosition()
+    {
+        GetCursorPos(out var pt);
+        return new System.Drawing.Point(pt.X, pt.Y);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT pt);
+
     private static unsafe IntPtr KeepAtBottom(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WM_WINDOWPOSCHANGING)
+        if (msg == WM_WINDOWPOSCHANGING && !Peeking)
         {
             var pos = (WINDOWPOS*)lParam;
             // Elke wijziging in de stapelvolgorde (klikken, activeren) wordt

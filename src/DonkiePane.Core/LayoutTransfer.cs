@@ -61,5 +61,9 @@ public static class LayoutTransfer
         target.GridSize = imported.GridSize;
         target.SyncSeconds = imported.SyncSeconds;
         target.RemindDueTasks = imported.RemindDueTasks;
+        target.RollUpOpen = imported.RollUpOpen;
+        target.Appearance = imported.Appearance;
+        target.CornerRadius = imported.CornerRadius;
+        target.Rules = imported.Rules ?? [];
     }
 }

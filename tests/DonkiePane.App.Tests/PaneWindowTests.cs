@@ -43,7 +43,7 @@ public sealed class PaneWindowTests
             var themeMenu = (MenuItem)window.FindName("ThemeMenu");
             Assert.Contains(transparency, themeMenu.Items.Cast<object>());
             Assert.Contains(pattern, themeMenu.Items.Cast<object>());
-            Assert.Equal(5, ((ContextMenu)((FrameworkElement)window.FindName("TitleBar")).ContextMenu).Items.Count);
+            Assert.Equal(8, ((ContextMenu)((FrameworkElement)window.FindName("TitleBar")).ContextMenu).Items.Count);
 
             // Een thema kiezen wist een eigen kleur en meldt de wijziging.
             pane.CustomColor = "#2F9E6B";

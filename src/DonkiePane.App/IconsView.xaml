@@ -4,7 +4,6 @@
         xmlns:l="clr-namespace:DonkiePane.App"
              xmlns:local="clr-namespace:DonkiePane.App">
     <UserControl.Resources>
-        <DropShadowEffect x:Key="TextShadow" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.75" Color="#000000" />
 
         <!-- Rechtermuisknop toont het menu van Verkenner; dit is alleen de terugval als dat niet lukt. -->
         <ContextMenu x:Key="FallbackMenu" x:Shared="False">
@@ -61,7 +60,7 @@
                                                LineHeight="16"
                                                LineStackingStrategy="BlockLineHeight"
                                                Foreground="{DynamicResource PaneText}"
-                                               Effect="{StaticResource TextShadow}" />
+                                               Effect="{DynamicResource PaneTextShadow}" />
                                     <TextBox x:Name="NameEditor"
                                              Visibility="Collapsed"
                                              TextAlignment="Center"
@@ -212,7 +211,7 @@
                     IsHitTestVisible="False" Opacity="0.7">
             <TextBlock Text="&#xE8B7;" FontFamily="{DynamicResource IconFont}" FontSize="26"
                        HorizontalAlignment="Center" Foreground="{DynamicResource PaneMutedText}" />
-            <TextBlock Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap" FontSize="12"
+            <TextBlock x:Name="EmptyHintText" Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap" FontSize="12"
                        Foreground="{DynamicResource PaneMutedText}"
                        Text="{l:T 'Sleep hier iconen of bestanden naartoe'}" />
         </StackPanel>

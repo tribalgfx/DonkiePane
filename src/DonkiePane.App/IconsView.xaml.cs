@@ -84,8 +84,37 @@ public partial class IconsView : UserControl
     /// </summary>
     public event EventHandler? ArrivalExpected;
 
-    /// <summary>De map waar geplakte en hierheen gesleepte bestanden heen gaan: je eigen bureaublad.</summary>
+    /// <summary>Je eigen bureaublad.</summary>
     public static string DesktopFolder => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+
+    /// <summary>De map waar geplakte, nieuwe en hierheen gesleepte bestanden heen gaan: het bureaublad, of de map van een mappane.</summary>
+    public string TargetFolder { get; set; } = DesktopFolder;
+
+    /// <summary>
+    /// Een mappane: de iconen zijn bestanden in <see cref="TargetFolder"/>, niet bureaubladitems. Slepen naar een ander
+    /// pane verplaatst dan het bestand (via de shell) in plaats van het icoon in de indeling, en een map openen gaat
+    /// erin kijken in plaats van Verkenner te openen.
+    /// </summary>
+    public bool IsFolderView { get; set; }
+
+    /// <summary>In een mappane is een map geopend (dubbelklik of Enter): erin kijken.</summary>
+    public event EventHandler<string>? FolderOpened;
+
+    /// <summary>De filtertekst is veranderd (leeg = filter weg).</summary>
+    public event EventHandler<string>? FilterChanged;
+
+    /// <summary>Een lege-plek-tekst in plaats van "Sleep hier iconen naartoe" (bijv. "Deze map is leeg").</summary>
+    public void SetEmptyHint(string text) => EmptyHintText.Text = text;
+
+    /// <summary>
+    /// Worden iconen uit een pane met het bureaublad hier opnieuw ingedeeld (in plaats van als bestand verplaatst)? Alleen
+    /// tussen panes met bureaubladitems.
+    /// </summary>
+    private bool IsLayoutDrag(DragEventArgs e) =>
+        !IsFolderView && (ActiveDrag is { } drag ? !drag.Source.IsFolderView : e.Data.GetDataPresent(InternalDataFormat));
+
+    /// <summary>Iconen uit deze mappane boven deze mappane: neerzetten in dezelfde map doet niets.</summary>
+    private bool IsOwnFolderDrag => IsFolderView && ActiveDrag?.Source == this;
 
     public IconsView()
     {
@@ -142,7 +171,8 @@ public partial class IconsView : UserControl
         var filter = FilterBar.Visibility == Visibility.Visible ? FilterBox.Text.Trim() : "";
         _items = filter.Length == 0
             ? _allItems
-            : _allItems.Where(i => i.DisplayName.Contains(filter, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            : _allItems.Where(i => i.DisplayName.Contains(filter, StringComparison.CurrentCultureIgnoreCase) ||
+                                   (IsFolderView && Path.GetFileName(i.Path).Contains(filter, StringComparison.CurrentCultureIgnoreCase))).ToList();
         ItemsHost.ItemsSource = _items;
         EmptyHint.Visibility = _allItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         NoMatchHint.Visibility = _allItems.Count > 0 && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -345,7 +375,7 @@ public partial class IconsView : UserControl
         var selected = SelectedInOrder();
         if (selected.Count == 0)
         {
-            ShellContextMenu.ShowBackground(DesktopFolder,
+            ShellContextMenu.ShowBackground(TargetFolder,
                 beforeCommand: () => ArrivalExpected?.Invoke(this, EventArgs.Empty),
                 newItem: () => _renameNextNewUntil = DateTime.UtcNow.AddSeconds(10));
             return;
@@ -406,11 +436,11 @@ public partial class IconsView : UserControl
             case Key.V when ctrl:
                 if (!ShellItems.CanPaste()) break;
                 ArrivalExpected?.Invoke(this, EventArgs.Empty);
-                ShellItems.Paste(DesktopFolder);
+                ShellItems.Paste(TargetFolder);
                 break;
             case Key.N when ctrl && shift:
                 ArrivalExpected?.Invoke(this, EventArgs.Empty);
-                _renameWhenArrives = ShellItems.CreateNewFolder(DesktopFolder);
+                _renameWhenArrives = ShellItems.CreateNewFolder(TargetFolder);
                 break;
             case Key.A when ctrl:
                 ItemsHost.SelectAll();
@@ -468,6 +498,7 @@ public partial class IconsView : UserControl
         FilterBar.Visibility = Visibility.Collapsed;
         FilterBox.Text = "";
         ShowItems();
+        FilterChanged?.Invoke(this, "");
         if (focusIcons) ItemsHost.Focus();
     }
 
@@ -476,8 +507,13 @@ public partial class IconsView : UserControl
 
     private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (FilterBar.Visibility == Visibility.Visible) ShowItems();
+        if (FilterBar.Visibility != Visibility.Visible) return;
+        ShowItems();
+        FilterChanged?.Invoke(this, FilterBox.Text.Trim());
     }
+
+    /// <summary>De tekst in het filtervak (leeg als het filter dicht is).</summary>
+    internal string FilterText => FilterBar.Visibility == Visibility.Visible ? FilterBox.Text.Trim() : "";
 
     private void FilterBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -693,20 +729,24 @@ public partial class IconsView : UserControl
             // Op een map, de Prullenbak of een programma: dat doet de shell (verplaatsen, verwijderen, openen met).
             effect = _itemTarget.Drop(data, e.KeyStates, e.AllowedEffects);
         }
-        else if (ActiveDrag is { } drag)
+        else if (IsOwnFolderDrag)
+        {
+            effect = DragDropEffects.None; // naar dezelfde map
+        }
+        else if (IsLayoutDrag(e) && ActiveDrag is { } drag)
         {
             ItemsDropped?.Invoke(this, (drag.Ids, DropIndex(e)));
             effect = DragDropEffects.Move;
         }
-        else if (e.Data.GetData(InternalDataFormat) is string ids)
+        else if (IsLayoutDrag(e) && e.Data.GetData(InternalDataFormat) is string ids)
         {
             ItemsDropped?.Invoke(this, (ids.Split('|'), DropIndex(e)));
             effect = DragDropEffects.Move;
         }
         else if (_folderTarget is not null && data is not null)
         {
-            // Bestanden van buiten: naar het bureaublad, en in dit pane.
-            ArrivalExpected?.Invoke(this, EventArgs.Empty);
+            // Bestanden van buiten (of uit een mappane): naar de map van dit pane, en in dit pane.
+            if (!IsFolderView) ArrivalExpected?.Invoke(this, EventArgs.Empty);
             effect = _folderTarget.Drop(data, e.KeyStates, e.AllowedEffects);
         }
 
@@ -719,7 +759,7 @@ public partial class IconsView : UserControl
     /// <summary>Bepaalt wat neerzetten hier zou doen, en laat dat zien (markering, invoegstreep, cursor).</summary>
     private void UpdateDrop(DragEventArgs e)
     {
-        var internalDrag = ActiveDrag is not null || e.Data.GetDataPresent(InternalDataFormat);
+        var internalDrag = IsLayoutDrag(e);
         var container = ContainerAt(e.GetPosition(ItemsHost));
 
         // 1. Boven het icoon van een map, de Prullenbak of een programma?
@@ -743,8 +783,14 @@ public partial class IconsView : UserControl
             return;
         }
 
-        // 3. Bestanden van buiten: wat de bureaubladmap ermee zou doen (verplaatsen, kopiëren, snelkoppeling).
+        // 3. Bestanden van buiten: wat de map ermee zou doen (verplaatsen, kopiëren, snelkoppeling).
         InsertMarker.Visibility = Visibility.Collapsed;
+        if (IsOwnFolderDrag)
+        {
+            LeaveFolderTarget();
+            e.Effects = DragDropEffects.None;
+            return;
+        }
         e.Effects = FolderEffect(e);
     }
 
@@ -754,7 +800,7 @@ public partial class IconsView : UserControl
         if (data is null) return DragDropEffects.None;
         if (_folderTarget is null)
         {
-            _folderTarget = ShellDropTarget.For(DesktopFolder);
+            _folderTarget = ShellDropTarget.For(TargetFolder);
             if (_folderTarget is null) return DragDropEffects.None;
             return _folderTarget.DragEnter(data, e.KeyStates, e.AllowedEffects);
         }
@@ -895,7 +941,17 @@ public partial class IconsView : UserControl
         else StartProcess(new ProcessStartInfo("explorer.exe", $"/select,\"{item.Path}\""));
     }
 
-    private static void Open(ItemView item) =>
+    private void Open(ItemView item)
+    {
+        if (IsFolderView && Directory.Exists(item.Path))
+        {
+            FolderOpened?.Invoke(this, item.Path);
+            return;
+        }
+        OpenWithShell(item);
+    }
+
+    private static void OpenWithShell(ItemView item) =>
         StartProcess(VirtualDesktopItems.IsVirtual(item.Path)
             ? new ProcessStartInfo("explorer.exe", "shell:" + item.Path)
             : new ProcessStartInfo(item.Path)

@@ -27,6 +27,14 @@
     <SolidColorBrush x:Key="PaneSelectionInactiveBorder" Color="#38FFFFFF" />
     <SolidColorBrush x:Key="PaneAccentLine" Color="#FF99DCFF" />
     <SolidColorBrush x:Key="PaneCheck" Color="#FF4CC2FF" />
+    <SolidColorBrush x:Key="PaneCheckRing" Color="#8CF5F3EF" />
+    <SolidColorBrush x:Key="PaneScrollThumb" Color="#59F5F3EF" />
+    <SolidColorBrush x:Key="PaneScrollThumbHover" Color="#A6F5F3EF" />
+    <SolidColorBrush x:Key="PaneScrollThumbDrag" Color="#CCF5F3EF" />
+    <SolidColorBrush x:Key="PaneButtonHover" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="PaneButtonPressed" Color="#12FFFFFF" />
+    <SolidColorBrush x:Key="PaneInputHoverBorder" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="PaneInputFocusBackground" Color="#E61C1D20" />
 
     <SolidColorBrush x:Key="MenuBackground" Color="#F2272A2F" />
     <SolidColorBrush x:Key="MenuBorder" Color="#29FFFFFF" />
@@ -42,7 +50,7 @@
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal" Background="Transparent">
                         <Grid VerticalAlignment="Top" Width="18" Height="18">
-                            <Border x:Name="Box" CornerRadius="9" BorderThickness="1.5" BorderBrush="#8CF5F3EF" Background="Transparent" />
+                            <Border x:Name="Box" CornerRadius="9" BorderThickness="1.5" BorderBrush="{DynamicResource PaneCheckRing}" Background="Transparent" />
                             <TextBlock x:Name="Mark" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="10"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Foreground="#FFFFFFFF" Opacity="0" />
@@ -55,7 +63,7 @@
                             <Setter TargetName="Label" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Box" Property="BorderBrush" Value="#FFF5F3EF" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource PaneText}" />
                             <Setter TargetName="Mark" Property="Opacity" Value="0.55" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
@@ -101,17 +109,17 @@
                                     <ControlTemplate TargetType="Thumb">
                                         <Border Background="Transparent">
                                             <Border x:Name="Bar" Width="4" HorizontalAlignment="Center" Margin="0,4"
-                                                    CornerRadius="2" Background="#59F5F3EF" />
+                                                    CornerRadius="2" Background="{DynamicResource PaneScrollThumb}" />
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="Bar" Property="Width" Value="6" />
                                                 <Setter TargetName="Bar" Property="CornerRadius" Value="3" />
-                                                <Setter TargetName="Bar" Property="Background" Value="#A6F5F3EF" />
+                                                <Setter TargetName="Bar" Property="Background" Value="{DynamicResource PaneScrollThumbHover}" />
                                             </Trigger>
                                             <Trigger Property="IsDragging" Value="True">
                                                 <Setter TargetName="Bar" Property="Width" Value="6" />
-                                                <Setter TargetName="Bar" Property="Background" Value="#CCF5F3EF" />
+                                                <Setter TargetName="Bar" Property="Background" Value="{DynamicResource PaneScrollThumbDrag}" />
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -239,10 +247,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#1FFFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PaneButtonHover}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#12FFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PaneButtonPressed}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -274,10 +282,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PaneInputHoverBorder}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#E61C1D20" />
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PaneInputFocusBackground}" />
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource PaneAccentLine}" />
                         </Trigger>
                     </ControlTemplate.Triggers>

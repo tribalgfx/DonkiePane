@@ -1,3 +1,5 @@
+using DonkiePane.Core;
+
 namespace DonkiePane.App;
 
 public partial class App
@@ -25,6 +27,16 @@ public partial class App
         Shutdown();
     }
 
+    /// <summary>De regels nu toepassen op wat er in de Inbox staat; geeft het aantal verplaatste iconen.</summary>
+    private int ApplyRulesNow()
+    {
+        var moved = LayoutEditor.ApplyRulesToInbox(_layout, IsFolderItem);
+        if (moved == 0) return 0;
+        SaveLayout();
+        RefreshItems();
+        return moved;
+    }
+
     private void ShowSettings()
     {
         // Eén instellingenvenster tegelijk: een tweede keer openen haalt het naar voren.
@@ -35,7 +47,7 @@ public partial class App
         }
 
         _settingsWindow = new SettingsWindow(_layout, SaveLayout, BringAllPanesToPrimaryScreen, _sources, _updates, ShowUpdateWindow, Restart,
-            ExportLayout, ImportLayout);
+            ExportLayout, ImportLayout, RefreshAllLooks, ApplyPeekHotkey, ApplyRulesNow);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
         _settingsWindow.Activate();

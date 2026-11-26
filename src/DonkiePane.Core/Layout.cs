@@ -45,6 +45,32 @@ public sealed class Layout
     /// <summary>Taken waarover vandaag al een melding is geweest (bron/lijst/taak), zodat die niet bij elke controle terugkomt.</summary>
     public List<string> DueRemindedTaskIds { get; set; } = [];
 
+    /// <summary>Hoe een opgerold pane even opengaat: alleen met de knop, bij aanwijzen met de muis, of met één klik.</summary>
+    public RollUpOpen RollUpOpen { get; set; } = RollUpOpen.Button;
+
+    /// <summary>
+    /// De sneltoets die alle panes even boven je vensters haalt (bijv. <c>"Ctrl+Alt+Space"</c>, zie
+    /// <see cref="Hotkey"/>). Leeg = geen sneltoets.
+    /// </summary>
+    public string? PeekHotkey { get; set; } = DefaultPeekHotkey;
+
+    public const string DefaultPeekHotkey = "Ctrl+Alt+Space";
+
+    /// <summary>Donkere of lichte panes, of zoals de apps in Windows.</summary>
+    public AppTheme Appearance { get; set; } = AppTheme.Dark;
+
+    /// <summary>Hoe rond de hoeken van de panes zijn, in WPF-eenheden (0 = recht).</summary>
+    public double CornerRadius { get; set; } = DefaultCornerRadius;
+
+    public const double DefaultCornerRadius = 10;
+    public const double MaxCornerRadius = 20;
+
+    /// <summary><see cref="CornerRadius"/> binnen de grenzen.</summary>
+    public double EffectiveCornerRadius => double.IsFinite(CornerRadius) ? Math.Clamp(CornerRadius, 0, MaxCornerRadius) : DefaultCornerRadius;
+
+    /// <summary>Regels die nieuwe bureaubladitems meteen in het juiste pane zetten, in volgorde: de eerste die past, telt.</summary>
+    public List<FileRule> Rules { get; set; } = [];
+
     public const int DefaultSyncSeconds = 60;
     public const int MinSyncSeconds = 15;
     public const int MaxSyncSeconds = 300;

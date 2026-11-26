@@ -97,6 +97,46 @@
         </CheckBox>
         <TextBlock x:Name="AutoStartHint" Style="{StaticResource Hint}" />
 
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Panes'}" />
+        <TextBlock Text="{l:T 'Uiterlijk'}" />
+        <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="AppearanceDark" Style="{StaticResource Chip}" GroupName="Appearance" Checked="Appearance_Checked" Content="{l:T 'Donker'}" />
+            <RadioButton x:Name="AppearanceLight" Style="{StaticResource Chip}" GroupName="Appearance" Checked="Appearance_Checked" Content="{l:T 'Licht'}" />
+            <RadioButton x:Name="AppearanceSystem" Style="{StaticResource Chip}" GroupName="Appearance" Checked="Appearance_Checked" Content="{l:T 'Zoals Windows'}" />
+        </StackPanel>
+        <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="44" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{l:T 'Ronde hoeken'}" />
+            <Slider x:Name="CornerSlider" Grid.Column="1" Minimum="0" Maximum="20"
+                    TickFrequency="2" IsSnapToTickEnabled="True" TickPlacement="BottomRight"
+                    ValueChanged="CornerSlider_ValueChanged" />
+            <TextBlock x:Name="CornerValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                   Text="{l:T 'Kleur, transparantie en Mica kies je per pane: rechtsklik op de titelbalk → Thema.'}" />
+
+        <TextBlock Margin="0,14,0,0" Text="{l:T 'Een opgerold pane openen'}" />
+        <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="RollButtonOnly" Style="{StaticResource Chip}" GroupName="RollUp" Checked="RollUp_Checked" Content="{l:T 'Met de knop'}" />
+            <RadioButton x:Name="RollHover" Style="{StaticResource Chip}" GroupName="RollUp" Checked="RollUp_Checked" Content="{l:T 'Bij aanwijzen'}" />
+            <RadioButton x:Name="RollClick" Style="{StaticResource Chip}" GroupName="RollUp" Checked="RollUp_Checked" Content="{l:T 'Met een klik'}" />
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                   Text="{l:T 'Bij aanwijzen of een klik gaat een opgerold pane even open en rolt het weer op als de muis weggaat. Dubbelklikken op de titelbalk rolt het echt uit.'}" />
+
+        <TextBlock Margin="0,14,0,0" Text="{l:T 'Sneltoets om de panes naar voren te halen'}" />
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBox x:Name="HotkeyBox" Width="200" IsReadOnly="True" IsReadOnlyCaretVisible="False" Padding="6,4"
+                     Background="#26FFFFFF" Foreground="#FFF5F0E8" BorderThickness="0"
+                     PreviewKeyDown="HotkeyBox_PreviewKeyDown" GotKeyboardFocus="HotkeyBox_GotKeyboardFocus" LostKeyboardFocus="HotkeyBox_LostKeyboardFocus" />
+            <Button Style="{StaticResource Action}" Margin="8,0,0,0" Click="ClearHotkey_Click" Content="{l:T 'Geen'}" />
+        </StackPanel>
+        <TextBlock x:Name="HotkeyHint" Style="{StaticResource Hint}" Margin="0,4,0,0" />
+
         <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Ruitjesraster'}" />
 
         <CheckBox x:Name="SnapBox" Style="{StaticResource Option}" Click="Snap_Click">
@@ -149,6 +189,23 @@
             <Button x:Name="RemoveSourceButton" Style="{StaticResource Action}" Click="RemoveSource_Click" Content="{l:T 'Verwijderen'}" />
         </StackPanel>
         <TextBlock x:Name="PluginsInfo" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+
+        <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Regels'}" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
+                   Text="{l:T 'Nieuwe bestanden op het bureaublad gaan naar het pane van de eerste regel die past, in plaats van naar de Inbox. Plak of sleep je iets zelf in een pane, dan blijft het daar.'}" />
+        <ListBox x:Name="RulesList" Height="96" Background="#26FFFFFF" BorderThickness="0" Foreground="#FFF5F0E8"
+                 DisplayMemberPath="Label" SelectionChanged="Rules_SelectionChanged" MouseDoubleClick="EditRule_Click" />
+        <StackPanel Orientation="Horizontal">
+            <Button Style="{StaticResource Action}" Click="AddRule_Click" Content="{l:T 'Toevoegen…'}" />
+            <Button x:Name="EditRuleButton" Style="{StaticResource Action}" Click="EditRule_Click" Content="{l:T 'Bewerken…'}" />
+            <Button x:Name="RemoveRuleButton" Style="{StaticResource Action}" Click="RemoveRule_Click" Content="{l:T 'Verwijderen'}" />
+            <Button x:Name="RuleUpButton" Style="{StaticResource Action}" Click="RuleUp_Click" Content="&#xE70E;"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" ToolTip="{l:T 'Hoger (gaat voor)'}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <Button x:Name="ApplyRulesButton" Style="{StaticResource Action}" Click="ApplyRules_Click" Content="{l:T 'Nu toepassen op de Inbox'}" />
+        </StackPanel>
+        <TextBlock x:Name="RulesStatus" Style="{StaticResource Hint}" Margin="0,4,0,0" />
 
         <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Schermen'}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,0" Foreground="{StaticResource Muted}"
