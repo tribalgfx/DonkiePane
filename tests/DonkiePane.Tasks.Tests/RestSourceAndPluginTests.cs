@@ -233,6 +233,33 @@ public sealed class PluginLoaderTests : IDisposable
         return target;
     }
 
+
+    [Fact]
+    public void A_plugin_in_the_user_folder_only_loads_once_it_is_approved()
+    {
+        var dll = Install("rest", typeof(RestTasksPlugin));
+        var userFolder = Path.Combine(_root, "plugins");
+
+        var first = PluginLoader.Load([], userFolder, _ => false);
+        Assert.Empty(first.Plugins);
+        var pending = Assert.Single(first.Pending);
+        Assert.Equal(dll, pending.Path);
+
+        var approved = PluginLoader.Load([], userFolder, hash => hash == pending.Hash);
+        Assert.Empty(approved.Pending);
+        Assert.Equal("tasks-rest-v1", Assert.Single(approved.Plugins).Plugin.TypeId);
+    }
+
+    [Fact]
+    public void Changing_any_dll_next_to_a_plugin_changes_its_fingerprint()
+    {
+        var dll = Install("rest", typeof(RestTasksPlugin));
+        var before = PluginLoader.Fingerprint(dll);
+        Assert.Equal(before, PluginLoader.Fingerprint(dll)); // vast
+
+        File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(dll)!, "Extra.dll"), [1, 2, 3]); // een afhankelijkheid erbij
+        Assert.NotEqual(before, PluginLoader.Fingerprint(dll));
+    }
     [Fact]
     public void A_missing_folder_gives_no_plugins_and_no_errors()
     {

@@ -68,7 +68,7 @@ DonkiePane/
 Zie [docs/Bronnen.md](docs/Bronnen.md) voor het gebruik. Samengevat:
 
 - **Eén algemene app.** Er is geen bron ingebouwd en er staat geen adres of naam van iemands eigen dashboard in de app. Wat een gebruiker gebruikt, vult hij zelf in.
-- **Bronnen zijn plug-ins** (`DonkiePane.Plugins.*.dll`) uit `plugins\` naast het programma en uit `%APPDATA%\DonkiePane\plugins`. Alleen daaruit, nooit van internet. Een plug-in beschrijft zijn invoervelden; de app tekent het formulier en bewaart geheimen versleuteld (DPAPI, `secrets\`), nooit in `sources.json`.
+- **Bronnen zijn plug-ins** (`DonkiePane.Plugins.*.dll`) uit `plugins\` naast het programma en uit `%APPDATA%\DonkiePane\plugins`. Alleen daaruit, nooit van internet; die uit `%APPDATA%` pas nadat je ze hebt toegestaan (afdruk van hun DLLs in `plugins-allowed.dat`, versleuteld met DPAPI). Een plug-in beschrijft zijn invoervelden; de app tekent het formulier en bewaart geheimen versleuteld (DPAPI, `secrets\`), nooit in `sources.json`.
 - **Meegeleverd:** Taken via REST (Tasks REST v1, met optionele vastgepinde certificaat-vingerafdruk), Google Taken (de gebruiker maakt zelf een OAuth-client; er wordt geen client-ID meegeleverd) en Home Assistant (to-do lijsten; http alleen na een uitdrukkelijke keuze).
 - **Synchronisatie:** instelbaar interval (standaard 60 s, 15 s tot 5 min) en een verversknop. Een wachtrij om elke gekoppelde bron bewaart wat je offline doet, in een bestand per verbinding, en verstuurt het in volgorde zodra het kan.
 - **Gedrag naar de bron toe:** na een 401 stopt DonkiePane met verzoeken (een bron kan na een paar mislukte pogingen alles blokkeren), bij 429 wacht het de opgegeven tijd, elke minuut volstaat één vraag met de revisie (304).

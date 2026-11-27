@@ -47,7 +47,7 @@ public partial class App
         }
 
         _settingsWindow = new SettingsWindow(_layout, SaveLayout, BringAllPanesToPrimaryScreen, _sources, _updates, ShowUpdateWindow, Restart,
-            ExportLayout, ImportLayout, RefreshAllLooks, ApplyPeekHotkey, ApplyRulesNow);
+            ExportLayout, ImportLayout, RefreshAllLooks, ApplyRaiseHotkey, ApplyRulesNow, ApprovePlugins);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
         _settingsWindow.Activate();

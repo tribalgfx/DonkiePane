@@ -97,12 +97,12 @@ public static class DesktopLayer
     /// De panes staan even boven alle vensters (de sneltoets om naar je panes te kijken). Zolang dit aan staat, worden
     /// ze niet naar onderen gestuurd als je erop klikt.
     /// </summary>
-    public static bool Peeking { get; private set; }
+    public static bool Raised { get; private set; }
 
     /// <summary>Haalt deze vensters boven alle andere (ook boven vensters die "altijd bovenop" staan, als laatste gezet).</summary>
-    public static void BeginPeek(IEnumerable<Window> windows)
+    public static void BeginRaise(IEnumerable<Window> windows)
     {
-        Peeking = true;
+        Raised = true;
         foreach (var window in windows)
         {
             var hwnd = new WindowInteropHelper(window).Handle;
@@ -111,9 +111,9 @@ public static class DesktopLayer
     }
 
     /// <summary>Zet de vensters weer gewoon op de bureaubladlaag.</summary>
-    public static void EndPeek(IEnumerable<Window> windows)
+    public static void EndRaise(IEnumerable<Window> windows)
     {
-        Peeking = false;
+        Raised = false;
         foreach (var window in windows)
         {
             var hwnd = new WindowInteropHelper(window).Handle;
@@ -156,7 +156,7 @@ public static class DesktopLayer
 
     private static unsafe IntPtr KeepAtBottom(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WM_WINDOWPOSCHANGING && !Peeking)
+        if (msg == WM_WINDOWPOSCHANGING && !Raised)
         {
             var pos = (WINDOWPOS*)lParam;
             // Elke wijziging in de stapelvolgorde (klikken, activeren) wordt

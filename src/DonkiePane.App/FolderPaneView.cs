@@ -146,6 +146,9 @@ public sealed class FolderPaneView : UserControl
 
     private void OpenInExplorer()
     {
+        // Verkenner opent ook een bestand of programma dat je zo meegeeft. Alleen een map die echt bestaat (en zonder
+        // aanhalingstekens, die een extra argument zouden maken).
+        if (!Directory.Exists(CurrentFolder) || CurrentFolder.Contains('"')) return;
         try
         {
             Process.Start(new ProcessStartInfo("explorer.exe", $"\"{CurrentFolder}\"") { UseShellExecute = true })?.Dispose();

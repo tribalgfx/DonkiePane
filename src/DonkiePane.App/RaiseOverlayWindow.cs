@@ -11,12 +11,12 @@ namespace DonkiePane.App;
 /// Een donker, half doorzichtig vlak over een heel scherm terwijl de panes naar voren gehaald zijn. Klikken of Esc
 /// zet de panes terug op het bureaublad.
 /// </summary>
-internal sealed class PeekOverlayWindow : Window
+internal sealed class RaiseOverlayWindow : Window
 {
     /// <summary>Er is op het vlak geklikt of Esc ingedrukt.</summary>
     public event EventHandler? Dismissed;
 
-    public PeekOverlayWindow()
+    public RaiseOverlayWindow()
     {
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;

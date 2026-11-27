@@ -119,5 +119,8 @@ dus een plug-in heeft geen eigen schermen of opslag nodig. Teksten voor de gebru
 vertaling erbij in `src/DonkiePane.Core/Localization/en.json`.
 
 **Veiligheid:** een plug-in is gewone code en draait met jouw rechten. Zet er alleen in wat je vertrouwt. DonkiePane
-laadt nooit iets van internet en nooit uit een andere map. Een kapotte of ontbrekende plug-in wordt gemeld in
+laadt nooit iets van internet en nooit uit een andere map. Een nieuwe of veranderde plug-in in
+`%APPDATA%\DonkiePane\plugins` wordt pas geladen als je hem toestaat: je krijgt een melding, en in Instellingen →
+Takenbronnen staat de knop **Plug-ins toestaan…** (DonkiePane start daarna opnieuw). Elk programma dat als jou draait,
+kan in die map schrijven; zo loopt daar niets ongemerkt mee. Een kapotte of ontbrekende plug-in wordt gemeld in
 Instellingen; de app gaat gewoon door.

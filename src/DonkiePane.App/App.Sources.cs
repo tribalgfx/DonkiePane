@@ -16,19 +16,52 @@ public partial class App
 
     private ITaskProvider TaskProviderFor(Pane pane) => _sources.ProviderFor(pane);
 
+    private readonly PluginApprovals _pluginApprovals = new(PluginApprovals.DefaultPath);
+
     /// <summary>
-    /// Laadt de plug-ins uit twee mappen die de gebruiker zelf beheert: <c>plugins</c> naast het programma
-    /// en <c>%APPDATA%\DonkiePane\plugins</c>. Nooit uit een andere plek en nooit van internet.
+    /// Laadt de plug-ins uit twee mappen: <c>plugins</c> naast het programma (van de installer) en
+    /// <c>%APPDATA%\DonkiePane\plugins</c> (je eigen plug-ins; pas als je ze hebt toegestaan, zie
+    /// <see cref="ApprovePlugins"/>). Nooit uit een andere plek en nooit van internet.
     /// </summary>
     private TaskSourceHost CreateSourceHost()
     {
         var appData = Path.GetDirectoryName(LayoutStore.DefaultPath)!;
-        var plugins = PluginLoader.Load([Path.Combine(AppContext.BaseDirectory, "plugins"), Path.Combine(appData, "plugins")]);
+        var plugins = PluginLoader.Load([Path.Combine(AppContext.BaseDirectory, "plugins")], Path.Combine(appData, "plugins"),
+            _pluginApprovals.IsApproved);
 
         var host = new TaskSourceHost(new SourcesStore(SourcesStore.DefaultPath), plugins,
             id => new DpapiSecretStore(id), OpenBrowser, _localTasks, Path.Combine(appData, "queue"));
         host.SourceReset += (_, sourceId) => Dispatcher.InvokeAsync(() => RebuildTaskPanes(sourceId));
         return host;
+    }
+
+    /// <summary>
+    /// Na het starten: staan er nieuwe of veranderde plug-ins in je eigen plug-inmap, dan zijn die niet geladen. Eén
+    /// melding; toestaan gaat in Instellingen → Takenbronnen.
+    /// </summary>
+    private void NotifyPendingPlugins()
+    {
+        if (_sources.Plugins.Pending.Count == 0 || _trayIcon is null) return;
+        _balloonClicked = ShowSettings;
+        _trayIcon.ShowBalloonTip(15_000, Loc.T("Nieuwe plug-in gevonden"),
+            Loc.F("{0} staat in je plug-inmap, maar is niet geladen. Heb je hem zelf geplaatst? Sta hem toe in Instellingen → Takenbronnen.",
+                string.Join(", ", _sources.Plugins.Pending.Select(p => Path.GetFileNameWithoutExtension(p.Path)))),
+            Forms.ToolTipIcon.Warning);
+    }
+
+    /// <summary>Sta deze plug-ins toe en start opnieuw, zodat ze geladen worden.</summary>
+    private void ApprovePlugins(IReadOnlyList<PendingPlugin> plugins)
+    {
+        try
+        {
+            _pluginApprovals.Approve(plugins.Select(p => p.Hash));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
+        {
+            MessageBox.Show(Loc.F("Toestaan lukte niet: {0}", ex.Message), "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        Restart();
     }
 
     /// <summary>Opent een inlogpagina in de standaardbrowser; alleen gewone webadressen.</summary>

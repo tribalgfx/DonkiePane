@@ -260,12 +260,12 @@ public sealed class TabsFolderAndLookTests : TempData
             using var host = new TaskSourceHost(new DonkiePane.Tasks.Plugins.SourcesStore(Path.Combine(Dir, "sources.json")),
                 new DonkiePane.Tasks.Plugins.PluginLoadResult(), id => new DpapiSecretStore(id, Path.Combine(Dir, "secrets")),
                 _ => Task.CompletedTask, new DonkiePane.Tasks.LocalTaskProvider(new DonkiePane.Tasks.TaskStore(Path.Combine(Dir, "t.json"))), Path.Combine(Dir, "queue"));
-            var layout = new Layout { CornerRadius = 4, RollUpOpen = RollUpOpen.Hover, PeekHotkey = "Ctrl+Alt+Space" };
+            var layout = new Layout { CornerRadius = 4, RollUpOpen = RollUpOpen.Hover, RaiseHotkey = "Ctrl+Alt+Space" };
             var redraws = 0;
             string? hotkey = "x";
 
             var window = new SettingsWindow(layout, () => { }, () => { }, host, lookChanged: () => redraws++,
-                setPeekHotkey: text => { hotkey = text; return null; });
+                setRaiseHotkey: text => { hotkey = text; return null; });
 
             Assert.Equal(4, ((Slider)window.FindName("CornerSlider")).Value);
             Assert.True(((RadioButton)window.FindName("RollHover")).IsChecked);

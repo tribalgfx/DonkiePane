@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace DonkiePane.Tasks.Plugins;
 
@@ -7,10 +9,16 @@ public sealed record LoadedPlugin(ITaskSourcePlugin Plugin, string AssemblyPath)
 
 public sealed record PluginLoadError(string Path, string Message);
 
+/// <summary>Een plug-in uit een map van de gebruiker die (nog) niet is toegestaan, met de afdruk van zijn bestanden.</summary>
+public sealed record PendingPlugin(string Path, string Hash);
+
 public sealed class PluginLoadResult
 {
     public List<LoadedPlugin> Plugins { get; } = [];
     public List<PluginLoadError> Errors { get; } = [];
+
+    /// <summary>Gevonden in een map van de gebruiker, maar niet geladen: eerst toestaan.</summary>
+    public List<PendingPlugin> Pending { get; } = [];
 }
 
 /// <summary>
@@ -21,34 +29,79 @@ public sealed class PluginLoadResult
 /// of ontbrekende plug-in wordt als fout gemeld; de app gaat gewoon door.
 ///
 /// <b>Veiligheid:</b> een plug-in is gewone code en draait met de rechten van de gebruiker. Zet er
-/// alleen in wat je vertrouwt. Daarom wordt er niets uit een andere bron geladen dan deze mappen.
+/// alleen in wat je vertrouwt. Daarom wordt er niets uit een andere bron geladen dan deze mappen, en een plug-in uit
+/// een map van de gebruiker pas als die hem heeft toegestaan (zie <see cref="Load(IEnumerable{string}, string?, Func{string, bool})"/>).
 /// </summary>
 public static class PluginLoader
 {
     private const string FilePrefix = "DonkiePane.Plugins.";
 
-    public static PluginLoadResult Load(IEnumerable<string> folders)
+    /// <summary>Laadt alles uit deze mappen (bijv. de map naast het programma, die de installer vult).</summary>
+    public static PluginLoadResult Load(IEnumerable<string> folders) => Load(folders, null, _ => false);
+
+    /// <summary>
+    /// Laadt alles uit <paramref name="trustedFolders"/>, en uit <paramref name="userFolder"/> alleen de plug-ins
+    /// waarvan <paramref name="isApproved"/> de afdruk (<see cref="Fingerprint"/>) kent. De rest komt in
+    /// <see cref="PluginLoadResult.Pending"/>. Elk programma dat als jou draait, kan in die map schrijven; zo wordt
+    /// een nieuwe of veranderde plug-in daar nooit ongemerkt geladen.
+    /// </summary>
+    public static PluginLoadResult Load(IEnumerable<string> trustedFolders, string? userFolder, Func<string, bool> isApproved)
     {
         var result = new PluginLoadResult();
-        foreach (var folder in folders)
+        foreach (var folder in trustedFolders)
+            foreach (var dll in FindDlls(folder, result)) LoadAssembly(dll, result);
+
+        if (userFolder is null) return result;
+        foreach (var dll in FindDlls(userFolder, result))
         {
-            List<string> dlls;
+            string hash;
             try
             {
-                if (!Directory.Exists(folder)) continue;
-                // Vaste volgorde: welke plug-in voorgaat als twee hetzelfde soort bron leveren, hangt niet van het bestandssysteem af.
-                dlls = Directory.EnumerateDirectories(folder).Order(StringComparer.OrdinalIgnoreCase)
-                    .SelectMany(dir => Directory.EnumerateFiles(dir, FilePrefix + "*.dll").Order(StringComparer.OrdinalIgnoreCase))
-                    .ToList();
+                hash = Fingerprint(dll);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                result.Errors.Add(new PluginLoadError(folder, ex.Message)); // een onleesbare map: de rest gaat gewoon door
+                result.Errors.Add(new PluginLoadError(dll, ex.Message));
                 continue;
             }
-            foreach (var dll in dlls) LoadAssembly(dll, result);
+            if (isApproved(hash)) LoadAssembly(dll, result);
+            else result.Pending.Add(new PendingPlugin(dll, hash));
         }
         return result;
+    }
+
+    /// <summary>
+    /// De afdruk van een plug-in: SHA-256 over alle DLL's in zijn map (naam en inhoud). Verandert er één, ook een
+    /// afhankelijkheid, dan is het een andere plug-in die opnieuw toestemming nodig heeft.
+    /// </summary>
+    public static string Fingerprint(string dll)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(dll))!;
+        using var all = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var file in Directory.EnumerateFiles(folder, "*.dll").Order(StringComparer.OrdinalIgnoreCase))
+        {
+            all.AppendData(Encoding.UTF8.GetBytes(Path.GetFileName(file).ToLowerInvariant() + "\0"));
+            using var stream = File.OpenRead(file);
+            all.AppendData(SHA256.HashData(stream));
+        }
+        return Convert.ToHexString(all.GetHashAndReset());
+    }
+
+    private static List<string> FindDlls(string folder, PluginLoadResult result)
+    {
+        try
+        {
+            if (!Directory.Exists(folder)) return [];
+            // Vaste volgorde: welke plug-in voorgaat als twee hetzelfde soort bron leveren, hangt niet van het bestandssysteem af.
+            return Directory.EnumerateDirectories(folder).Order(StringComparer.OrdinalIgnoreCase)
+                .SelectMany(dir => Directory.EnumerateFiles(dir, FilePrefix + "*.dll").Order(StringComparer.OrdinalIgnoreCase))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            result.Errors.Add(new PluginLoadError(folder, ex.Message)); // een onleesbare map: de rest gaat gewoon door
+            return [];
+        }
     }
 
     private static void LoadAssembly(string dll, PluginLoadResult result)

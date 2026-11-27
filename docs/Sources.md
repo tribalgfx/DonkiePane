@@ -120,5 +120,8 @@ needs no screens or storage of its own. Texts shown to users go through `Loc.T("
 `src/DonkiePane.Core/Localization/en.json`.
 
 **Security:** a plug-in is ordinary code and runs with your rights. Only put in what you trust. DonkiePane never
-loads anything from the internet or from any other folder. A broken or missing plug-in is reported in Settings; the
+loads anything from the internet or from any other folder. A new or changed plug-in in `%APPDATA%\DonkiePane\plugins`
+is not loaded until you allow it: you get a notification, and Settings → Task sources has an **Allow plug-ins…** button
+(DonkiePane restarts afterwards). Any program running as you can write to that folder, so this way nothing runs there
+unnoticed. A broken or missing plug-in is reported in Settings; the
 app carries on.

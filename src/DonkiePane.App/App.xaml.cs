@@ -128,6 +128,7 @@ public partial class App : Application
         StartRecycleBinWatcher();
 
         _trayIcon = CreateTrayIcon();
+        NotifyPendingPlugins();
         StartUpdateChecks();
         StartDueReminders();
         StartDimming();
@@ -136,7 +137,7 @@ public partial class App : Application
         _shellWatcher = new ShellRestartWatcher();
         _shellWatcher.ShellRestarted += (_, _) => RebuildPanesSoon();
 
-        StartPeekHotkey();
+        StartRaiseHotkey();
         WatchLookChanges();
     }
 
@@ -755,7 +756,7 @@ public partial class App : Application
         menu.Items.Add(Loc.T("Nieuw mappane…"), null, (_, _) => AddFolderPane());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Loc.T("Panes verbergen of tonen"), null, (_, _) => TogglePanesHidden());
-        menu.Items.Add(Loc.T("Panes naar voren halen"), null, (_, _) => BeginPeek());
+        menu.Items.Add(Loc.T("Panes naar voren halen"), null, (_, _) => BeginRaise());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Loc.T("Instellingen…"), null, (_, _) => ShowSettings());
         menu.Items.Add(new Forms.ToolStripSeparator());
@@ -787,7 +788,7 @@ public partial class App : Application
         }
 
         RestoreDesktopIcons(); // eerst: wat er verder ook misgaat, het bureaublad moet terug
-        StopPeek();
+        StopRaise();
         SaveLayout();
         StopUpdateChecks();
         StopDueReminders();

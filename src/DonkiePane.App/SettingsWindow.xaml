@@ -199,6 +199,8 @@
             <Button x:Name="RemoveSourceButton" Style="{StaticResource Action}" Click="RemoveSource_Click" Content="{l:T 'Verwijderen'}" />
         </StackPanel>
         <TextBlock x:Name="PluginsInfo" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+        <Button x:Name="ApprovePluginsButton" Style="{StaticResource Action}" HorizontalAlignment="Left" Visibility="Collapsed"
+                Click="ApprovePlugins_Click" Content="{l:T 'Plug-ins toestaan…'}" />
 
         <TextBlock Style="{StaticResource Heading}" Text="{l:T 'Regels'}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"

@@ -23,8 +23,9 @@ public partial class SettingsWindow : Window
     private readonly Action<string>? _exportLayout;
     private readonly Action<Layout>? _importLayout;
     private readonly Action? _lookChanged;
-    private readonly Func<string?, string?>? _setPeekHotkey;
+    private readonly Func<string?, string?>? _setRaiseHotkey;
     private readonly Func<int>? _applyRules;
+    private readonly Action<IReadOnlyList<PendingPlugin>>? _approvePlugins;
     private bool _loading = true;
 
     /// <summary>Een regel in de lijst met regels.</summary>
@@ -36,11 +37,13 @@ public partial class SettingsWindow : Window
     internal SettingsWindow(Layout layout, Action save, Action bringPanes, TaskSourceHost sources,
         UpdateService? updates = null, Action? showUpdate = null, Action? restart = null,
         Action<string>? exportLayout = null, Action<Layout>? importLayout = null,
-        Action? lookChanged = null, Func<string?, string?>? setPeekHotkey = null, Func<int>? applyRules = null)
+        Action? lookChanged = null, Func<string?, string?>? setRaiseHotkey = null, Func<int>? applyRules = null,
+        Action<IReadOnlyList<PendingPlugin>>? approvePlugins = null)
     {
         _lookChanged = lookChanged;
-        _setPeekHotkey = setPeekHotkey;
+        _setRaiseHotkey = setRaiseHotkey;
         _applyRules = applyRules;
+        _approvePlugins = approvePlugins;
         InitializeComponent();
         // Nooit hoger dan het scherm; wat er niet in past, scrolt.
         MaxHeight = SystemParameters.WorkArea.Height - 40;
@@ -84,7 +87,7 @@ public partial class SettingsWindow : Window
         (layout.RollUpOpen switch { RollUpOpen.Hover => RollHover, RollUpOpen.Click => RollClick, _ => RollButtonOnly }).IsChecked = true;
         (layout.DimUnusedDays switch { <= 0 => DimNever, <= 30 => Dim30, <= 90 => Dim90, _ => Dim180 }).IsChecked = true;
         // Opnieuw instellen laat meteen zien of de sneltoets werkt (of al door iets anders gebruikt wordt).
-        ShowHotkey(layout.PeekHotkey, error: setPeekHotkey?.Invoke(layout.PeekHotkey));
+        ShowHotkey(layout.RaiseHotkey, error: setRaiseHotkey?.Invoke(layout.RaiseHotkey));
         RefreshRules();
         DataPath.Text = Path.GetDirectoryName(LayoutStore.DefaultPath);
         VersionText.Text = "DonkiePane " + (Assembly.GetEntryAssembly()?
@@ -203,7 +206,7 @@ public partial class SettingsWindow : Window
 
     private void HotkeyBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
-        if (HotkeyHint.Text == Loc.T("Druk nu de toetsen in, bijvoorbeeld Ctrl+Alt+Spatie.")) ShowHotkey(_layout.PeekHotkey, null);
+        if (HotkeyHint.Text == Loc.T("Druk nu de toetsen in, bijvoorbeeld Ctrl+Alt+Spatie.")) ShowHotkey(_layout.RaiseHotkey, null);
     }
 
     /// <summary>De ingedrukte combinatie wordt de sneltoets (Esc laat hem zoals hij was).</summary>
@@ -213,7 +216,7 @@ public partial class SettingsWindow : Window
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (key == Key.Escape)
         {
-            ShowHotkey(_layout.PeekHotkey, null);
+            ShowHotkey(_layout.RaiseHotkey, null);
             Keyboard.ClearFocus();
             return;
         }
@@ -238,10 +241,10 @@ public partial class SettingsWindow : Window
 
     private void SetHotkey(string? text)
     {
-        var error = _setPeekHotkey is not null ? _setPeekHotkey(text) : null;
-        if (_setPeekHotkey is null)
+        var error = _setRaiseHotkey is not null ? _setRaiseHotkey(text) : null;
+        if (_setRaiseHotkey is null)
         {
-            _layout.PeekHotkey = text ?? "";
+            _layout.RaiseHotkey = text ?? "";
             _save();
         }
         ShowHotkey(text, error);
@@ -356,7 +359,21 @@ public partial class SettingsWindow : Window
         var loaded = _sources.Plugins.Plugins.Select(p => p.Plugin.DisplayName).ToList();
         PluginsInfo.Text = (loaded.Count == 0 ? Loc.T("Er zijn geen plug-ins geladen.") : Loc.F("Geladen plug-ins: {0}.", string.Join(", ", loaded)))
             + (_sources.Plugins.Errors.Count == 0 ? "" : "\n" + Loc.F("Problemen: {0}", string.Join("; ",
-                _sources.Plugins.Errors.Select(e => $"{Path.GetFileName(e.Path)}: {e.Message}"))));
+                _sources.Plugins.Errors.Select(e => $"{Path.GetFileName(e.Path)}: {e.Message}"))))
+            + (_sources.Plugins.Pending.Count == 0 ? "" : "\n" + Loc.F("Niet geladen, nog niet toegestaan: {0}.", string.Join(", ",
+                _sources.Plugins.Pending.Select(p => Path.GetFileNameWithoutExtension(p.Path)))));
+        ApprovePluginsButton.Visibility = _sources.Plugins.Pending.Count > 0 && _approvePlugins is not null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void ApprovePlugins_Click(object sender, RoutedEventArgs e)
+    {
+        var pending = _sources.Plugins.Pending;
+        if (pending.Count == 0 || _approvePlugins is null) return;
+        var answer = MessageBox.Show(this,
+            Loc.F("Een plug-in is gewone code en kan alles wat jij op deze pc kunt. Sta hem alleen toe als je hem zelf in de plug-inmap hebt gezet en de maker vertrouwt.\n\n{0}\n\nToestaan? DonkiePane start daarna opnieuw.",
+                string.Join("\n", pending.Select(p => p.Path))),
+            "DonkiePane", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (answer == MessageBoxResult.Yes) _approvePlugins(pending);
     }
 
     private SourceConnection? SelectedSource => (SourcesList.SelectedItem as SourceRow)?.Connection;
@@ -490,7 +507,7 @@ public partial class SettingsWindow : Window
         Layout imported;
         try
         {
-            imported = LayoutTransfer.Parse(File.ReadAllText(dialog.FileName));
+            imported = LayoutTransfer.ReadFile(dialog.FileName);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

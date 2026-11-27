@@ -53,11 +53,13 @@ public sealed class Layout
 
     /// <summary>
     /// De sneltoets die alle panes even boven je vensters haalt (bijv. <c>"Ctrl+Alt+Space"</c>, zie
-    /// <see cref="Hotkey"/>). Leeg = geen sneltoets.
+    /// <see cref="Hotkey"/>). Leeg = geen sneltoets. In <c>layout.json</c> staat hij onder de naam uit de eerste
+    /// versies, zodat een ingestelde sneltoets na bijwerken blijft werken.
     /// </summary>
-    public string? PeekHotkey { get; set; } = DefaultPeekHotkey;
+    [System.Text.Json.Serialization.JsonPropertyName("PeekHotkey")]
+    public string? RaiseHotkey { get; set; } = DefaultRaiseHotkey;
 
-    public const string DefaultPeekHotkey = "Ctrl+Alt+Space";
+    public const string DefaultRaiseHotkey = "Ctrl+Alt+Space";
 
     /// <summary>Donkere of lichte panes, of zoals de apps in Windows.</summary>
     public AppTheme Appearance { get; set; } = AppTheme.Dark;

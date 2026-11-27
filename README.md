@@ -67,7 +67,8 @@ The design and the choices behind it are in [PLAN.md](PLAN.md) (in Dutch). Code 
 
 - Settings, panes and tasks are stored per user in `%APPDATA%\DonkiePane`. Secrets (tokens, passwords of sources) are stored there encrypted with Windows (DPAPI), never in a plain file or in git.
 - Connections to sources use HTTPS only (Home Assistant over http only after an explicit choice). A source can be pinned to a certificate fingerprint.
-- Plug-ins are only loaded from the `plugins` folder next to the program and from `%APPDATA%\DonkiePane\plugins`, never from the internet.
+- Plug-ins are only loaded from the `plugins` folder next to the program and from `%APPDATA%\DonkiePane\plugins`, never from the internet. A plug-in in that second folder only loads after you allow it in Settings.
+- An imported layout never makes DonkiePane look at a network folder: folder panes from the file keep only folders on this PC.
 - The update check only asks GitHub for the latest release, without any data about you. A new version is only downloaded when you click Update now, and only installed if GitHub's SHA-256 checksum matches.
 - If DonkiePane crashes, the error goes into `%APPDATA%\DonkiePane\crash.log`. That file stays on your PC; nothing is sent.
 - Something went wrong and your Windows icons stay hidden? Right-click the desktop → **View** → **Show desktop icons**.

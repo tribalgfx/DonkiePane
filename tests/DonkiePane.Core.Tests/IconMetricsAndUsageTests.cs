@@ -182,3 +182,79 @@ public sealed class FrostedGlassNameTests
         }
     }
 }
+
+public sealed class RaiseHotkeyNameTests
+{
+    [Fact]
+    public void A_hotkey_saved_by_an_earlier_version_is_still_read_and_saved_under_the_same_name()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "donkiepane-hotkey-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            File.WriteAllText(path, """{ "Panes": [], "PeekHotkey": "Ctrl+Shift+D" }""");
+            var store = new LayoutStore(path);
+            var layout = store.Load();
+            Assert.Equal("Ctrl+Shift+D", layout.RaiseHotkey);
+
+            store.Save(layout);
+            using var saved = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            Assert.Equal("Ctrl+Shift+D", saved.RootElement.GetProperty("PeekHotkey").GetString()); // een oudere DonkiePane leest hem ook
+        }
+        finally
+        {
+            foreach (var file in Directory.GetFiles(Path.GetTempPath(), Path.GetFileName(path) + "*")) File.Delete(file);
+        }
+    }
+}
+
+public sealed class ImportSafetyTests
+{
+    [Theory]
+    [InlineData(@"C:\Users\x\Documenten", true)]
+    [InlineData(@"D:\", true)]
+    [InlineData(@"\server\share", false)]
+    [InlineData(@"//server/share", false)]
+    [InlineData(@"\?\C:\map", false)]
+    [InlineData(@"\.\pipe\x", false)]
+    [InlineData(@"\?\UNC\server\share", false)]
+    [InlineData(@"map\sub", false)]
+    [InlineData(@"C:map", false)]
+    [InlineData(@"C:\x"" ""\server\a.exe", false)]
+    [InlineData(null, false)]
+    public void Only_local_folders_count(string? path, bool local) =>
+        Assert.Equal(local, LayoutTransfer.IsLocalFolder(path));
+
+    [Fact]
+    public void An_imported_folder_pane_on_the_network_loses_its_folder()
+    {
+        var target = new Layout();
+        LayoutTransfer.ApplyTo(target, new Layout
+        {
+            Panes = [Pane.NewFolderPane(@"\203.0.113.5\x"), Pane.NewFolderPane(@"C:\Projecten")],
+        });
+        Assert.Null(target.Panes[0].FolderPath);
+        Assert.Equal(@"C:\Projecten", target.Panes[1].FolderPath);
+    }
+
+    [Fact]
+    public void A_huge_file_is_not_even_read()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "donkiepane-huge-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            using (var file = File.Create(path)) file.SetLength(LayoutTransfer.MaxFileBytes + 1);
+            Assert.Throws<InvalidDataException>(() => LayoutTransfer.ReadFile(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Deeply_nested_json_is_refused()
+    {
+        var json = """{ "Panes": [ { "Title": "x" } ], "Rules": """ + new string('[', 200) + new string(']', 200) + " }";
+        Assert.Throws<InvalidDataException>(() => LayoutTransfer.Parse(json));
+    }
+}
