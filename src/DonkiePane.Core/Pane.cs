@@ -127,6 +127,15 @@ public sealed class Pane
     /// </summary>
     public ItemSortOrder SortBy { get; set; } = ItemSortOrder.Manual;
 
+    /// <summary>
+    /// Eigen grootte van de iconen in WPF-eenheden (zie <see cref="IconMetrics"/>); <c>null</c> = de standaard van
+    /// <see cref="IconSize"/>. Een andere weergave kiezen zet hem terug op de standaard. Iconen- en mappanes.
+    /// </summary>
+    public int? IconPixels { get; set; }
+
+    /// <summary>Namen onder de iconen tonen. Uit: alleen iconen, de naam staat in de tooltip. Een lijst toont ze altijd.</summary>
+    public bool ShowNames { get; set; } = true;
+
     /// <summary>Bureaubladitems in dit pane, in de eigen volgorde (zie <see cref="DesktopItemId"/>). Alleen bij <see cref="PaneKind.Icons"/>.</summary>
     public List<string> Items { get; set; } = [];
 

@@ -12,7 +12,8 @@ Panes on your Windows desktop for your shortcuts and your tasks. With a calm loo
 
 - **Panes on the desktop.** They sit behind your windows and stay put when you press Win+D.
 - **Your desktop icons in panes.** Whatever you do with a file or shortcut on the desktop, you can do in a pane too: open, select (Ctrl, Shift, drag a selection box), drag to File Explorer, an app, a folder or the Recycle Bin, drag files into a pane, Delete, F2, Ctrl+C/X/V, Ctrl+Shift+N, Alt+Enter and the File Explorer menu (right-clicking an empty spot gives Paste and New). Drop icons on an empty spot of the desktop and a new pane appears there with them. Windows carries it all out, so confirmations and the Recycle Bin work as always; DonkiePane never moves or deletes anything by itself. New files land in the Inbox pane, or in the pane you pasted or dropped them in.
-- **View and sorting per pane.** Large icons, small icons or a list, sorted in your own order, by name, by type or by date modified (right-click the title bar). Start typing in a pane to filter its icons by name; Esc clears the filter.
+- **View and sorting per pane.** Large icons, small icons or a list, sorted in your own order, by name, by type or by date modified (right-click the title bar). Make the icons larger or smaller with Ctrl+scroll wheel, and hide the names under the icons if you like (the name then shows on hover). Start typing in a pane to filter its icons by name; Esc clears the filter.
+- **Gray out icons you no longer use.** Desktop icons you haven't opened from a pane or changed for a month, three months or six months turn gray (Settings → Panes; off by default).
 - **Task panes.** Add, check off, reorder and star tasks. Local, or synced with a source you add yourself:
   - Google Tasks
   - Home Assistant (to-do lists)

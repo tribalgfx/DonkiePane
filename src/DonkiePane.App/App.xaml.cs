@@ -10,7 +10,7 @@ namespace DonkiePane.App;
 
 public partial class App : Application
 {
-    private const int IconPixelSize = 96; // scherp tot 200% schaling bij 48 DIP
+    private int _iconLoadPixels = 96; // hoe scherp bureaubladiconen geladen worden (zie IconMetrics.LoadPixels)
 
     private readonly LayoutStore _store = new(LayoutStore.DefaultPath);
     private readonly List<PaneWindow> _windows = [];
@@ -89,6 +89,9 @@ public partial class App : Application
         var unavailable = new List<string>();
         LayoutEditor.Sync(_layout, _desktop.EnumerateItems(unavailable), unavailable, isFolder: IsFolderItem);
         SaveLayout();
+        LoadUsage();
+        TrackUsage();
+        UpdateIconLoadPixels();
 
         foreach (var pane in _layout.Panes.Where(p => p.TabHost is null).ToList())
             ShowPane(pane);
@@ -113,6 +116,8 @@ public partial class App : Application
         {
             _itemCache.Remove(ids.OldId);
             LayoutEditor.Rename(_layout, ids.OldId, ids.NewId);
+            _usage.Rename(ids.OldId, ids.NewId);
+            SaveUsage();
         });
         _desktop.StartWatching();
         // Een bureaubladmap die bij het starten nog niet bereikbaar was, of een watcher die na een fout is gestopt,
@@ -125,6 +130,7 @@ public partial class App : Application
         _trayIcon = CreateTrayIcon();
         StartUpdateChecks();
         StartDueReminders();
+        StartDimming();
         if (options.OpenSettings || openSettingsAfterWelcome) ShowSettings(); // --settings is handig voor een snelkoppeling
 
         _shellWatcher = new ShellRestartWatcher();
@@ -191,20 +197,36 @@ public partial class App : Application
         LayoutEditor.Sync(_layout, items, unavailable, arrival, IsFolderItem);
         _desktop.StartWatching(); // na een fout van de watcher: opnieuw volgen
         SaveLayout();
+        TrackUsage();
         RefreshItems();
     }
 
     private void RefreshItems()
     {
+        UpdateIconLoadPixels();
         foreach (var pane in _iconViews.Keys.ToList()) RefreshItems(pane);
+    }
+
+    /// <summary>
+    /// Bureaubladiconen worden één keer geladen en door alle panes gedeeld: zo scherp als het pane met de grootste
+    /// iconen nodig heeft. Verandert dat, dan opnieuw laden.
+    /// </summary>
+    private void UpdateIconLoadPixels()
+    {
+        var needed = _layout.Panes.Where(p => p.Kind == PaneKind.Icons)
+            .Select(p => IconMetrics.LoadPixels(IconMetrics.Pixels(p))).DefaultIfEmpty(96).Max();
+        if (needed == _iconLoadPixels) return;
+        _iconLoadPixels = needed;
+        _itemCache.Clear();
     }
 
     private void RefreshItems(Pane pane)
     {
         if (!_iconViews.TryGetValue(pane, out var view)) return;
         var items = pane.Items.Select(GetItemView).OfType<ItemView>().ToList();
-        view.SetView(pane.IconSize, sorted: pane.SortBy != ItemSortOrder.Manual);
+        view.SetView(pane.IconSize, sorted: pane.SortBy != ItemSortOrder.Manual, pane.IconPixels, pane.ShowNames);
         view.SetItems(pane.SortBy == ItemSortOrder.Manual ? items : Sorted(items, pane.SortBy));
+        UpdateDimming(pane);
     }
 
     /// <summary>Voor de regel "is een map": staat dit bureaubladitem voor een map?</summary>
@@ -242,7 +264,7 @@ public partial class App : Application
         var path = _desktop!.ResolvePath(id);
         if (path is null) return null;
 
-        var view = new ItemView(id, path, ShellItemInfo.GetDisplayName(path), ShellItemInfo.GetIcon(path, IconPixelSize));
+        var view = new ItemView(id, path, ShellItemInfo.GetDisplayName(path), ShellItemInfo.GetIcon(path, _iconLoadPixels));
         _itemCache[id] = view;
         return view;
     }
@@ -336,6 +358,7 @@ public partial class App : Application
                 };
                 view.DragStarted += (_, _) => ShowDesktopDropWindows();
                 view.DragFinished += (_, _) => HideDesktopDropWindows();
+                view.ItemOpened += (_, item) => OnItemOpened(pane, item);
                 _iconViews[pane] = view;
                 content = view;
                 RefreshItems(pane);
@@ -512,6 +535,7 @@ public partial class App : Application
     private void RefreshAllLooks()
     {
         foreach (var window in _windows.Where(w => !w.IsClosed)) window.RefreshLook();
+        UpdateDimming(); // de instelling voor grijze iconen kan veranderd zijn
     }
 
     // ---------- Iconen op een lege plek van het bureaublad loslaten: nieuw pane ----------
@@ -764,6 +788,7 @@ public partial class App : Application
         SaveLayout();
         StopUpdateChecks();
         StopDueReminders();
+        _dimTimer?.Stop();
         StopWatchingDisplays();
         _watchTimer?.Stop();
         _doubleClickWatcher?.Dispose();

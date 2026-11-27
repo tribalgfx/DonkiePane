@@ -17,7 +17,7 @@ namespace DonkiePane.App;
 /// </summary>
 public sealed class FolderPaneView : UserControl
 {
-    private const int IconPixelSize = 96;
+    private int _loadPixels; // hoe scherp de iconen geladen worden; groter bij grote iconen
     private const int MaxItems = 1000;          // meer iconen maakt het pane traag en niet overzichtelijker
     private const int MaxSearchResults = 300;
 
@@ -43,6 +43,7 @@ public sealed class FolderPaneView : UserControl
     public FolderPaneView(Pane pane)
     {
         _pane = pane;
+        _loadPixels = IconMetrics.LoadPixels(IconMetrics.Pixels(pane));
         CurrentFolder = RootFolder;
 
         _upButton = BarButton("", Loc.T("Map omhoog (Backspace)"), (_, _) => GoUp());
@@ -187,14 +188,14 @@ public sealed class FolderPaneView : UserControl
             _icons.SetEmptyHint(RootFolder.Length == 0 ? Loc.T("Kies een map via het menu van dit pane") : Loc.F("Map niet gevonden: {0}", CurrentFolder));
         }
 
-        _icons.SetView(_pane.IconSize, sorted: true);
+        ApplyView();
         _icons.SetItems(Sorted(paths.Select(View).ToList()));
     }
 
     private ItemView View(string path)
     {
         if (_cache.TryGetValue(path, out var cached)) return cached;
-        var view = new ItemView(path, path, ShellItemInfo.GetDisplayName(path), ShellItemInfo.GetIcon(path, IconPixelSize));
+        var view = new ItemView(path, path, ShellItemInfo.GetDisplayName(path), ShellItemInfo.GetIcon(path, _loadPixels));
         _cache[path] = view;
         return view;
     }
@@ -218,9 +219,18 @@ public sealed class FolderPaneView : UserControl
     /// <summary>Weergave of sortering van het pane is veranderd.</summary>
     public void Refresh()
     {
+        // Veel groter geworden: de iconen opnieuw laden, anders worden ze wazig.
+        var load = IconMetrics.LoadPixels(IconMetrics.Pixels(_pane));
+        if (load != _loadPixels)
+        {
+            _loadPixels = load;
+            _cache.Clear();
+        }
         if (_icons.FilterText.Length == 0) Reload();
-        else _icons.SetView(_pane.IconSize, sorted: true);
+        else ApplyView();
     }
+
+    private void ApplyView() => _icons.SetView(_pane.IconSize, sorted: true, _pane.IconPixels, _pane.ShowNames);
 
     // ---------- Zoeken in deze map en de mappen eronder ----------
 

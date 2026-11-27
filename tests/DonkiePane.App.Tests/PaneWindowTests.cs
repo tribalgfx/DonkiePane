@@ -70,7 +70,8 @@ public sealed class PaneWindowTests
             var viewMenu = (MenuItem)window.FindName("ViewMenu");
             var sortMenu = (MenuItem)window.FindName("SortMenu");
             Assert.Equal(Visibility.Visible, viewMenu.Visibility);
-            Assert.Equal(3, viewMenu.Items.Count);
+            MenuItem[] Sizes() => viewMenu.Items.OfType<MenuItem>().Where(m => m.Tag is IconSize).ToArray();
+            Assert.Equal(3, Sizes().Length);
             Assert.Equal(4, sortMenu.Items.Count);
             Assert.True(((MenuItem)viewMenu.Items[0]).IsChecked);  // grote iconen
             Assert.True(((MenuItem)sortMenu.Items[0]).IsChecked);  // eigen volgorde
@@ -82,8 +83,43 @@ public sealed class PaneWindowTests
             Assert.Equal(ItemSortOrder.Name, pane.SortBy);
             Assert.Equal((2, 2), (viewChanged, changed));
             // Het vinkje staat nu bij de nieuwe keuze, en alleen daar.
-            Assert.Equal([2], viewMenu.Items.Cast<MenuItem>().Select((m, i) => (m, i)).Where(x => x.m.IsChecked).Select(x => x.i));
+            Assert.Equal([2], Sizes().Select((m, i) => (m, i)).Where(x => x.m.IsChecked).Select(x => x.i));
             Assert.Equal([1], sortMenu.Items.Cast<MenuItem>().Select((m, i) => (m, i)).Where(x => x.m.IsChecked).Select(x => x.i));
+        });
+    }
+
+    [Fact]
+    public void Icon_size_and_names_are_set_per_pane()
+    {
+        OnStaThread(() =>
+        {
+            var pane = new Pane { Title = "Test" };
+            var window = new PaneWindow(pane);
+            var viewChanged = 0;
+            window.ViewChanged += (_, _) => viewChanged++;
+            var viewMenu = (MenuItem)window.FindName("ViewMenu");
+            MenuItem Item(string header) => viewMenu.Items.OfType<MenuItem>().Single(m => (string)m.Header == Loc.T(header));
+            void Click(string header) => Item(header).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+
+            Assert.False(Item("Standaardgrootte").IsEnabled); // nog de grootte van de weergave
+            Click("Grotere iconen");
+            Assert.Equal(64, pane.IconPixels);
+            Click("Kleinere iconen");
+            Assert.Null(pane.IconPixels); // terug op 48: de standaard, dus niets eigens meer
+            Click("Kleinere iconen");
+            Assert.Equal(40, pane.IconPixels);
+            Assert.True(Item("Standaardgrootte").IsEnabled);
+
+            Assert.True(Item("Namen tonen").IsChecked);
+            Click("Namen tonen");
+            Assert.False(pane.ShowNames);
+            Assert.False(Item("Namen tonen").IsChecked);
+
+            // Een andere weergave kiezen zet de eigen grootte terug; een lijst heeft de namen altijd.
+            viewMenu.Items.OfType<MenuItem>().Single(m => m.Tag is IconSize.List).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.Null(pane.IconPixels);
+            Assert.DoesNotContain(viewMenu.Items.OfType<MenuItem>(), m => (string)m.Header == Loc.T("Namen tonen"));
+            Assert.Equal(5, viewChanged);
         });
     }
 

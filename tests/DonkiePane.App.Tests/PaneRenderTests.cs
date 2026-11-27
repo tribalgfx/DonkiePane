@@ -264,6 +264,61 @@ public sealed class PaneRenderTests : TempData
     }
 
     [Theory]
+    [InlineData(64, true)]
+    [InlineData(null, false)]
+    [InlineData(80, false)]
+    public void Own_icon_size_hidden_names_and_gray_icons_render(int? pixels, bool showNames)
+    {
+        OnStaThread(() =>
+        {
+            var theme = UseTheme();
+            try
+            {
+                var pane = new Pane { Title = "Programma's", Width = 352, Height = 288, IconPixels = pixels, ShowNames = showNames };
+                var window = new PaneWindow(pane);
+                var view = new IconsView();
+                var items = SampleItems();
+                view.SetView(IconSize.Large, sorted: false, pixels, showNames);
+                view.SetItems(items);
+                view.SetDimmed([items[1].Id, items[4].Id]);
+                window.SetContent(view);
+
+                var bitmap = Render(window, pane.Width, pane.Height);
+                Save(bitmap, $"icons-pane-{pixels?.ToString() ?? "standaard"}-{(showNames ? "namen" : "zonder-namen")}");
+
+                var host = (ListBox)view.FindName("ItemsHost");
+                var containers = items.Select(i => (ListBoxItem)host.ItemContainerGenerator.ContainerFromItem(i)).ToList();
+                var expected = IconMetrics.TileWidth(IconSize.Large, IconMetrics.Pixels(IconSize.Large, pixels), showNames);
+                var tile = (Border)containers[0].Template.FindName("Tile", containers[0]);
+                var icon = (Image)containers[0].Template.FindName("Icon", containers[0]);
+                var names = (FrameworkElement)containers[0].Template.FindName("NameArea", containers[0]);
+                Assert.Equal(expected, tile.ActualWidth, 0.5);
+                Assert.Equal(IconMetrics.Pixels(IconSize.Large, pixels), icon.ActualWidth, 0.5);
+                Assert.Equal(showNames ? Visibility.Visible : Visibility.Collapsed, names.Visibility);
+
+                Assert.Equal([false, true, false, false, true, false, false], containers.Select(IconsView.GetIsDimmed));
+                var grayIcon = (Image)containers[1].Template.FindName("Icon", containers[1]);
+                Assert.Same(items[1].GrayIcon, grayIcon.Source);
+            }
+            finally
+            {
+                Application.Current.Resources.MergedDictionaries.Remove(theme);
+            }
+        });
+    }
+
+    [Fact]
+    public void A_gray_icon_keeps_its_transparent_edges()
+    {
+        var pixels = new byte[] { 0, 0, 255, 255, /* rood, massief */ 0, 0, 0, 0 /* doorzichtig */ };
+        var source = BitmapSource.Create(2, 1, 96, 96, PixelFormats.Bgra32, null, pixels, 8);
+        var gray = ItemView.Grayscale(source);
+        var result = new byte[8];
+        gray.CopyPixels(result, 8, 0);
+        Assert.Equal([76, 76, 76, 255, 0, 0, 0, 0], result);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void A_pane_with_tabs_renders_dark_and_light(bool light)

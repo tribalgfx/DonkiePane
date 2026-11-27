@@ -21,8 +21,8 @@
 
         <!--
             Eén icoon: zoals op het bureaublad, met een afgeronde markering bij aanwijzen en selecteren.
-            De weergave van het pane (IconsView.Mode, erft door naar elk icoon) bepaalt de maat: groot, klein of een
-            lijstregel met het icoon links van de naam.
+            De weergave van het pane (IconsView.Mode, IconPixels, TileWidth en ShowNames; ze erven door naar elk icoon)
+            bepaalt de maat: groot, klein of een lijstregel met het icoon links van de naam.
         -->
         <Style x:Key="TileStyle" TargetType="ListBoxItem">
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -31,7 +31,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Tile"
-                                Width="100" Padding="4,7,4,6"
+                                Width="{Binding (local:IconsView.TileWidth), RelativeSource={RelativeSource TemplatedParent}}"
+                                Padding="4,7,4,6"
                                 CornerRadius="7"
                                 Background="Transparent"
                                 BorderBrush="Transparent"
@@ -47,7 +48,9 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <Image x:Name="Icon" Grid.ColumnSpan="2" Source="{Binding Icon}" Width="48" Height="48"
+                                <Image x:Name="Icon" Grid.ColumnSpan="2" Source="{Binding Icon}"
+                                       Width="{Binding (local:IconsView.IconPixels), RelativeSource={RelativeSource TemplatedParent}}"
+                                       Height="{Binding (local:IconsView.IconPixels), RelativeSource={RelativeSource TemplatedParent}}"
                                        RenderOptions.BitmapScalingMode="HighQuality" />
                                 <Grid x:Name="NameArea" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
                                     <TextBlock x:Name="NameText"
@@ -75,10 +78,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="local:IconsView.Mode" Value="Small">
-                                <Setter TargetName="Tile" Property="Width" Value="88" />
                                 <Setter TargetName="Tile" Property="Padding" Value="2,5,2,4" />
-                                <Setter TargetName="Icon" Property="Width" Value="32" />
-                                <Setter TargetName="Icon" Property="Height" Value="32" />
                                 <Setter TargetName="NameArea" Property="Margin" Value="0,4,0,0" />
                                 <Setter TargetName="NameText" Property="FontSize" Value="11" />
                                 <Setter TargetName="NameText" Property="LineHeight" Value="14" />
@@ -89,8 +89,6 @@
                                 <Setter TargetName="Tile" Property="Width" Value="NaN" />
                                 <Setter TargetName="Tile" Property="Padding" Value="6,3" />
                                 <Setter TargetName="Tile" Property="CornerRadius" Value="5" />
-                                <Setter TargetName="Icon" Property="Width" Value="20" />
-                                <Setter TargetName="Icon" Property="Height" Value="20" />
                                 <Setter TargetName="Icon" Property="Grid.ColumnSpan" Value="1" />
                                 <Setter TargetName="NameArea" Property="Grid.Row" Value="0" />
                                 <Setter TargetName="NameArea" Property="Grid.Column" Value="1" />
@@ -125,6 +123,16 @@
                             <Trigger Property="Tag" Value="DropTarget">
                                 <Setter TargetName="Tile" Property="Background" Value="{DynamicResource PaneSelection}" />
                                 <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource PaneAccentLine}" />
+                            </Trigger>
+                            <!-- Namen verborgen (instelling van het pane): alleen het icoon, de naam komt sneller in de tooltip. -->
+                            <Trigger Property="local:IconsView.ShowNames" Value="False">
+                                <Setter TargetName="NameArea" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="Tile" Property="ToolTipService.InitialShowDelay" Value="300" />
+                            </Trigger>
+                            <!-- Lang niet geopend (Instellingen → Panes): grijs en wat lichter, de naam blijft leesbaar. -->
+                            <Trigger Property="local:IconsView.IsDimmed" Value="True">
+                                <Setter TargetName="Icon" Property="Source" Value="{Binding GrayIcon}" />
+                                <Setter TargetName="Icon" Property="Opacity" Value="0.6" />
                             </Trigger>
                             <!-- Geknipt (Ctrl+X): half doorzichtig tot het geplakt is, zoals in Verkenner. -->
                             <Trigger Property="local:IconsView.IsCut" Value="True">

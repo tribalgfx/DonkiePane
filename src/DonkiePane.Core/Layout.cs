@@ -68,6 +68,12 @@ public sealed class Layout
     /// <summary><see cref="CornerRadius"/> binnen de grenzen.</summary>
     public double EffectiveCornerRadius => double.IsFinite(CornerRadius) ? Math.Clamp(CornerRadius, 0, MaxCornerRadius) : DefaultCornerRadius;
 
+    /// <summary>
+    /// Bureaubladiconen die je zo veel dagen niet via een pane hebt geopend en die zo lang niet gewijzigd zijn, worden
+    /// grijs (zie <see cref="ItemUsage"/>). 0 = uit.
+    /// </summary>
+    public int DimUnusedDays { get; set; }
+
     /// <summary>Regels die nieuwe bureaubladitems meteen in het juiste pane zetten, in volgorde: de eerste die past, telt.</summary>
     public List<FileRule> Rules { get; set; } = [];
 

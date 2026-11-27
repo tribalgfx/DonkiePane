@@ -45,6 +45,38 @@ public partial class IconsView : UserControl
     public static IconSize GetMode(DependencyObject element) => (IconSize)element.GetValue(ModeProperty);
     public static void SetMode(DependencyObject element, IconSize value) => element.SetValue(ModeProperty, value);
 
+    /// <summary>Hoe groot de iconen zijn (WPF-eenheden); erft door naar elk icoon.</summary>
+    public static readonly DependencyProperty IconPixelsProperty =
+        DependencyProperty.RegisterAttached("IconPixels", typeof(double), typeof(IconsView),
+            new FrameworkPropertyMetadata((double)IconMetrics.Default(IconSize.Large), FrameworkPropertyMetadataOptions.Inherits));
+
+    public static double GetIconPixels(DependencyObject element) => (double)element.GetValue(IconPixelsProperty);
+    public static void SetIconPixels(DependencyObject element, double value) => element.SetValue(IconPixelsProperty, value);
+
+    /// <summary>Hoe breed een tegel is (<see cref="double.NaN"/> = zo breed als nodig, bij een lijst); erft door.</summary>
+    public static readonly DependencyProperty TileWidthProperty =
+        DependencyProperty.RegisterAttached("TileWidth", typeof(double), typeof(IconsView),
+            new FrameworkPropertyMetadata(IconMetrics.TileWidth(IconSize.Large, IconMetrics.Default(IconSize.Large), true),
+                FrameworkPropertyMetadataOptions.Inherits));
+
+    public static double GetTileWidth(DependencyObject element) => (double)element.GetValue(TileWidthProperty);
+    public static void SetTileWidth(DependencyObject element, double value) => element.SetValue(TileWidthProperty, value);
+
+    /// <summary>Namen onder de iconen; erft door naar elk icoon.</summary>
+    public static readonly DependencyProperty ShowNamesProperty =
+        DependencyProperty.RegisterAttached("ShowNames", typeof(bool), typeof(IconsView),
+            new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.Inherits));
+
+    public static bool GetShowNames(DependencyObject element) => (bool)element.GetValue(ShowNamesProperty);
+    public static void SetShowNames(DependencyObject element, bool value) => element.SetValue(ShowNamesProperty, value);
+
+    /// <summary>Dit icoon is lang niet geopend en wordt grijs getoond.</summary>
+    public static readonly DependencyProperty IsDimmedProperty =
+        DependencyProperty.RegisterAttached("IsDimmed", typeof(bool), typeof(IconsView), new PropertyMetadata(false));
+
+    public static bool GetIsDimmed(DependencyObject element) => (bool)element.GetValue(IsDimmedProperty);
+    public static void SetIsDimmed(DependencyObject element, bool value) => element.SetValue(IsDimmedProperty, value);
+
     private static readonly HashSet<string> CutIds = new(StringComparer.OrdinalIgnoreCase);
     private static ComIDataObject? _cutData;
     private static DispatcherTimer? _cutTimer;
@@ -53,7 +85,8 @@ public partial class IconsView : UserControl
     private IReadOnlyList<ItemView> _allItems = []; // alles in dit pane, in de volgorde op het scherm
     private IReadOnlyList<ItemView> _items = [];    // wat er nu te zien is (na het filter)
     private IconSize _mode = IconSize.Large;
-    private bool _sorted;                            // gesorteerd op naam/type/datum: zelf ordenen kan dan niet
+    private HashSet<string> _dimmedIds = new(StringComparer.OrdinalIgnoreCase); // lang niet geopend: grijs
+    private bool _sorted;                           // gesorteerd op naam/type/datum: zelf ordenen kan dan niet
     private Point? _dragStart;              // waar de linkerknop op een icoon omlaag ging
     private ListBoxItem? _deferredSelect;    // klik op een al geselecteerd icoon: pas bij loslaten alleen dat selecteren
     private Point? _marqueeStart;            // kader trekken vanaf een lege plek
@@ -99,6 +132,9 @@ public partial class IconsView : UserControl
 
     /// <summary>In een mappane is een map geopend (dubbelklik of Enter): erin kijken.</summary>
     public event EventHandler<string>? FolderOpened;
+
+    /// <summary>Een icoon is geopend (dubbelklik, Enter of het menu): telt als gebruikt.</summary>
+    public event EventHandler<ItemView>? ItemOpened;
 
     /// <summary>De filtertekst is veranderd (leeg = filter weg).</summary>
     public event EventHandler<string>? FilterChanged;
@@ -179,18 +215,39 @@ public partial class IconsView : UserControl
         if (selected.Count > 0) Select(selected);
         if (focusedId is not null && _items.FirstOrDefault(i => i.Id == focusedId) is { } focused)
             Dispatcher.InvokeAsync(() => ContainerOf(focused)?.Focus(), DispatcherPriority.Loaded);
-        Dispatcher.InvokeAsync(ApplyCutState, DispatcherPriority.Loaded);
+        Dispatcher.InvokeAsync(ApplyItemStates, DispatcherPriority.Loaded);
     }
 
-    /// <summary>Grote of kleine iconen, of een lijst; en of de volgorde gesorteerd is (dan kun je niet zelf ordenen).</summary>
-    public void SetView(IconSize mode, bool sorted)
+    /// <summary>
+    /// Grote of kleine iconen, of een lijst; en of de volgorde gesorteerd is (dan kun je niet zelf ordenen). Met een
+    /// eigen icoongrootte (<c>null</c> = die van de weergave) en of de namen onder de iconen staan (een lijst toont
+    /// ze altijd).
+    /// </summary>
+    public void SetView(IconSize mode, bool sorted, int? iconPixels = null, bool showNames = true)
     {
         _sorted = sorted;
+        var pixels = IconMetrics.Pixels(mode, iconPixels);
+        showNames |= mode == IconSize.List;
+        SetIconPixels(ItemsHost, pixels);
+        SetTileWidth(ItemsHost, IconMetrics.TileWidth(mode, pixels, showNames));
+        SetShowNames(ItemsHost, showNames);
         if (_mode == mode) return;
         _mode = mode;
         SetMode(ItemsHost, mode);
         ItemsHost.ItemsPanel = (ItemsPanelTemplate)FindResource(mode == IconSize.List ? "ListItems" : "WrapItems");
     }
+
+    /// <summary>Deze iconen zijn lang niet geopend en worden grijs; de rest gewoon.</summary>
+    public void SetDimmed(IEnumerable<string> ids)
+    {
+        var dimmed = new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
+        if (dimmed.SetEquals(_dimmedIds)) return;
+        _dimmedIds = dimmed;
+        ApplyItemStates();
+    }
+
+    /// <summary>Welke iconen nu grijs zijn (voor de tests).</summary>
+    internal IReadOnlyCollection<string> DimmedIds => _dimmedIds;
 
     /// <summary>Selecteert precies deze items (onbekende id's tellen niet).</summary>
     public void Select(IEnumerable<string> ids)
@@ -573,12 +630,16 @@ public partial class IconsView : UserControl
         return timer;
     }
 
-    private void OnCutChanged(object? sender, EventArgs e) => ApplyCutState();
+    private void OnCutChanged(object? sender, EventArgs e) => ApplyItemStates();
 
-    private void ApplyCutState()
+    private void ApplyItemStates()
     {
         foreach (var item in _items)
-            if (ContainerOf(item) is { } container) SetIsCut(container, CutIds.Contains(item.Id));
+        {
+            if (ContainerOf(item) is not { } container) continue;
+            SetIsCut(container, CutIds.Contains(item.Id));
+            SetIsDimmed(container, _dimmedIds.Contains(item.Id));
+        }
     }
 
     // ---------- Naam wijzigen (F2) ----------
@@ -594,6 +655,8 @@ public partial class IconsView : UserControl
         ItemsHost.SelectedItems.Clear();
         container.IsSelected = true;
         editor.Text = name;
+        // Ook als de namen verborgen zijn: tijdens het typen staat het naamvak onder het icoon.
+        Part<FrameworkElement>(container, "NameArea")?.SetValue(VisibilityProperty, Visibility.Visible);
         text.Visibility = Visibility.Hidden;
         editor.Visibility = Visibility.Visible;
         editor.KeyDown += Editor_KeyDown;
@@ -628,6 +691,7 @@ public partial class IconsView : UserControl
         if (ContainerOf(item) is { } container)
         {
             if (Part<TextBlock>(container, "NameText") is { } text) text.Visibility = Visibility.Visible;
+            Part<FrameworkElement>(container, "NameArea")?.ClearValue(VisibilityProperty);
             container.Focus();
         }
 
@@ -949,6 +1013,7 @@ public partial class IconsView : UserControl
             return;
         }
         OpenWithShell(item);
+        ItemOpened?.Invoke(this, item);
     }
 
     private static void OpenWithShell(ItemView item) =>

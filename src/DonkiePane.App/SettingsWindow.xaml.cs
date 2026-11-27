@@ -82,6 +82,7 @@ public partial class SettingsWindow : Window
         CornerSlider.Value = layout.EffectiveCornerRadius;
         CornerValue.Text = $"{layout.EffectiveCornerRadius:0}";
         (layout.RollUpOpen switch { RollUpOpen.Hover => RollHover, RollUpOpen.Click => RollClick, _ => RollButtonOnly }).IsChecked = true;
+        (layout.DimUnusedDays switch { <= 0 => DimNever, <= 30 => Dim30, <= 90 => Dim90, _ => Dim180 }).IsChecked = true;
         // Opnieuw instellen laat meteen zien of de sneltoets werkt (of al door iets anders gebruikt wordt).
         ShowHotkey(layout.PeekHotkey, error: setPeekHotkey?.Invoke(layout.PeekHotkey));
         RefreshRules();
@@ -177,6 +178,14 @@ public partial class SettingsWindow : Window
     {
         if (_loading) return;
         _layout.RollUpOpen = RollHover.IsChecked == true ? RollUpOpen.Hover : RollClick.IsChecked == true ? RollUpOpen.Click : RollUpOpen.Button;
+        _save();
+        _lookChanged?.Invoke();
+    }
+
+    private void Dim_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string days }) return;
+        _layout.DimUnusedDays = int.Parse(days, System.Globalization.CultureInfo.InvariantCulture);
         _save();
         _lookChanged?.Invoke();
     }

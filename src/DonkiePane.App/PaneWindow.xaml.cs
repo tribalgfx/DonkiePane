@@ -122,6 +122,7 @@ public partial class PaneWindow : Window
         BuildThemeMenu();
         BuildViewMenus();
         ApplyKindMenus();
+        PreviewMouseWheel += OnPreviewMouseWheel;
 
         LocationChanged += (_, _) =>
         {
@@ -379,6 +380,32 @@ public partial class PaneWindow : Window
             ViewMenu.Items.Add(item);
         }
 
+        // Eigen icoongrootte bovenop de weergave, zoals Ctrl+scrollwiel in Verkenner.
+        var pixels = IconMetrics.Pixels(pane);
+        ViewMenu.Items.Add(new Separator());
+        var larger = new MenuItem { Header = Loc.T("Grotere iconen"), InputGestureText = Loc.T("Ctrl+scrollwiel"), IsEnabled = pixels < IconMetrics.Max };
+        larger.Click += (_, _) => StepIconSize(1);
+        var smaller = new MenuItem { Header = Loc.T("Kleinere iconen"), IsEnabled = pixels > IconMetrics.Min };
+        smaller.Click += (_, _) => StepIconSize(-1);
+        var reset = new MenuItem { Header = Loc.T("Standaardgrootte"), IsEnabled = pane.IconPixels is not null };
+        reset.Click += (_, _) => SetIconPixels(null);
+        ViewMenu.Items.Add(larger);
+        ViewMenu.Items.Add(smaller);
+        ViewMenu.Items.Add(reset);
+
+        // Een lijst heeft de naam naast het icoon nodig; daar is deze keuze er niet.
+        if (pane.IconSize != IconSize.List)
+        {
+            ViewMenu.Items.Add(new Separator());
+            var names = new MenuItem { Header = Loc.T("Namen tonen"), IsCheckable = true, IsChecked = pane.ShowNames };
+            names.Click += (_, _) =>
+            {
+                ActivePane.ShowNames = !ActivePane.ShowNames;
+                AfterViewChange();
+            };
+            ViewMenu.Items.Add(names);
+        }
+
         // Een map heeft geen eigen volgorde: daar is "eigen volgorde" gewoon op naam.
         var folder = pane.Kind == PaneKind.Folder;
         var currentOrder = folder && pane.SortBy == ItemSortOrder.Manual ? ItemSortOrder.Name : pane.SortBy;
@@ -396,6 +423,29 @@ public partial class PaneWindow : Window
     {
         if (sender is not MenuItem { Tag: IconSize size }) return;
         ActivePane.IconSize = size;
+        ActivePane.IconPixels = null; // een weergave kiezen is ook zijn eigen grootte kiezen
+        AfterViewChange();
+    }
+
+    /// <summary>Ctrl+scrollwiel boven een iconen- of mappane: iconen groter of kleiner.</summary>
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0 || ActivePane.Kind is not (PaneKind.Icons or PaneKind.Folder)) return;
+        e.Handled = true; // niet ook nog scrollen
+        StepIconSize(Math.Sign(e.Delta));
+    }
+
+    internal void StepIconSize(int steps)
+    {
+        if (steps == 0) return;
+        var next = IconMetrics.Step(IconMetrics.Pixels(ActivePane), steps);
+        SetIconPixels(next == IconMetrics.Default(ActivePane.IconSize) ? null : next);
+    }
+
+    private void SetIconPixels(int? pixels)
+    {
+        if (ActivePane.IconPixels == pixels) return;
+        ActivePane.IconPixels = pixels;
         AfterViewChange();
     }
 

@@ -128,6 +128,16 @@
         <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
                    Text="{l:T 'Bij aanwijzen of een klik gaat een opgerold pane even open en rolt het weer op als de muis weggaat. Dubbelklikken op de titelbalk rolt het echt uit.'}" />
 
+        <TextBlock Margin="0,14,0,0" Text="{l:T 'Iconen grijs maken die je lang niet hebt geopend'}" />
+        <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="DimNever" Style="{StaticResource Chip}" GroupName="Dim" Checked="Dim_Checked" Content="{l:T 'Nooit'}" Tag="0" />
+            <RadioButton x:Name="Dim30" Style="{StaticResource Chip}" GroupName="Dim" Checked="Dim_Checked" Content="{l:T 'Na een maand'}" Tag="30" />
+            <RadioButton x:Name="Dim90" Style="{StaticResource Chip}" GroupName="Dim" Checked="Dim_Checked" Content="{l:T 'Na drie maanden'}" Tag="90" />
+            <RadioButton x:Name="Dim180" Style="{StaticResource Chip}" GroupName="Dim" Checked="Dim_Checked" Content="{l:T 'Na een halfjaar'}" Tag="180" />
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                   Text="{l:T 'Telt openen via een pane en wijzigen van het bestand. Alleen bij bureaubladiconen, niet in mappanes.'}" />
+
         <TextBlock Margin="0,14,0,0" Text="{l:T 'Sneltoets om de panes naar voren te halen'}" />
         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
             <TextBox x:Name="HotkeyBox" Width="200" IsReadOnly="True" IsReadOnlyCaretVisible="False" Padding="6,4"
