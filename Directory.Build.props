@@ -6,7 +6,7 @@
     <Company>DonkiePane</Company>
     <Product>DonkiePane</Product>
     <Copyright>Copyright (C) 2026 tribalgfx. GPL-3.0-or-later.</Copyright>
-    <Version>0.5.1</Version>
+    <Version>0.5.2</Version>
   </PropertyGroup>
 
   <!-- Vertalen (Loc.T("Nederlandse tekst")) kan in elk project zonder extra using. -->
