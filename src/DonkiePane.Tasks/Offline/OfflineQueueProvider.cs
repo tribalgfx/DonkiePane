@@ -19,6 +19,11 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
     private readonly Dictionary<string, string> _notices = [];
     private readonly SemaphoreSlim _flushGate = new(1, 1);
 
+    // Offline toegevoegde taken die intussen bij de bron zijn aangekomen: tijdelijk id ("queued-…") → de taak zoals hij
+    // verstuurd is, en zodra bekend het echte id van de bron. Een pane dat de lijst nog niet opnieuw heeft gelezen,
+    // kent alleen het tijdelijke id; daarmee moet afvinken of verwijderen toch bij de goede taak uitkomen.
+    private readonly Dictionary<string, (TaskItem Sent, string? RealId)> _sentAdds = [];
+
     /// <summary>
     /// Waar binnen <see cref="GetTasksAsync"/> gelezen wordt. Daar is net al verstuurd; een "weer bereikbaar" van dat
     /// lezen mag dan niet meteen een tweede poging starten (na een geweigerd token zou dat de bron bestoken).
@@ -112,7 +117,7 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
 
             try
             {
-                await _inner.UpdateAsync([task], ct);
+                await _inner.UpdateAsync([await WithRealIdAsync(task, ct)], ct);
                 // Wat nog van eerder wachtte is ouder dan wat net aankwam; later versturen zou het terugdraaien.
                 DropPendingUpdates(task.Id);
             }
@@ -144,7 +149,7 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
 
         try
         {
-            await _inner.DeleteAsync(listId, taskId, ct);
+            await _inner.DeleteAsync(listId, await RealIdAsync(listId, taskId, ct), ct);
             DropPendingUpdates(taskId); // een wijziging aan een taak die weg is, zou alleen nog een fout geven
         }
         catch (TaskProviderException ex) when (IsTransient(ex))
@@ -181,6 +186,8 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
                 try
                 {
                     await Send(op, ct);
+                    if (op is { Kind: PendingOperation.Add, Task: { } sent })
+                        lock (_lock) _sentAdds[op.TaskId] = (sent, null);
 
                     // Bronnen maken een nieuwe taak altijd open aan, dus een taak die offline meteen is afgevinkt,
                     // komt open aan. Dat zeggen we, in plaats van het stil te laten gebeuren.
@@ -216,13 +223,79 @@ public class OfflineQueueProvider : ITaskProvider, IDisposable
         }
     }
 
-    private Task Send(PendingOperation op, CancellationToken ct) => op switch
+    private async Task Send(PendingOperation op, CancellationToken ct)
     {
-        { Kind: PendingOperation.Add, Task: { } task } => _inner.AddAsync(op.ListId, task, ct),
-        { Kind: PendingOperation.Update, Task: { } task } => _inner.UpdateAsync([task], ct),
-        { Kind: PendingOperation.Delete } => _inner.DeleteAsync(op.ListId, op.TaskId, ct),
-        _ => Task.CompletedTask, // onbekend soort of beschadigde regel in het bestand: weggooien
-    };
+        switch (op)
+        {
+            case { Kind: PendingOperation.Add, Task: { } task }:
+                await _inner.AddAsync(op.ListId, task, ct);
+                break;
+            case { Kind: PendingOperation.Update, Task: { } task }:
+                await _inner.UpdateAsync([await WithRealIdAsync(task, ct)], ct);
+                break;
+            case { Kind: PendingOperation.Delete }:
+                await _inner.DeleteAsync(op.ListId, await RealIdAsync(op.ListId, op.TaskId, ct), ct);
+                break;
+            // Onbekend soort of beschadigde regel in het bestand: weggooien.
+        }
+    }
+
+    /// <summary>
+    /// Het id dat de bron kent. Voor een offline toegevoegde taak die al verstuurd is, maar die het pane nog met zijn
+    /// tijdelijke id toont: de taak met dezelfde titel bij de bron (de nieuwste, als er meer zijn). Anders het id zelf.
+    /// </summary>
+    private async Task<string> RealIdAsync(string listId, string taskId, CancellationToken ct)
+    {
+        TaskItem sent;
+        lock (_lock)
+        {
+            if (!_sentAdds.TryGetValue(taskId, out var entry)) return taskId;
+            if (entry.RealId is { } known) return known;
+            sent = entry.Sent;
+        }
+
+        IReadOnlyList<TaskItem> server;
+        ReadingAfterFlush.Value = true; // dit lezen mag geen nieuwe ronde versturen starten
+        try
+        {
+            server = await _inner.GetTasksAsync(listId, ct);
+        }
+        finally
+        {
+            ReadingAfterFlush.Value = false;
+        }
+
+        string[] taken;
+        lock (_lock) taken = [.. _sentAdds.Values.Select(v => v.RealId).OfType<string>()];
+        var match = server
+            .Where(t => t.Title == sent.Title && !taken.Contains(t.Id))
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefault();
+        if (match is null) return taskId; // niet te vinden: de bron geeft dan zelf een duidelijke fout
+        lock (_lock) _sentAdds[taskId] = (sent, match.Id);
+        return match.Id;
+    }
+
+    private async Task<TaskItem> WithRealIdAsync(TaskItem task, CancellationToken ct)
+    {
+        var id = await RealIdAsync(task.ListId, task.Id, ct);
+        if (id == task.Id) return task;
+        return new TaskItem
+        {
+            Id = id,
+            ListId = task.ListId,
+            ParentId = task.ParentId,
+            Title = task.Title,
+            IsCompleted = task.IsCompleted,
+            CompletedAt = task.CompletedAt,
+            Importance = task.Importance,
+            DueDate = task.DueDate,
+            SortOrder = task.SortOrder,
+            CreatedAt = task.CreatedAt,
+            UpdatedAt = task.UpdatedAt,
+            ExternalId = task.ExternalId,
+        };
+    }
 
     private void DropPendingUpdates(string taskId)
     {

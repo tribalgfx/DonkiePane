@@ -442,7 +442,9 @@ public partial class IconsView : UserControl
 
     private void ShowItemMenu(List<ItemView> selected)
     {
-        if (ShellContextMenu.TryShow(PathsOf(selected), rename: () => BeginRename(selected[0]))) return;
+        if (ShellContextMenu.TryShow(PathsOf(selected), rename: () => BeginRename(selected[0]),
+                invoked: verb => OnShellVerbInvoked(selected, verb)))
+            return;
 
         var menu = (ContextMenu)FindResource("FallbackMenu");
         menu.DataContext = selected[0];
@@ -475,7 +477,7 @@ public partial class IconsView : UserControl
                 ShellContextMenu.InvokeVerb(PathsOf(selected), "properties");
                 break;
             case Key.Enter when selected.Count > 0:
-                foreach (var item in selected) Open(item);
+                OpenSelection(selected);
                 break;
             case Key.Delete when selected.Count > 0:
                 ShellContextMenu.InvokeVerb(PathsOf(selected), "delete", shift);
@@ -791,7 +793,9 @@ public partial class IconsView : UserControl
         if (_itemTarget is not null && data is not null)
         {
             // Op een map, de Prullenbak of een programma: dat doet de shell (verplaatsen, verwijderen, openen met).
+            var targetItem = _itemTargetContainer?.DataContext as ItemView;
             effect = _itemTarget.Drop(data, e.KeyStates, e.AllowedEffects);
+            if (effect != DragDropEffects.None && targetItem is not null) ItemOpened?.Invoke(this, targetItem); // het doel is gebruikt
         }
         else if (IsOwnFolderDrag)
         {
@@ -1012,11 +1016,21 @@ public partial class IconsView : UserControl
             FolderOpened?.Invoke(this, item.Path);
             return;
         }
-        OpenWithShell(item);
-        ItemOpened?.Invoke(this, item);
+        if (OpenWithShell(item)) ItemOpened?.Invoke(this, item); // mislukt (bijv. kapotte snelkoppeling): niet gebruikt
     }
 
-    private static void OpenWithShell(ItemView item) =>
+    /// <summary>Enter op de selectie. In een mappane gaat dat de eerste map in (meer mappen tegelijk kan niet).</summary>
+    private void OpenSelection(List<ItemView> selected)
+    {
+        if (IsFolderView && selected.FirstOrDefault(i => Directory.Exists(i.Path)) is { } folder)
+        {
+            Open(folder);
+            return;
+        }
+        foreach (var item in selected) Open(item);
+    }
+
+    private static bool OpenWithShell(ItemView item) =>
         StartProcess(VirtualDesktopItems.IsVirtual(item.Path)
             ? new ProcessStartInfo("explorer.exe", "shell:" + item.Path)
             : new ProcessStartInfo(item.Path)
@@ -1025,16 +1039,32 @@ public partial class IconsView : UserControl
                 WorkingDirectory = Path.GetDirectoryName(item.Path),
             });
 
-    private static void StartProcess(ProcessStartInfo info)
+    /// <summary>Start een programma of document; <c>false</c> (met een melding) als dat niet lukte.</summary>
+    private static bool StartProcess(ProcessStartInfo info)
     {
         try
         {
             Process.Start(info)?.Dispose(); // het proces zelf hoeven we niet te volgen
+            return true;
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
             // Bijv. geannuleerd UAC-venster of verwijderd doel van een snelkoppeling.
             MessageBox.Show(ex.Message, "DonkiePane", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
         }
+    }
+
+    /// <summary>
+    /// Een optie uit het menu van Verkenner is uitgevoerd. Openen, bewerken, "Openen met" en dergelijke tellen als
+    /// gebruik van de items waar het menu voor gold (die in dezelfde map als het eerste, zie
+    /// <see cref="ShellContextMenu.TryShow(IReadOnlyList{string}, Action?, Action{string?}?)"/>).
+    /// </summary>
+    private void OnShellVerbInvoked(List<ItemView> selected, string? verb)
+    {
+        if (!ItemUsage.CountsAsUse(verb)) return;
+        var folder = Path.GetDirectoryName(selected[0].Path);
+        foreach (var item in selected.Where(i => string.Equals(Path.GetDirectoryName(i.Path), folder, StringComparison.OrdinalIgnoreCase)))
+            ItemOpened?.Invoke(this, item);
     }
 }

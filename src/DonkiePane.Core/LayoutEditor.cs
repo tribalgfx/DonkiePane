@@ -43,6 +43,11 @@ public static class LayoutEditor
             if (pane.TabHost is { } host && (host == pane.Id || !standalone.Contains(host))) { pane.TabHost = null; repaired = true; }
         }
 
+        // Een rastergrootte buiten wat Instellingen toestaat (bijv. uit een geïmporteerd bestand): 2 maakt het raster
+        // traag en onleesbaar, een enorm getal zet panes bij de eerste keer verplaatsen buiten beeld.
+        repaired |= Fix(layout.GridSize, GridSnap.DefaultCell, Layout.MinGridSize, Layout.MaxGridSize, v => layout.GridSize = v);
+        if (layout.DimUnusedDays < 0) { layout.DimUnusedDays = 0; repaired = true; }
+
         if (layout.Rules is null) { layout.Rules = []; repaired = true; }
         repaired |= layout.Rules.RemoveAll(r => r is null) > 0;
         foreach (var rule in layout.Rules)
@@ -273,6 +278,30 @@ public static class LayoutEditor
         if (index < 0 || index > target.Items.Count) index = target.Items.Count;
         target.Items.Insert(index, itemId);
         return true;
+    }
+
+    /// <summary>
+    /// Een plek tussen de iconen die een pane laat zien (<paramref name="shownIds"/>, in de eigen volgorde) omgezet
+    /// naar een plek in <paramref name="paneItems"/>. Daar staan ook items die nu niet te zien zijn, bijvoorbeeld van
+    /// een bureaubladmap die even niet bereikbaar is. Achter het laatste zichtbare icoon = direct daarachter; -1 blijft
+    /// -1 (achteraan).
+    /// </summary>
+    public static int ToItemsIndex(IReadOnlyList<string> paneItems, IReadOnlyList<string> shownIds, int shownIndex)
+    {
+        if (shownIndex < 0 || shownIds.Count == 0) return -1;
+        if (shownIndex >= shownIds.Count)
+        {
+            var last = IndexOf(paneItems, shownIds[^1]);
+            return last < 0 ? -1 : last + 1;
+        }
+        return IndexOf(paneItems, shownIds[shownIndex]);
+
+        static int IndexOf(IReadOnlyList<string> items, string id)
+        {
+            for (var i = 0; i < items.Count; i++)
+                if (string.Equals(items[i], id, StringComparison.OrdinalIgnoreCase)) return i;
+            return -1;
+        }
     }
 
     /// <summary>

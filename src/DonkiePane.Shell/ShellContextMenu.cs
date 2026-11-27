@@ -85,13 +85,14 @@ public sealed class ShellContextMenu : IDisposable
     /// Staan de items in verschillende mappen, dan geldt het menu voor die van het eerste item.
     /// </summary>
     /// <param name="rename">Uitgevoerd bij "Naam wijzigen"; <c>null</c> = die optie niet tonen.</param>
-    public static bool TryShow(IReadOnlyList<string> paths, Action? rename = null)
+    /// <param name="invoked">Na het uitvoeren van een andere optie, met het werkwoord van de shell (bijv. <c>open</c>); <c>null</c> als die er geen heeft.</param>
+    public static bool TryShow(IReadOnlyList<string> paths, Action? rename = null, Action<string?>? invoked = null)
     {
         if (paths.Count == 0) return false;
         var group = GroupByFolder(paths).First(g => g.Contains(paths[0]));
         if (!TryCreate(() => Create(group, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift), rename is not null), out var menu))
             return false;
-        using (menu) menu.Show(rename);
+        using (menu) menu.Show(rename, invoked: invoked);
         return true;
     }
 
@@ -281,7 +282,7 @@ public sealed class ShellContextMenu : IDisposable
         }
     }
 
-    private void Show(Action? rename, Action? beforeCommand = null)
+    private void Show(Action? rename, Action? beforeCommand = null, Action<string?>? invoked = null)
     {
         GetCursorPos(out var pt);
         var owner = Helper();
@@ -303,13 +304,14 @@ public sealed class ShellContextMenu : IDisposable
         if (command < FirstCommand) return;
 
         // De shell wijzigt buiten Verkenner zelf geen namen; dat doet de pane.
-        if (rename is not null && string.Equals(VerbOf(command - FirstCommand), "rename", StringComparison.OrdinalIgnoreCase))
+        var verb = VerbOf(command - FirstCommand);
+        if (rename is not null && string.Equals(verb, "rename", StringComparison.OrdinalIgnoreCase))
         {
             rename();
             return;
         }
         beforeCommand?.Invoke();
-        Invoke((IntPtr)(command - FirstCommand), owner.Handle, pt, Keyboard.Modifiers);
+        if (Invoke((IntPtr)(command - FirstCommand), owner.Handle, pt, Keyboard.Modifiers) >= 0) invoked?.Invoke(verb);
     }
 
     private bool Invoke(string verb, bool shift)

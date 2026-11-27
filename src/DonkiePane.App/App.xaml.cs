@@ -347,7 +347,10 @@ public partial class App : Application
                 var view = new IconsView();
                 view.ItemsDropped += (_, drop) =>
                 {
-                    if (!LayoutEditor.MoveItems(_layout, drop.ItemIds, pane.Id, drop.Index)) return;
+                    // De plek telt tussen de zichtbare iconen; in de indeling kunnen er ook onzichtbare tussen staan.
+                    var shown = pane.Items.Where(id => GetItemView(id) is not null).ToList();
+                    var index = LayoutEditor.ToItemsIndex(pane.Items, shown, drop.Index);
+                    if (!LayoutEditor.MoveItems(_layout, drop.ItemIds, pane.Id, index)) return;
                     SaveLayout();
                     RefreshItems();
                 };

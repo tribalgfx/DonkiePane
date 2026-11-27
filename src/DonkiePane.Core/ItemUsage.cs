@@ -39,6 +39,19 @@ public sealed class ItemUsage
 
     public void Opened(string id, DateTime nowUtc) => _lastUsed[id] = nowUtc;
 
+    // Werkwoorden uit het menu van Verkenner die het item zelf gebruiken (openen, bewerken, afspelen, ...). Knippen,
+    // kopiëren, verwijderen, eigenschappen en dergelijke tellen niet.
+    private static readonly HashSet<string> UseVerbs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "open", "opennew", "openas", "runas", "runasuser", "edit", "play", "explore", "print", "printto",
+    };
+
+    /// <summary>
+    /// Telt deze optie uit het menu van Verkenner als het item gebruiken? Een optie zonder werkwoord (bijv. een
+    /// programma onder "Openen met") telt mee: dat zijn bijna altijd manieren om het item te openen.
+    /// </summary>
+    public static bool CountsAsUse(string? verb) => string.IsNullOrEmpty(verb) || UseVerbs.Contains(verb);
+
     /// <summary>Een item heeft een andere naam gekregen: de geschiedenis gaat mee.</summary>
     public void Rename(string oldId, string newId)
     {

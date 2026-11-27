@@ -65,5 +65,6 @@ public static class LayoutTransfer
         target.Appearance = imported.Appearance;
         target.CornerRadius = imported.CornerRadius;
         target.Rules = imported.Rules ?? [];
+        target.DimUnusedDays = Math.Max(0, imported.DimUnusedDays);
     }
 }

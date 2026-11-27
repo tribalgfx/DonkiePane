@@ -105,3 +105,56 @@ public sealed class IconMetricsAndUsageTests
         }
     }
 }
+
+public sealed class ReviewFixesTests
+{
+    [Theory]
+    [InlineData("open", true)]
+    [InlineData("OpenAs", true)]
+    [InlineData("runas", true)]
+    [InlineData("edit", true)]
+    [InlineData(null, true)]        // bijv. een programma onder "Openen met"
+    [InlineData("delete", false)]
+    [InlineData("properties", false)]
+    [InlineData("cut", false)]
+    [InlineData("copy", false)]
+    [InlineData("opencontaining", false)] // bestandslocatie openen gebruikt het item zelf niet
+    public void Only_menu_options_that_use_the_item_count(string? verb, bool counts) =>
+        Assert.Equal(counts, ItemUsage.CountsAsUse(verb));
+
+    [Fact]
+    public void A_drop_position_among_visible_icons_skips_items_that_are_not_shown()
+    {
+        // Twee items van een map die even weg is staan vooraan in de indeling, maar zijn niet te zien.
+        string[] items = ["public/a", "public/b", "user/c", "user/d", "user/e"];
+        string[] shown = ["user/c", "user/d", "user/e"];
+
+        Assert.Equal(3, LayoutEditor.ToItemsIndex(items, shown, 1)); // vóór user/d
+        Assert.Equal(2, LayoutEditor.ToItemsIndex(items, shown, 0));
+        Assert.Equal(5, LayoutEditor.ToItemsIndex(items, shown, 3)); // achter het laatste
+        Assert.Equal(-1, LayoutEditor.ToItemsIndex(items, shown, -1));
+        Assert.Equal(-1, LayoutEditor.ToItemsIndex(items, [], 0));
+    }
+
+    [Theory]
+    [InlineData(2, Layout.MinGridSize)]
+    [InlineData(50_000, Layout.MaxGridSize)]
+    [InlineData(40, 40)]
+    public void A_grid_size_outside_the_settings_range_is_repaired(double size, double expected)
+    {
+        var layout = new Layout { GridSize = size };
+        LayoutEditor.Repair(layout);
+        Assert.Equal(expected, layout.GridSize);
+    }
+
+    [Fact]
+    public void Importing_brings_the_gray_icons_setting_along()
+    {
+        var target = new Layout();
+        LayoutTransfer.ApplyTo(target, new Layout { Panes = [new Pane()], DimUnusedDays = 90 });
+        Assert.Equal(90, target.DimUnusedDays);
+
+        LayoutTransfer.ApplyTo(target, new Layout { Panes = [new Pane()], DimUnusedDays = -5 });
+        Assert.Equal(0, target.DimUnusedDays);
+    }
+}

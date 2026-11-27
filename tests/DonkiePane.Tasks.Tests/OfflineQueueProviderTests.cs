@@ -175,6 +175,29 @@ public sealed class OfflineQueueProviderTests : IDisposable
         Assert.DoesNotContain(view, t => t.Id.StartsWith("queued-")); // de tijdelijke taak is vervangen door de echte
     }
 
+
+    [Fact]
+    public async Task A_task_added_offline_can_be_ticked_off_by_its_temporary_id_after_it_was_sent()
+    {
+        var queue = Create();
+        await queue.GetTasksAsync("L");
+        _server.Online = false;
+        await queue.AddAsync("L", New("Melk"));
+        var shown = (await queue.GetTasksAsync("L")).Single(); // het pane kent alleen het tijdelijke id
+        Assert.StartsWith("queued-", shown.Id);
+
+        _server.Online = true;
+        await queue.GetTasksAsync("L"); // verstuurt de wachtrij (het pane gebruikt dit antwoord nog niet)
+        Assert.Equal(0, queue.PendingCount);
+
+        // Afvinken voordat het pane de lijst opnieuw heeft gelezen.
+        shown.IsCompleted = true;
+        await queue.UpdateAsync([shown]);
+        Assert.True(_server.Server.Single(t => t.Title == "Melk").IsCompleted);
+
+        await queue.DeleteAsync("L", shown.Id);
+        Assert.Empty(_server.Server);
+    }
     [Fact]
     public async Task An_offline_edit_shows_at_once_and_reaches_the_source_later()
     {

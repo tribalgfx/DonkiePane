@@ -24,6 +24,9 @@ public sealed class Layout
     /// <summary>Rastergrootte in WPF-eenheden.</summary>
     public double GridSize { get; set; } = GridSnap.DefaultCell;
 
+    /// <summary>Grenzen van <see cref="GridSize"/>, dezelfde als in Instellingen.</summary>
+    public const double MinGridSize = 16, MaxGridSize = 64;
+
     /// <summary>Hoe vaak (in seconden) takenbronnen op veranderingen van andere apparaten controleren.</summary>
     public int SyncSeconds { get; set; } = DefaultSyncSeconds;
 
