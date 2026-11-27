@@ -158,3 +158,27 @@ public sealed class ReviewFixesTests
         Assert.Equal(0, target.DimUnusedDays);
     }
 }
+
+public sealed class FrostedGlassNameTests
+{
+    [Fact]
+    public void A_layout_that_says_Mica_still_loads_as_frosted_glass_and_is_saved_the_same_way()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "donkiepane-frosted-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            File.WriteAllText(path, """{ "Panes": [ { "Title": "Oud", "Material": "Mica" } ] }""");
+            var store = new LayoutStore(path);
+            var layout = store.Load();
+            Assert.Equal(PaneMaterial.Frosted, layout.Panes[0].Material);
+
+            store.Save(layout);
+            Assert.Contains("\"Material\": \"Mica\"", File.ReadAllText(path)); // een oudere DonkiePane kan het nog lezen
+            Assert.Contains("\"Mica\"", LayoutTransfer.Serialize(layout));
+        }
+        finally
+        {
+            foreach (var file in Directory.GetFiles(Path.GetTempPath(), Path.GetFileName(path) + "*")) File.Delete(file);
+        }
+    }
+}

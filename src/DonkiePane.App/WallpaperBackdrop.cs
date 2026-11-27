@@ -10,7 +10,8 @@ using DonkiePane.Shell;
 namespace DonkiePane.App;
 
 /// <summary>
-/// Mica zonder hulp van Windows: panes staan op de bureaubladlaag, waar Windows zijn eigen Mica niet tekent. Mica is in
+/// Matglas zonder hulp van Windows: panes staan op de bureaubladlaag, waar Windows zijn eigen vervaagde materialen niet tekent.
+/// Matglas is in
 /// wezen je bureaubladachtergrond, heel sterk vervaagd; dat maakt DonkiePane hier zelf, één keer per scherm, op een
 /// kleine maat (vervagen maakt details toch onzichtbaar). Een pane toont het stuk dat precies onder hem ligt.
 /// </summary>

@@ -24,8 +24,12 @@ public enum PaneMaterial
     /// <summary>Effen kleur (met de gekozen transparantie).</summary>
     Solid,
 
-    /// <summary>Mica: de achtergrond van het bureaublad, sterk vervaagd, met de kleur van het thema eroverheen.</summary>
-    Mica,
+    /// <summary>
+    /// Matglas: de achtergrond van het bureaublad, sterk vervaagd, met de kleur van het thema eroverheen. In
+    /// <c>layout.json</c> heet het nog "Mica" (de naam uit de eerste versies), zodat bestaande indelingen blijven werken.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonStringEnumMemberName("Mica")]
+    Frosted,
 }
 
 /// <summary>Hoe een iconenpane zijn iconen laat zien.</summary>
@@ -97,7 +101,7 @@ public sealed class Pane
     /// <summary>Toon het ruitpatroon van het thema. Standaard uit: rustig en zakelijk.</summary>
     public bool ShowPattern { get; set; }
 
-    /// <summary>Effen of Mica. Bij Mica bepaalt <see cref="Opacity"/> hoe sterk de themakleur over de vervaagde achtergrond ligt.</summary>
+    /// <summary>Effen of matglas. Bij matglas bepaalt <see cref="Opacity"/> hoe sterk de themakleur over de vervaagde achtergrond ligt.</summary>
     public PaneMaterial Material { get; set; } = PaneMaterial.Solid;
 
     /// <summary>

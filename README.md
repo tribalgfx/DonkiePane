@@ -25,7 +25,7 @@ Panes on your Windows desktop for your shortcuts and your tasks. With a calm loo
 - **Rules.** New files on the desktop go straight to the right pane, by extension, by name or because they are a folder (Settings → Rules). What is already in the Inbox can be sorted there in one go.
 - **Peek into rolled-up panes.** A rolled-up pane opens on hover or with a single click and rolls up again when the mouse leaves (Settings → Panes).
 - **Bring panes to the front.** A shortcut (Ctrl+Alt+Space by default, configurable) brings all panes above your windows; press it again, press Esc or click beside them to put them back.
-- **Calm and customizable.** Plain themes, light or dark (or like Windows), Mica (your desktop background blurred behind the pane), your own color and transparency per pane, rounded or square corners, a grid to snap panes to, and an optional tea-towel check pattern.
+- **Calm and customizable.** Plain themes, light or dark (or like Windows), frosted glass (your desktop background blurred behind the pane), your own color and transparency per pane, rounded or square corners, a grid to snap panes to, and an optional tea-towel check pattern.
 - **Double-click an empty spot on the desktop** to hide all panes; double-click again to bring them back.
 - **English and Dutch.** DonkiePane follows the language of Windows; you can choose in Settings → Language. Translations live in `src/DonkiePane.Core/Localization`.
 - **Export and import your layout.** Settings → Data saves your panes and where they are as a file, as a backup or to move them to another PC. Tasks, sources and tokens are not included.

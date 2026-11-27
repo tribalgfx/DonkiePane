@@ -389,14 +389,14 @@ public sealed class PaneRenderTests : TempData
     {
         OnStaThread(() =>
         {
-            // Zonder te lezen achtergrond (bijv. op een server) is er geen Mica; dat mag.
+            // Zonder te lezen achtergrond (bijv. op een server) is er geen matglas; dat mag.
             if (WallpaperBackdrop.For(new PxRect(200, 150, 704, 576)) is not { } sample) return;
             Assert.InRange(sample.Viewbox.Width, 0.01, 1.5);
 
             var theme = UseTheme();
             try
             {
-                var pane = new Pane { Title = "Mica", Width = 352, Height = 288, Material = PaneMaterial.Mica };
+                var pane = new Pane { Title = "Matglas", Width = 352, Height = 288, Material = PaneMaterial.Frosted };
                 var window = new PaneWindow(pane);
                 var view = new IconsView();
                 view.SetItems(SampleItems());

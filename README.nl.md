@@ -25,7 +25,7 @@ Vakken (panes) op je Windows-bureaublad voor je snelkoppelingen en je taken. Met
 - **Regels.** Nieuwe bestanden op het bureaublad gaan meteen naar het juiste pane, op extensie, naam of omdat het een map is (Instellingen → Regels). Wat al in de Inbox staat, kun je daar in één keer laten indelen.
 - **Opgerolde panes even openen.** Een opgerold pane gaat open bij aanwijzen of met één klik en rolt weer op als de muis weggaat (Instellingen → Panes).
 - **Panes naar voren halen.** Met een sneltoets (standaard Ctrl+Alt+Spatie, in te stellen) komen alle panes boven je vensters; nog een keer, Esc of ernaast klikken zet ze terug.
-- **Rustig en aanpasbaar.** Effen thema's, licht of donker (of zoals Windows), Mica (je bureaubladachtergrond vervaagd achter het pane), een eigen kleur en transparantie per pane, ronde of rechte hoeken, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
+- **Rustig en aanpasbaar.** Effen thema's, licht of donker (of zoals Windows), matglas (je bureaubladachtergrond vervaagd achter het pane), een eigen kleur en transparantie per pane, ronde of rechte hoeken, een ruitraster om panes op vast te klikken en optioneel het theedoek-ruitpatroon.
 - **Dubbelklik op een leeg stuk bureaublad** verbergt alle panes; nog een keer haalt ze terug.
 - **Nederlands en Engels.** DonkiePane volgt de taal van Windows; kiezen kan in Instellingen → Taal. Vertalingen staan in `src/DonkiePane.Core/Localization`.
 - **Indeling exporteren en importeren.** Instellingen → Gegevens bewaart je panes en hun plek als bestand, als reservekopie of om ze op een andere pc over te zetten. Taken, bronnen en tokens gaan niet mee.

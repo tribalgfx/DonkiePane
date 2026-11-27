@@ -117,7 +117,7 @@
             <TextBlock x:Name="CornerValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                   Text="{l:T 'Kleur, transparantie en Mica kies je per pane: rechtsklik op de titelbalk → Thema.'}" />
+                   Text="{l:T 'Kleur, transparantie en matglas kies je per pane: rechtsklik op de titelbalk → Thema.'}" />
 
         <TextBlock Margin="0,14,0,0" Text="{l:T 'Een opgerold pane openen'}" />
         <StackPanel Orientation="Horizontal">

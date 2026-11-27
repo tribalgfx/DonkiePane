@@ -8,7 +8,7 @@ using DonkiePane.Core;
 
 namespace DonkiePane.App.Tests;
 
-/// <summary>Tabbladen, mappanes, licht/donker, Mica, oprollen en de regel-dialoog: echt opgebouwd op een STA-thread.</summary>
+/// <summary>Tabbladen, mappanes, licht/donker, matglas, oprollen en de regel-dialoog: echt opgebouwd op een STA-thread.</summary>
 [Collection("WPF-vensters")]
 public sealed class TabsFolderAndLookTests : TempData
 {
@@ -89,7 +89,7 @@ public sealed class TabsFolderAndLookTests : TempData
     }
 
     [Fact]
-    public void Mica_is_switched_on_per_pane_from_the_theme_menu()
+    public void Frosted_glass_is_switched_on_per_pane_from_the_theme_menu()
     {
         OnStaThread(() =>
         {
@@ -98,11 +98,11 @@ public sealed class TabsFolderAndLookTests : TempData
             var changed = 0;
             window.PaneChanged += (_, _) => changed++;
 
-            var mica = (MenuItem)window.FindName("MicaMenuItem");
-            mica.IsChecked = true;
-            Click(mica);
+            var frosted = (MenuItem)window.FindName("FrostedMenuItem");
+            frosted.IsChecked = true;
+            Click(frosted);
 
-            Assert.Equal(PaneMaterial.Mica, pane.Material);
+            Assert.Equal(PaneMaterial.Frosted, pane.Material);
             Assert.Equal(1, changed);
 
             Click((MenuItem)((MenuItem)window.FindName("ThemeMenu")).Items.OfType<MenuItem>().Last()); // standaard herstellen

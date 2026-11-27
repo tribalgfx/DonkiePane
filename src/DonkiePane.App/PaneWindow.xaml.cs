@@ -233,10 +233,10 @@ public partial class PaneWindow : Window
         UpdateBackdrop();
     });
 
-    /// <summary>Mica: het stuk vervaagde bureaubladachtergrond dat precies onder dit venster ligt.</summary>
+    /// <summary>Matglas: het stuk vervaagde bureaubladachtergrond dat precies onder dit venster ligt.</summary>
     private void UpdateBackdrop()
     {
-        if (ActivePane.Material != PaneMaterial.Mica || IsClosed)
+        if (ActivePane.Material != PaneMaterial.Frosted || IsClosed)
         {
             Backdrop.Visibility = Visibility.Collapsed;
             return;
@@ -286,7 +286,7 @@ public partial class PaneWindow : Window
         }
 
         PatternMenuItem.IsChecked = ActivePane.ShowPattern;
-        MicaMenuItem.IsChecked = ActivePane.Material == PaneMaterial.Mica;
+        FrostedMenuItem.IsChecked = ActivePane.Material == PaneMaterial.Frosted;
     }
 
     private void LookChanged()
@@ -333,9 +333,9 @@ public partial class PaneWindow : Window
         LookChanged();
     }
 
-    private void Mica_Click(object sender, RoutedEventArgs e)
+    private void Frosted_Click(object sender, RoutedEventArgs e)
     {
-        ActivePane.Material = MicaMenuItem.IsChecked ? PaneMaterial.Mica : PaneMaterial.Solid;
+        ActivePane.Material = FrostedMenuItem.IsChecked ? PaneMaterial.Frosted : PaneMaterial.Solid;
         LookChanged();
     }
 

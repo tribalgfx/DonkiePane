@@ -12,7 +12,7 @@
         UseLayoutRounding="True"
         MinWidth="160" MinHeight="36">
     <Grid x:Name="Root">
-        <!-- Mica: de vervaagde bureaubladachtergrond onder het pane (alleen als het pane Mica gebruikt). -->
+        <!-- Matglas: de vervaagde bureaubladachtergrond onder het pane (alleen als het pane matglas gebruikt). -->
         <Border x:Name="Backdrop" CornerRadius="10" Visibility="Collapsed" />
 
         <Border x:Name="Frame"
@@ -65,7 +65,7 @@
                                 <MenuItem Header="{l:T 'Eigen kleur kiezen…'}" Click="PickColor_Click" />
                                 <MenuItem x:Name="TransparencyMenu" Header="{l:T 'Transparantie'}" />
                                 <MenuItem x:Name="PatternMenuItem" Header="{l:T 'Ruitpatroon'}" IsCheckable="True" Click="Pattern_Click" />
-                                <MenuItem x:Name="MicaMenuItem" Header="{l:T 'Mica (vervaagde achtergrond)'}" IsCheckable="True" Click="Mica_Click" />
+                                <MenuItem x:Name="FrostedMenuItem" Header="{l:T 'Matglas (vervaagde achtergrond)'}" IsCheckable="True" Click="Frosted_Click" />
                                 <Separator />
                                 <MenuItem Header="{l:T 'Standaard herstellen'}" Click="ResetLook_Click" />
                             </MenuItem>
